@@ -11,7 +11,7 @@
  * @param data data to place in node
  * @returns pointer to the queue node. `NULL` if error
  */
-struct queue_node *create_node(char *data) {
+static struct queue_node *create_node(char *data) {
     if (!data) {
         return NULL;
     }
