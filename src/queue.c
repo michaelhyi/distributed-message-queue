@@ -28,7 +28,7 @@ struct queue_node *create_node(char *data) {
         free(node);
         return NULL;
     }
-    strlcpy(node->data, data, data_size);
+    strlcpy(node->data, data, data_size + 1);
 
     time((long *) &node->timestamp);
     node->next = NULL;
