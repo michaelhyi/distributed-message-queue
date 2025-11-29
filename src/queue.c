@@ -11,8 +11,8 @@
  * @param data data to place in node
  * @returns pointer to the queue node. `NULL` if error
  */
-static struct queue_node *create_node(char *data) {
-    if (!data) {
+static struct queue_node *create_node(char *data, unsigned int data_size) {
+    if (!data || data_size == 0) {
         return NULL;
     }
 
@@ -21,8 +21,6 @@ static struct queue_node *create_node(char *data) {
         return NULL;
     }
 
-    // TODO: what if data contains nul term due to encrpytion
-    unsigned int data_size = strnlen(data, INT_MAX);
     node->data = malloc(data_size);
     if (node->data == NULL) {
         free(node);
@@ -46,12 +44,12 @@ int queue_init(struct queue *queue) {
     return 0;
 }
 
-int queue_push(struct queue *queue, char *data) {
-    if (queue == NULL || data == NULL) {
+int queue_push(struct queue *queue, char *data, unsigned int data_size) {
+    if (queue == NULL || data == NULL || data_size == 0) {
         return -1;
     }
 
-    struct queue_node *node = create_node(data);
+    struct queue_node *node = create_node(data, data_size);
     
     if (!queue->head) {
         queue->head = node;

@@ -25,9 +25,10 @@ int queue_init(struct queue *queue);
  * 
  * @param queue the queue to update
  * @param data data to push on the queue
+ * @param data_size size of the data
  * @returns 0 if success, -1 if error
  */
-int queue_push(struct queue *queue, char *data);
+int queue_push(struct queue *queue, char *data, unsigned int data_size);
 
 /**
  * Pops data off the queue.

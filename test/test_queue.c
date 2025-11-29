@@ -32,14 +32,16 @@ void test_queue_push_throws_error_when_invalid_args() {
     char *data;
 
     // act
-    int res1 = queue_push(NULL, NULL);
-    int res2 = queue_push(&queue, NULL);
-    int res3 = queue_push(NULL, data);
+    int res1 = queue_push(NULL, NULL, 0);
+    int res2 = queue_push(&queue, NULL, 0);
+    int res3 = queue_push(NULL, data, 0);
+    int res4 = queue_push(NULL, NULL, 1);
 
     // assert
     assert(res1 < 0);
     assert(res2 < 0);
     assert(res3 < 0);
+    assert(res4 < 0);
 }
 
 void test_queue_push_success_when_empty() {
@@ -49,7 +51,7 @@ void test_queue_push_success_when_empty() {
     char *data = "Hello, World!";
 
     // act
-    int res = queue_push(&queue, data);
+    int res = queue_push(&queue, data, strlen(data));
 
     // assert
     assert(res >= 0);
@@ -66,12 +68,12 @@ void test_queue_push_success_when_size_is_one() {
     queue_init(&queue);
 
     char *data = "Hello, ";
-    queue_push(&queue, data);
+    queue_push(&queue, data, strlen(data));
 
     data = "World!";
 
     // act
-    int res = queue_push(&queue, data);
+    int res = queue_push(&queue, data, strlen(data));
 
     // assert
     assert(res >= 0);
@@ -92,18 +94,18 @@ void test_queue_push_success_when_size_is_greater_than_one() {
     queue_init(&queue);
 
     char *data = "Hello";
-    queue_push(&queue, data);
+    queue_push(&queue, data, strlen(data));
 
     data = ", ";
-    queue_push(&queue, data);
+    queue_push(&queue, data, strlen(data));
 
     data = "World";
-    queue_push(&queue, data);
+    queue_push(&queue, data, strlen(data));
 
     data = "!";
 
     // act
-    int res = queue_push(&queue, data);
+    int res = queue_push(&queue, data, strlen(data));
 
     // assert
     assert(res >= 0);
@@ -156,7 +158,7 @@ void test_queue_pop_success_when_size_is_one() {
     struct queue queue;
     queue_init(&queue);
     char *data = "Hello, World!";
-    queue_push(&queue, data);
+    queue_push(&queue, data, strlen(data));
 
     // act
     char *res = queue_pop(&queue);
@@ -176,16 +178,16 @@ void test_queue_pop_success_when_size_is_greater_than_one() {
     queue_init(&queue);
 
     char *data = "Hello";
-    queue_push(&queue, data);
+    queue_push(&queue, data, strlen(data));
 
     data = ", ";
-    queue_push(&queue, data);
+    queue_push(&queue, data, strlen(data));
 
     data = "World";
-    queue_push(&queue, data);
+    queue_push(&queue, data, strlen(data));
 
     data = "!";
-    queue_push(&queue, data);
+    queue_push(&queue, data, strlen(data));
 
     // act
     char *res = queue_pop(&queue);
@@ -225,9 +227,9 @@ void (*tests[])(void) = {
 };
 
 int main() {
-    unsigned int num_tests = sizeof(tests) / sizeof(tests[0]);
+    int num_tests = sizeof(tests) / sizeof(tests[0]);
 
-    for (unsigned int i = 0; i < num_tests; i++) {
+    for (int i = 0; i < num_tests; i++) {
         tests[i]();
     }
 
