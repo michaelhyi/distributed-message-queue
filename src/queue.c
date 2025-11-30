@@ -47,14 +47,13 @@ int queue_init(struct queue *queue) {
 }
 
 int queue_push(struct queue *queue, char *data, unsigned int data_size) {
-    pthread_mutex_lock(&queue->lock);
-
     if (queue == NULL || data == NULL || data_size == 0) {
-        pthread_mutex_unlock(&queue->lock);
         return -1;
     }
 
+    pthread_mutex_lock(&queue->lock);
     struct queue_node *node = create_node(data, data_size);
+
     if (node == NULL) {
         pthread_mutex_unlock(&queue->lock);
         return -1;
@@ -76,8 +75,12 @@ int queue_push(struct queue *queue, char *data, unsigned int data_size) {
 }
 
 char *queue_pop(struct queue *queue) {
+    if (queue == NULL) {
+        return NULL;
+    }
+
     pthread_mutex_lock(&queue->lock);
-    if (queue == NULL || queue->head == NULL) {
+    if (queue->head == NULL) {
         pthread_mutex_unlock(&queue->lock);
         return NULL;
     }
@@ -98,6 +101,10 @@ char *queue_pop(struct queue *queue) {
 }
 
 void queue_destroy(struct queue *queue) {
+    if (queue == NULL) {
+        return;
+    }
+
     pthread_mutex_lock(&queue->lock);
     struct queue_node *curr = queue->head; 
 

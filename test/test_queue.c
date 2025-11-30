@@ -29,7 +29,8 @@ void test_queue_init_success() {
 void test_queue_push_throws_error_when_invalid_args() {
     // arrange
     struct queue queue;
-    char *data;
+    queue_init(&queue);
+    char *data = (char *) 0x1;
 
     // act
     int res1 = queue_push(NULL, NULL, 0);
@@ -56,7 +57,7 @@ void test_queue_push_success_when_empty() {
     // assert
     assert(res >= 0);
     assert(queue.head == queue.tail);
-    assert(strcmp(queue.head->data, data) == 0);
+    assert(memcmp(queue.head->data, data, strlen(data)) == 0);
     assert(queue.head->next == NULL);
 
     free(queue.head);
@@ -78,10 +79,10 @@ void test_queue_push_success_when_size_is_one() {
     // assert
     assert(res >= 0);
     assert(queue.head != queue.tail);
-    assert(strcmp(queue.head->data, "Hello, ") == 0);
+    assert(memcmp(queue.head->data, "Hello, ", 7) == 0);
     assert(queue.head->next == queue.tail);
 
-    assert(strcmp(queue.tail->data, "World!") == 0);
+    assert(memcmp(queue.tail->data, "World!", 6) == 0);
     assert(queue.tail->next == NULL);
 
     free(queue.head);
@@ -110,26 +111,26 @@ void test_queue_push_success_when_size_is_greater_than_one() {
     // assert
     assert(res >= 0);
     assert(queue.head != queue.tail);
-    assert(strcmp(queue.tail->data, "!") == 0);
+    assert(memcmp(queue.tail->data, "!", 1) == 0);
     assert(queue.tail->next == NULL);
 
     struct queue_node *curr = queue.head;
-    assert(strcmp(curr->data, "Hello") == 0);
+    assert(memcmp(curr->data, "Hello", 5) == 0);
     struct queue_node *temp = curr;
     curr = curr->next;
     free(temp);
 
-    assert(strcmp(curr->data, ", ") == 0);
+    assert(memcmp(curr->data, ", ", 3) == 0);
     temp = curr;
     curr = curr->next;
     free(temp);
 
-    assert(strcmp(curr->data, "World") == 0);
+    assert(memcmp(curr->data, "World", 5) == 0);
     temp = curr;
     curr = curr->next;
     free(temp);
 
-    assert(strcmp(curr->data, "!") == 0);
+    assert(memcmp(curr->data, "!", 1) == 0);
     free(curr);
 }
 
@@ -167,7 +168,7 @@ void test_queue_pop_success_when_size_is_one() {
     assert(res != NULL);
     assert(queue.head == NULL);
     assert(queue.tail == NULL);
-    assert(strcmp(res, data) == 0);
+    assert(memcmp(res, data, strlen(data)) == 0);
 
     free(res);
 }
@@ -193,20 +194,20 @@ void test_queue_pop_success_when_size_is_greater_than_one() {
     char *res = queue_pop(&queue);
 
     // assert
-    assert(strcmp(res, "Hello") == 0);
+    assert(memcmp(res, "Hello", 5) == 0);
 
     struct queue_node *curr = queue.head;
-    assert(strcmp(curr->data, ", ") == 0);
+    assert(memcmp(curr->data, ", ", 2) == 0);
     struct queue_node *temp = curr;
     curr = curr->next;
     free(temp);
 
-    assert(strcmp(curr->data, "World") == 0);
+    assert(memcmp(curr->data, "World", 5) == 0);
     temp = curr;
     curr = curr->next;
     free(temp);
 
-    assert(strcmp(curr->data, "!") == 0);
+    assert(memcmp(curr->data, "!", 1) == 0);
     curr = curr->next;
     free(curr);
 }
