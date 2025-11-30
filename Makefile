@@ -36,5 +36,11 @@ debug: $(TARGET)
 debug-test: $(TEST_TARGET)
 	gdb $(TEST_TARGET)
 
+memcheck: $(TARGET)
+	valgrind --leak-check=yes $(TARGET)
+
+memcheck-test: $(TEST_TARGET)
+	valgrind --leak-check=yes $(TEST_TARGET)
+
 clean:
 	rm -rf $(BUILD_DIR)
