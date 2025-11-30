@@ -1,14 +1,22 @@
 CC = gcc
 CFLAGS = -Wall -g
+INCLUDE = -Iinclude
+
 BUILD_DIR = build
 TARGET = $(BUILD_DIR)/distributed-message-queue
-INCLUDE = -Iinclude
-SOURCES = $(shell find . -name "*.c") 
-OBJECTS := $(patsubst %.c,$(BUILD_DIR)/%.o,$(SOURCES))
+TEST_TARGET = $(BUILD_DIR)/test-distributed-message-queue
 
-.PHONY: all debug clean
+SOURCES = $(shell find src -name "*.c") 
+TEST_SOURCES = $(shell find test -name "*.c") 
+
+OBJECTS := $(patsubst %.c,$(BUILD_DIR)/%.o,$(SOURCES))
+TEST_OBJECTS := $(patsubst %.c,$(BUILD_DIR)/%.o,$(TEST_SOURCES))
+
+.PHONY: all test debug clean
 
 all: $(TARGET)
+
+test: $(TEST_TARGET)
 
 $(TARGET): $(OBJECTS)
 	mkdir -p $(dir $@)
@@ -18,8 +26,12 @@ $(BUILD_DIR)/%.o: %.c
 	mkdir -p $(dir $@)
 	$(CC) $(CFLAGS) $(INCLUDE) -c $< -o $@
 
+$(TEST_TARGET): $(OBJECTS) $(TEST_OBJECTS)
+	mkdir -p $(dir $@)
+	$(CC) $(CFLAGS) $(INCLUDE) $^ -o $@
+
 debug: $(TARGET)
 	gdb $(TARGET)
 
 clean:
-	rm -f $(OBJECTS) $(TARGET)
+	rm -rf $(BUILD_DIR)
