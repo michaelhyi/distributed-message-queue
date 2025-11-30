@@ -55,8 +55,12 @@ int queue_push(struct queue *queue, char *data, unsigned int data_size) {
     }
 
     struct queue_node *node = create_node(data, data_size);
+    if (node == NULL) {
+        pthread_mutex_unlock(&queue->lock);
+        return -1;
+    }
     
-    if (!queue->head) {
+    if (queue->head == NULL) {
         queue->head = node;
         queue->tail = node;
     } else if (queue->head == queue->tail) {
