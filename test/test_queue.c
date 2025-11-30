@@ -24,6 +24,8 @@ void test_queue_init_success() {
     assert(res >= 0);
     assert(queue.head == NULL);
     assert(queue.tail == NULL);
+
+    queue_destroy(&queue);
 }
 
 void test_queue_push_throws_error_when_invalid_args() {
@@ -43,6 +45,8 @@ void test_queue_push_throws_error_when_invalid_args() {
     assert(res2 < 0);
     assert(res3 < 0);
     assert(res4 < 0);
+
+    queue_destroy(&queue);
 }
 
 void test_queue_push_success_when_empty() {
@@ -60,7 +64,7 @@ void test_queue_push_success_when_empty() {
     assert(memcmp(queue.head->data, data, strlen(data)) == 0);
     assert(queue.head->next == NULL);
 
-    free(queue.head);
+    queue_destroy(&queue);
 }
 
 void test_queue_push_success_when_size_is_one() {
@@ -85,8 +89,7 @@ void test_queue_push_success_when_size_is_one() {
     assert(memcmp(queue.tail->data, "World!", 6) == 0);
     assert(queue.tail->next == NULL);
 
-    free(queue.head);
-    free(queue.tail);
+    queue_destroy(&queue);
 }
 
 void test_queue_push_success_when_size_is_greater_than_one() {
@@ -107,6 +110,10 @@ void test_queue_push_success_when_size_is_greater_than_one() {
 
     // act
     int res = queue_push(&queue, data, strlen(data));
+    struct queue_node *node1 = queue.head;
+    struct queue_node *node2 = node1->next;
+    struct queue_node *node3 = node2->next;
+    struct queue_node *node4 = node3->next;
 
     // assert
     assert(res >= 0);
@@ -114,24 +121,12 @@ void test_queue_push_success_when_size_is_greater_than_one() {
     assert(memcmp(queue.tail->data, "!", 1) == 0);
     assert(queue.tail->next == NULL);
 
-    struct queue_node *curr = queue.head;
-    assert(memcmp(curr->data, "Hello", 5) == 0);
-    struct queue_node *temp = curr;
-    curr = curr->next;
-    free(temp);
+    assert(memcmp(node1->data, "Hello", 5) == 0);
+    assert(memcmp(node2->data, ", ", 2) == 0);
+    assert(memcmp(node3->data, "World", 5) == 0);
+    assert(memcmp(node4->data, "!", 1) == 0);
 
-    assert(memcmp(curr->data, ", ", 3) == 0);
-    temp = curr;
-    curr = curr->next;
-    free(temp);
-
-    assert(memcmp(curr->data, "World", 5) == 0);
-    temp = curr;
-    curr = curr->next;
-    free(temp);
-
-    assert(memcmp(curr->data, "!", 1) == 0);
-    free(curr);
+    queue_destroy(&queue);
 }
 
 void test_queue_pop_throws_error_when_invalid_args() {
@@ -152,6 +147,8 @@ void test_queue_pop_returns_null_when_empty() {
 
     // assert
     assert(res == NULL);
+
+    queue_destroy(&queue);
 }
 
 void test_queue_pop_success_when_size_is_one() {
@@ -170,7 +167,7 @@ void test_queue_pop_success_when_size_is_one() {
     assert(queue.tail == NULL);
     assert(memcmp(res, data, strlen(data)) == 0);
 
-    free(res);
+    queue_destroy(&queue);
 }
 
 void test_queue_pop_success_when_size_is_greater_than_one() {
@@ -192,24 +189,17 @@ void test_queue_pop_success_when_size_is_greater_than_one() {
 
     // act
     char *res = queue_pop(&queue);
+    struct queue_node *node1 = queue.head;
+    struct queue_node *node2 = node1->next;
+    struct queue_node *node3 = node2->next;
 
     // assert
     assert(memcmp(res, "Hello", 5) == 0);
+    assert(memcmp(node1->data, ", ", 2) == 0);
+    assert(memcmp(node2->data, "World", 5) == 0);
+    assert(memcmp(node3->data, "!", 1) == 0);
 
-    struct queue_node *curr = queue.head;
-    assert(memcmp(curr->data, ", ", 2) == 0);
-    struct queue_node *temp = curr;
-    curr = curr->next;
-    free(temp);
-
-    assert(memcmp(curr->data, "World", 5) == 0);
-    temp = curr;
-    curr = curr->next;
-    free(temp);
-
-    assert(memcmp(curr->data, "!", 1) == 0);
-    curr = curr->next;
-    free(curr);
+    queue_destroy(&queue);
 }
 
 void (*tests[])(void) = {
