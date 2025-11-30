@@ -26,9 +26,9 @@ static struct queue_node *create_node(char *data, unsigned int data_size) {
         free(node);
         return NULL;
     }
-    strlcpy(node->data, data, data_size + 1);
+    memcpy(node->data, data, data_size);
 
-    time((long *) &node->timestamp);
+    time((time_t *) &node->timestamp);
     node->next = NULL;
     return node;
 }
