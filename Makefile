@@ -33,5 +33,8 @@ $(TEST_TARGET): $(OBJECTS) $(TEST_OBJECTS)
 debug: $(TARGET)
 	gdb $(TARGET)
 
+debug-test: $(TEST_TARGET)
+	gdb $(TEST_TARGET)
+
 clean:
 	rm -rf $(BUILD_DIR)
