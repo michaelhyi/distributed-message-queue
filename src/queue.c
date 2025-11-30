@@ -6,7 +6,8 @@
 #include <time.h>
 
 /**
- * Creates a new queue node with the given data.
+ * Creates a new queue node with the given data. Must be holding the queue's
+ * lock.
  * 
  * @param data data to place in node
  * @returns pointer to the queue node. `NULL` if error
@@ -41,11 +42,15 @@ int queue_init(struct queue *queue) {
     queue->head = NULL;
     queue->tail = NULL;
 
+    pthread_mutex_init(&queue->lock, NULL);
     return 0;
 }
 
 int queue_push(struct queue *queue, char *data, unsigned int data_size) {
+    pthread_mutex_lock(&queue->lock);
+
     if (queue == NULL || data == NULL || data_size == 0) {
+        pthread_mutex_unlock(&queue->lock);
         return -1;
     }
 
@@ -62,11 +67,14 @@ int queue_push(struct queue *queue, char *data, unsigned int data_size) {
         queue->tail = node;
     }
 
+    pthread_mutex_unlock(&queue->lock);
     return 0;
 }
 
 char *queue_pop(struct queue *queue) {
+    pthread_mutex_lock(&queue->lock);
     if (queue == NULL || queue->head == NULL) {
+        pthread_mutex_unlock(&queue->lock);
         return NULL;
     }
 
@@ -81,5 +89,21 @@ char *queue_pop(struct queue *queue) {
 
     char *data = node->data;
     free(node);
+    pthread_mutex_unlock(&queue->lock);
     return data;
+}
+
+void queue_destroy(struct queue *queue) {
+    pthread_mutex_lock(&queue->lock);
+    struct queue_node *curr = queue->head; 
+
+    while (curr != NULL) {
+        struct queue_node *temp = curr->next;
+        free(curr->data);
+        free(curr);
+        curr = temp;
+    }
+
+    pthread_mutex_unlock(&queue->lock);
+    pthread_mutex_destroy(&queue->lock);
 }

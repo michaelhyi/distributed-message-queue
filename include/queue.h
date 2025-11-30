@@ -1,9 +1,13 @@
 #ifndef QUEUE_H
 #define QUEUE_H
 
+#include <pthread.h>
+
 struct queue {
     struct queue_node *head;
     struct queue_node *tail;
+
+    pthread_mutex_t lock;
 };
 
 struct queue_node {
@@ -14,14 +18,14 @@ struct queue_node {
 };
 
 /**
- * Initializes the queue.
+ * Initializes a queue.
  * 
  * @returns -1 if error
  */
 int queue_init(struct queue *queue);
 
 /**
- * Pushes data on the queue.
+ * Pushes data on a queue.
  * 
  * @param queue the queue to update
  * @param data data to push on the queue
@@ -31,11 +35,18 @@ int queue_init(struct queue *queue);
 int queue_push(struct queue *queue, char *data, unsigned int data_size);
 
 /**
- * Pops data off the queue.
+ * Pops data off a queue.
  * 
  * @param queue the queue to update
  * @returns the data popped from the queue. `NULL` if error or empty queue
  */
 char *queue_pop(struct queue *queue);
+
+/**
+ * Destroys a queue.
+ * 
+ * @param queue the queue to destroy
+ */
+void queue_destroy(struct queue *queue);
 
 #endif
