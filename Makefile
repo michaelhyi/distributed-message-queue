@@ -2,7 +2,7 @@ CC = gcc
 CFLAGS = -Wall -g
 BUILD_DIR = build
 TARGET = $(BUILD_DIR)/distributed-message-queue
-INCLUDE = -Isrc/include
+INCLUDE = -Iinclude
 SOURCES = $(shell find . -name "*.c") 
 OBJECTS := $(patsubst %.c,$(BUILD_DIR)/%.o,$(SOURCES))
 
