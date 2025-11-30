@@ -2,6 +2,11 @@ CC = gcc
 CFLAGS = -Wall -g
 INCLUDE = -Iinclude
 
+GDB = gdb
+
+VALGRIND = valgrind
+VALGRIND_FLAGS = --leak-check=yes
+
 BUILD_DIR = build
 TARGET = $(BUILD_DIR)/distributed-message-queue
 TEST_TARGET = $(BUILD_DIR)/test-distributed-message-queue
@@ -31,16 +36,16 @@ $(TEST_TARGET): $(OBJECTS) $(TEST_OBJECTS)
 	$(CC) $(CFLAGS) $(INCLUDE) $^ -o $@
 
 debug: $(TARGET)
-	gdb $(TARGET)
+	$(GDB) $(TARGET)
 
 debug-test: $(TEST_TARGET)
-	gdb $(TEST_TARGET)
+	$(GDB) $(TEST_TARGET)
 
 memcheck: $(TARGET)
-	valgrind --leak-check=yes $(TARGET)
+	$(VALGRIND) $(VALGRIND_FLAGS) $(TARGET)
 
 memcheck-test: $(TEST_TARGET)
-	valgrind --leak-check=yes $(TEST_TARGET)
+	$(VALGRIND) $(VALGRIND_FLAGS) $(TEST_TARGET)
 
 clean:
 	rm -rf $(BUILD_DIR)
