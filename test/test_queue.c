@@ -167,6 +167,7 @@ void test_queue_pop_success_when_size_is_one() {
     assert(queue.tail == NULL);
     assert(memcmp(res, data, strlen(data)) == 0);
 
+    free(res);
     queue_destroy(&queue);
 }
 
@@ -199,6 +200,7 @@ void test_queue_pop_success_when_size_is_greater_than_one() {
     assert(memcmp(node2->data, "World", 5) == 0);
     assert(memcmp(node3->data, "!", 1) == 0);
 
+    free(res);
     queue_destroy(&queue);
 }
 
