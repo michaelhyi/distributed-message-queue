@@ -11,7 +11,8 @@ struct queue {
 };
 
 struct queue_node {
-    char *data;
+    void *data;
+    unsigned int data_size;
     unsigned long long timestamp;
 
     struct queue_node *next;
@@ -20,6 +21,7 @@ struct queue_node {
 /**
  * Initializes a queue.
  * 
+ * @param queue the queue to init
  * @returns -1 if error
  */
 int queue_init(struct queue *queue);
@@ -32,15 +34,17 @@ int queue_init(struct queue *queue);
  * @param data_size size of the data
  * @returns 0 if success, -1 if error
  */
-int queue_push(struct queue *queue, char *data, unsigned int data_size);
+int queue_push(struct queue *queue, void *data, unsigned int data_size);
 
 /**
  * Pops data off a queue.
  * 
  * @param queue the queue to update
- * @returns the data popped from the queue. `NULL` if error or empty queue
+ * @returns the node popped from the queue. `NULL` if error or empty queue
  */
-char *queue_pop(struct queue *queue);
+struct queue_node *queue_pop(struct queue *queue);
+
+// TODO: queue peek
 
 /**
  * Destroys a queue.

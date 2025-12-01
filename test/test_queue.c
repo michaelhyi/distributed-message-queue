@@ -5,6 +5,9 @@
 #include <stdlib.h>
 #include <string.h>
 
+// TOOD: test destroy_queue
+// TOOD: test errno
+
 void test_queue_init_throws_error_when_invalid_args() {
     // act
     int res = queue_init(NULL);
@@ -131,7 +134,7 @@ void test_queue_push_success_when_size_is_greater_than_one() {
 
 void test_queue_pop_throws_error_when_invalid_args() {
     // act
-    char *res = queue_pop(NULL);
+    struct queue_node *res = queue_pop(NULL);
 
     // assert
     assert(res == NULL);
@@ -143,7 +146,7 @@ void test_queue_pop_returns_null_when_empty() {
     queue_init(&queue);
 
     // act
-    char *res = queue_pop(&queue);
+    struct queue_node *res = queue_pop(&queue);
 
     // assert
     assert(res == NULL);
@@ -159,14 +162,16 @@ void test_queue_pop_success_when_size_is_one() {
     queue_push(&queue, data, strlen(data));
 
     // act
-    char *res = queue_pop(&queue);
+    struct queue_node *res = queue_pop(&queue);
 
     // assert
     assert(res != NULL);
     assert(queue.head == NULL);
     assert(queue.tail == NULL);
-    assert(memcmp(res, data, strlen(data)) == 0);
+    assert(memcmp(res->data, data, res->data_size) == 0);
+    assert(res->data_size == strlen(data));
 
+    free(res->data);
     free(res);
     queue_destroy(&queue);
 }
@@ -189,17 +194,19 @@ void test_queue_pop_success_when_size_is_greater_than_one() {
     queue_push(&queue, data, strlen(data));
 
     // act
-    char *res = queue_pop(&queue);
+    struct queue_node *res = queue_pop(&queue);
     struct queue_node *node1 = queue.head;
     struct queue_node *node2 = node1->next;
     struct queue_node *node3 = node2->next;
 
     // assert
-    assert(memcmp(res, "Hello", 5) == 0);
+    assert(memcmp(res->data, "Hello", 5) == 0);
+    assert(res->data_size == 5);
     assert(memcmp(node1->data, ", ", 2) == 0);
     assert(memcmp(node2->data, "World", 5) == 0);
     assert(memcmp(node3->data, "!", 1) == 0);
 
+    free(res->data);
     free(res);
     queue_destroy(&queue);
 }
@@ -226,6 +233,5 @@ int main() {
         tests[i]();
     }
 
-    printf("All tests passed!\n");
     return 0;
 }

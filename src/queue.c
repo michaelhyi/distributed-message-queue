@@ -12,7 +12,7 @@
  * @param data data to place in node
  * @returns pointer to the queue node. `NULL` if error
  */
-static struct queue_node *create_node(char *data, unsigned int data_size) {
+static struct queue_node *create_node(void *data, unsigned int data_size) {
     if (!data || data_size == 0) {
         return NULL;
     }
@@ -28,6 +28,7 @@ static struct queue_node *create_node(char *data, unsigned int data_size) {
         return NULL;
     }
     memcpy(node->data, data, data_size);
+    node->data_size = data_size;
 
     time((time_t *) &node->timestamp);
     node->next = NULL;
@@ -46,7 +47,7 @@ int queue_init(struct queue *queue) {
     return 0;
 }
 
-int queue_push(struct queue *queue, char *data, unsigned int data_size) {
+int queue_push(struct queue *queue, void *data, unsigned int data_size) {
     if (queue == NULL || data == NULL || data_size == 0) {
         return -1;
     }
@@ -74,7 +75,7 @@ int queue_push(struct queue *queue, char *data, unsigned int data_size) {
     return 0;
 }
 
-char *queue_pop(struct queue *queue) {
+struct queue_node *queue_pop(struct queue *queue) {
     if (queue == NULL) {
         return NULL;
     }
@@ -94,10 +95,8 @@ char *queue_pop(struct queue *queue) {
         queue->head = queue->head->next;
     }
 
-    char *data = node->data;
-    free(node);
     pthread_mutex_unlock(&queue->lock);
-    return data;
+    return node;
 }
 
 void queue_destroy(struct queue *queue) {
