@@ -92,9 +92,9 @@ struct queue_node *queue_peek(struct queue *queue) {
     return node;
 }
 
-void queue_destroy(struct queue *queue) {
+int queue_destroy(struct queue *queue) {
     if (queue == NULL) {
-        return;
+        return -1;
     }
 
     struct queue_node *curr = queue->head; 
@@ -108,4 +108,5 @@ void queue_destroy(struct queue *queue) {
 
     queue->head = NULL;
     queue->tail = NULL;
+    return 0;
 }

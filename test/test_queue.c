@@ -39,9 +39,9 @@ void test_queue_push_throws_error_when_invalid_args() {
 
     // act
     int res1 = queue_push(NULL, NULL, 0);
-    int res2 = queue_push(&queue, NULL, 0);
-    int res3 = queue_push(NULL, data, 0);
-    int res4 = queue_push(NULL, NULL, 1);
+    int res2 = queue_push(NULL, data, 1);
+    int res3 = queue_push(&queue, NULL, 1);
+    int res4 = queue_push(&queue, data, 0);
 
     // assert
     assert(res1 < 0);
@@ -173,8 +173,7 @@ void test_queue_pop_success_when_size_is_one() {
     assert(res != NULL);
     assert(queue.head == NULL);
     assert(queue.tail == NULL);
-    assert(memcmp(res->data, data, res->data_size) == 0);
-    assert(res->data_size == strlen(data));
+    assert(memcmp(res->data, data, strlen(data)) == 0);
 
     // cleanup
     free(res->data);
@@ -207,7 +206,6 @@ void test_queue_pop_success_when_size_is_greater_than_one() {
 
     // assert
     assert(memcmp(res->data, "Hello", 5) == 0);
-    assert(res->data_size == 5);
     assert(memcmp(node1->data, ", ", 2) == 0);
     assert(memcmp(node2->data, "World", 5) == 0);
     assert(memcmp(node3->data, "!", 1) == 0);
@@ -263,10 +261,17 @@ void test_queue_peek_success() {
 
     // assert
     assert(memcmp(res->data, "Hello", 5) == 0);
-    assert(res->data_size == 5);
 
     // cleanup
     queue_destroy(&queue);
+}
+
+void test_queue_destroy_throws_error_when_invalid_args() {
+    // act
+    int res = queue_destroy(NULL);
+
+    // assert
+    assert(res < 0);
 }
 
 void test_queue_destroy() {
@@ -287,9 +292,10 @@ void test_queue_destroy() {
     queue_push(&queue, data, strlen(data));
 
     // act
-    queue_destroy(&queue);
+    int res = queue_destroy(&queue);
 
     // assert
+    assert(res >= 0);
     assert(queue.head == NULL);
     assert(queue.tail == NULL);
 }
@@ -312,6 +318,7 @@ void (*tests[])(void) = {
     test_queue_peek_returns_null_when_empty,
     test_queue_peek_success,
 
+    test_queue_destroy_throws_error_when_invalid_args,
     test_queue_destroy
 };
 
