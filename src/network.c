@@ -102,6 +102,8 @@ int init_server(unsigned int server_port) {
         pthread_create(&threads[i], NULL, handle_requests, NULL);
     }
 
+    printf("server listening on port %d\n", server_port);
+
     for (int i = 0; i < NUM_REQUEST_HANDLER_THREADS; i++) {
         pthread_join(threads[i], NULL);
     }
