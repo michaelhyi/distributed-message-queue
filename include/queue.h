@@ -45,14 +45,14 @@ struct queue_node *queue_pop(struct queue *queue);
  */
 struct queue_node *queue_peek(struct queue *queue);
 
-// TODO: make this return an int
 // TODO: errno
 
 /**
  * Destroys a queue. No threads should hold the queue's lock.
  * 
  * @param queue the queue to destroy
+ * @returns 0 if success, -1 if error
  */
-void queue_destroy(struct queue *queue);
+int queue_destroy(struct queue *queue);
 
 #endif
