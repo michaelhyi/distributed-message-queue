@@ -28,7 +28,7 @@ $(BUILD_DIR)/%.o: %.c
 	@mkdir -p $(dir $@)
 	$(CC) $(CFLAGS) -c $< -o $@
 
-$(BUILD_DIR)/test/%: $(OBJ) $(BUILD_DIR)/test/%.o
+$(BUILD_DIR)/test/%: $(filter-out $(BUILD_DIR)/src/main.o,$(OBJ)) $(BUILD_DIR)/test/%.o
 	@mkdir -p $(dir $@)
 	$(CC) $(CFLAGS) $^ -o $@
 
