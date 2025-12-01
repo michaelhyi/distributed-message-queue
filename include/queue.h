@@ -1,20 +1,13 @@
 #ifndef QUEUE_H
 #define QUEUE_H
 
-#include <pthread.h>
-
 struct queue {
     struct queue_node *head;
     struct queue_node *tail;
-
-    pthread_mutex_t lock;
 };
 
 struct queue_node {
     void *data;
-    unsigned int data_size;
-    unsigned long long timestamp;
-
     struct queue_node *next;
 };
 
@@ -51,6 +44,9 @@ struct queue_node *queue_pop(struct queue *queue);
  * @returns the head node of the queue, `NULL` if error or empty queue
  */
 struct queue_node *queue_peek(struct queue *queue);
+
+// TODO: make this return an int
+// TODO: errno
 
 /**
  * Destroys a queue. No threads should hold the queue's lock.

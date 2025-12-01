@@ -1,9 +1,7 @@
 #include "queue.h"
 
-#include <limits.h>
 #include <stdlib.h>
 #include <string.h>
-#include <time.h>
 
 /**
  * Creates a new queue node with the given data. Must be holding the queue's
@@ -28,9 +26,7 @@ static struct queue_node *create_node(void *data, unsigned int data_size) {
         return NULL;
     }
     memcpy(node->data, data, data_size);
-    node->data_size = data_size;
 
-    time((time_t *) &node->timestamp);
     node->next = NULL;
     return node;
 }
@@ -42,8 +38,6 @@ int queue_init(struct queue *queue) {
 
     queue->head = NULL;
     queue->tail = NULL;
-
-    pthread_mutex_init(&queue->lock, NULL);
     return 0;
 }
 
@@ -52,11 +46,9 @@ int queue_push(struct queue *queue, void *data, unsigned int data_size) {
         return -1;
     }
 
-    pthread_mutex_lock(&queue->lock);
     struct queue_node *node = create_node(data, data_size);
 
     if (node == NULL) {
-        pthread_mutex_unlock(&queue->lock);
         return -1;
     }
     
@@ -71,18 +63,11 @@ int queue_push(struct queue *queue, void *data, unsigned int data_size) {
         queue->tail = node;
     }
 
-    pthread_mutex_unlock(&queue->lock);
     return 0;
 }
 
 struct queue_node *queue_pop(struct queue *queue) {
-    if (queue == NULL) {
-        return NULL;
-    }
-
-    pthread_mutex_lock(&queue->lock);
-    if (queue->head == NULL) {
-        pthread_mutex_unlock(&queue->lock);
+    if (queue == NULL || queue->head == NULL) {
         return NULL;
     }
 
@@ -95,23 +80,15 @@ struct queue_node *queue_pop(struct queue *queue) {
         queue->head = queue->head->next;
     }
 
-    pthread_mutex_unlock(&queue->lock);
     return node;
 }
 
 struct queue_node *queue_peek(struct queue *queue) {
-    if (queue == NULL) {
-        return NULL;
-    }
-
-    pthread_mutex_lock(&queue->lock);
-    if (queue->head == NULL) {
-        pthread_mutex_unlock(&queue->lock);
+    if (queue == NULL || queue->head == NULL) {
         return NULL;
     }
 
     struct queue_node *node = queue->head;
-    pthread_mutex_unlock(&queue->lock);
     return node;
 }
 
@@ -120,7 +97,6 @@ void queue_destroy(struct queue *queue) {
         return;
     }
 
-    pthread_mutex_lock(&queue->lock);
     struct queue_node *curr = queue->head; 
 
     while (curr != NULL) {
@@ -132,7 +108,4 @@ void queue_destroy(struct queue *queue) {
 
     queue->head = NULL;
     queue->tail = NULL;
-
-    pthread_mutex_unlock(&queue->lock);
-    pthread_mutex_destroy(&queue->lock);
 }
