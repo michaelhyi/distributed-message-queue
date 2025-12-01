@@ -40,7 +40,7 @@ int queue_push(struct queue *queue, void *data, unsigned int data_size);
  * Pops data off a queue.
  * 
  * @param queue the queue to update
- * @returns the node popped from the queue. `NULL` if error or empty queue
+ * @returns the node popped from the queue, `NULL` if error or empty queue
  */
 struct queue_node *queue_pop(struct queue *queue);
 
@@ -48,7 +48,7 @@ struct queue_node *queue_pop(struct queue *queue);
  * Gets the head of a queue.
  * 
  * @param queue the queue to peek
- * @returns the head node of the queue. `NULL` if error or empty queue
+ * @returns the head node of the queue, `NULL` if error or empty queue
  */
 struct queue_node *queue_peek(struct queue *queue);
 
