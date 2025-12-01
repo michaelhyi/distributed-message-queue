@@ -99,6 +99,22 @@ struct queue_node *queue_pop(struct queue *queue) {
     return node;
 }
 
+struct queue_node *queue_peek(struct queue *queue) {
+    if (queue == NULL) {
+        return NULL;
+    }
+
+    pthread_mutex_lock(&queue->lock);
+    if (queue->head == NULL) {
+        pthread_mutex_unlock(&queue->lock);
+        return NULL;
+    }
+
+    struct queue_node *node = queue->head;
+    pthread_mutex_unlock(&queue->lock);
+    return node;
+}
+
 void queue_destroy(struct queue *queue) {
     if (queue == NULL) {
         return;

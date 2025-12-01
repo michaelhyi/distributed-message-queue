@@ -44,7 +44,13 @@ int queue_push(struct queue *queue, void *data, unsigned int data_size);
  */
 struct queue_node *queue_pop(struct queue *queue);
 
-// TODO: queue peek
+/**
+ * Gets the head of a queue.
+ * 
+ * @param queue the queue to peek
+ * @returns the head node of the queue. `NULL` if error or empty queue
+ */
+struct queue_node *queue_peek(struct queue *queue);
 
 /**
  * Destroys a queue.
