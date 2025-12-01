@@ -5,7 +5,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-// TOOD: test destroy_queue
 // TOOD: test errno
 
 void test_queue_init_throws_error_when_invalid_args() {
@@ -28,6 +27,7 @@ void test_queue_init_success() {
     assert(queue.head == NULL);
     assert(queue.tail == NULL);
 
+    // cleanup
     queue_destroy(&queue);
 }
 
@@ -49,6 +49,7 @@ void test_queue_push_throws_error_when_invalid_args() {
     assert(res3 < 0);
     assert(res4 < 0);
 
+    // cleanup
     queue_destroy(&queue);
 }
 
@@ -67,6 +68,7 @@ void test_queue_push_success_when_empty() {
     assert(memcmp(queue.head->data, data, strlen(data)) == 0);
     assert(queue.head->next == NULL);
 
+    // cleanup
     queue_destroy(&queue);
 }
 
@@ -92,6 +94,7 @@ void test_queue_push_success_when_size_is_one() {
     assert(memcmp(queue.tail->data, "World!", 6) == 0);
     assert(queue.tail->next == NULL);
 
+    // cleanup
     queue_destroy(&queue);
 }
 
@@ -129,6 +132,7 @@ void test_queue_push_success_when_size_is_greater_than_one() {
     assert(memcmp(node3->data, "World", 5) == 0);
     assert(memcmp(node4->data, "!", 1) == 0);
 
+    // cleanup
     queue_destroy(&queue);
 }
 
@@ -151,6 +155,7 @@ void test_queue_pop_returns_null_when_empty() {
     // assert
     assert(res == NULL);
 
+    // cleanup
     queue_destroy(&queue);
 }
 
@@ -171,6 +176,7 @@ void test_queue_pop_success_when_size_is_one() {
     assert(memcmp(res->data, data, res->data_size) == 0);
     assert(res->data_size == strlen(data));
 
+    // cleanup
     free(res->data);
     free(res);
     queue_destroy(&queue);
@@ -206,9 +212,86 @@ void test_queue_pop_success_when_size_is_greater_than_one() {
     assert(memcmp(node2->data, "World", 5) == 0);
     assert(memcmp(node3->data, "!", 1) == 0);
 
+    // cleanup
     free(res->data);
     free(res);
     queue_destroy(&queue);
+}
+
+void test_queue_peek_throws_error_when_invalid_args() {
+    // act
+    struct queue_node *res = queue_peek(NULL);
+
+    // assert
+    assert(res == NULL);
+}
+
+void test_queue_peek_returns_null_when_empty() {
+    // arrange
+    struct queue queue;
+    queue_init(&queue);
+
+    // act
+    struct queue_node *res = queue_peek(&queue);
+
+    // assert
+    assert(res == NULL);
+
+    // cleanup
+    queue_destroy(&queue);
+}
+
+void test_queue_peek_success() {
+    // arrange
+    struct queue queue;
+    queue_init(&queue);
+
+    char *data = "Hello";
+    queue_push(&queue, data, strlen(data));
+
+    data = ", ";
+    queue_push(&queue, data, strlen(data));
+
+    data = "World";
+    queue_push(&queue, data, strlen(data));
+
+    data = "!";
+    queue_push(&queue, data, strlen(data));
+
+    // act
+    struct queue_node *res = queue_peek(&queue);
+
+    // assert
+    assert(memcmp(res->data, "Hello", 5) == 0);
+    assert(res->data_size == 5);
+
+    // cleanup
+    queue_destroy(&queue);
+}
+
+void test_queue_destroy() {
+    // arrange
+    struct queue queue;
+    queue_init(&queue);
+
+    char *data = "Hello";
+    queue_push(&queue, data, strlen(data));
+
+    data = ", ";
+    queue_push(&queue, data, strlen(data));
+
+    data = "World";
+    queue_push(&queue, data, strlen(data));
+
+    data = "!";
+    queue_push(&queue, data, strlen(data));
+
+    // act
+    queue_destroy(&queue);
+
+    // assert
+    assert(queue.head == NULL);
+    assert(queue.tail == NULL);
 }
 
 void (*tests[])(void) = {
@@ -223,7 +306,13 @@ void (*tests[])(void) = {
     test_queue_pop_throws_error_when_invalid_args,
     test_queue_pop_returns_null_when_empty,
     test_queue_pop_success_when_size_is_one,
-    test_queue_pop_success_when_size_is_greater_than_one
+    test_queue_pop_success_when_size_is_greater_than_one,
+
+    test_queue_peek_throws_error_when_invalid_args,
+    test_queue_peek_returns_null_when_empty,
+    test_queue_peek_success,
+
+    test_queue_destroy
 };
 
 int main() {

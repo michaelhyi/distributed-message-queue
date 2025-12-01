@@ -130,6 +130,9 @@ void queue_destroy(struct queue *queue) {
         curr = temp;
     }
 
+    queue->head = NULL;
+    queue->tail = NULL;
+
     pthread_mutex_unlock(&queue->lock);
     pthread_mutex_destroy(&queue->lock);
 }

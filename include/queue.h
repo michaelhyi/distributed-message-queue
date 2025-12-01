@@ -53,7 +53,7 @@ struct queue_node *queue_pop(struct queue *queue);
 struct queue_node *queue_peek(struct queue *queue);
 
 /**
- * Destroys a queue.
+ * Destroys a queue. No threads should hold the queue's lock.
  * 
  * @param queue the queue to destroy
  */
