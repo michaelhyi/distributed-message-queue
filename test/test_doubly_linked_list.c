@@ -1,11 +1,11 @@
 #include "doubly_linked_list.h"
 
-#include <assert.h>
+#include <criterion/criterion.h>
 #include <errno.h>
 #include <stdlib.h>
 #include <string.h>
 
-void test_doubly_linked_list_init_throws_error_on_invalid_args() {
+Test(doubly_linked_list, test_doubly_linked_list_init_throws_error_on_invalid_args) {
     // arrange
     errno = 0;
 
@@ -13,11 +13,11 @@ void test_doubly_linked_list_init_throws_error_on_invalid_args() {
     int res = doubly_linked_list_init(NULL);
 
     // assert
-    assert(res < 0);
-    assert(errno == EINVAL);
+    cr_assert(res < 0);
+    cr_assert_eq(EINVAL, errno);
 }
 
-void test_doubly_linked_list_init_success() {
+Test(doubly_linked_list, test_doubly_linked_list_init_success) {
     // arrange
     errno = 0;
     struct doubly_linked_list list;
@@ -26,13 +26,13 @@ void test_doubly_linked_list_init_success() {
     int res = doubly_linked_list_init(&list);
 
     // arrange
-    assert(res >= 0);
-    assert(errno == 0);
-    assert(list.head == NULL);
-    assert(list.tail == NULL);
+    cr_assert(res >= 0);
+    cr_assert_eq(0, errno);
+    cr_assert_null(list.head);
+    cr_assert_null(list.tail);
 }
 
-void test_doubly_linked_list_add_throws_error_on_invalid_args() {
+Test(doubly_linked_list, test_doubly_linked_list_add_throws_error_on_invalid_args) {
     // arrange
     errno = 0;
 
@@ -62,18 +62,18 @@ void test_doubly_linked_list_add_throws_error_on_invalid_args() {
     int errno4 = errno;
 
     // assert
-    assert(res1 < 0);
-    assert(res2 < 0);
-    assert(res3 < 0);
-    assert(res4 < 0);
+    cr_assert(res1 < 0);
+    cr_assert(res2 < 0);
+    cr_assert(res3 < 0);
+    cr_assert(res4 < 0);
 
-    assert(errno1 == EINVAL);
-    assert(errno2 == EINVAL);
-    assert(errno3 == EINVAL);
-    assert(errno4 == EINVAL);
+    cr_assert_eq(EINVAL, errno1);
+    cr_assert_eq(EINVAL, errno2);
+    cr_assert_eq(EINVAL, errno3);
+    cr_assert_eq(EINVAL, errno4);
 }
 
-void test_doubly_linked_list_add_success_when_empty_list() {
+Test(doubly_linked_list, test_doubly_linked_list_add_success_when_empty_list) {
     // arrange
     errno = 0;
 
@@ -86,18 +86,18 @@ void test_doubly_linked_list_add_success_when_empty_list() {
     int res = doubly_linked_list_add(&list, data, strlen(data));
 
     // assert
-    assert(res >= 0);
-    assert(errno == 0);
-    assert(list.head == list.tail);
-    assert(memcmp(list.head->data, data, strlen(data)) == 0);
-    assert(list.head->prev == NULL);
-    assert(list.head->next == NULL);
+    cr_assert(res >= 0);
+    cr_assert_eq(0, errno);
+    cr_assert_eq(list.head, list.tail);
+    cr_assert_arr_eq(list.head->data, data, strlen(data));
+    cr_assert_null(list.head->prev);
+    cr_assert_null(list.head->next);
 
     // cleanup
     doubly_linked_list_destroy(&list);
 }
 
-void test_doubly_linked_list_add_success_when_list_size_one() {
+Test(doubly_linked_list, test_doubly_linked_list_add_success_when_list_size_one) {
     // arrange
     errno = 0;
 
@@ -113,23 +113,23 @@ void test_doubly_linked_list_add_success_when_list_size_one() {
     int res = doubly_linked_list_add(&list, data, strlen(data));
 
     // assert
-    assert(res >= 0);
-    assert(errno == 0);
-    assert(list.head != list.tail);
+    cr_assert(res >= 0);
+    cr_assert_eq(0, errno);
+    cr_assert(list.head != list.tail);
 
-    assert(memcmp(list.head->data, "Hello, ", 7) == 0);
-    assert(list.head->prev == NULL);
-    assert(list.head->next == list.tail);
+    cr_assert_arr_eq(list.head->data, "Hello, ", 7);
+    cr_assert_null(list.head->prev);
+    cr_assert_eq(list.tail, list.head->next);
 
-    assert(memcmp(list.tail->data, "World!", 6) == 0);
-    assert(list.tail->prev == list.head);
-    assert(list.tail->next == NULL);
+    cr_assert_arr_eq(list.tail->data, "World!", 6);
+    cr_assert_eq(list.head, list.tail->prev);
+    cr_assert_null(list.tail->next);
 
     // cleanup
     doubly_linked_list_destroy(&list);
 }
 
-void test_doubly_linked_list_add_success_when_list_size_greater_than_one() {
+Test(doubly_linked_list, test_doubly_linked_list_add_success_when_list_size_greater_than_one) {
     // arrange
     errno = 0;
 
@@ -151,29 +151,29 @@ void test_doubly_linked_list_add_success_when_list_size_greater_than_one() {
     struct doubly_linked_list_node *node3 = node2->next;
 
     // assert
-    assert(res >= 0);
-    assert(errno == 0);
-    assert(list.head != list.tail);
-    assert(list.head == node1);
-    assert(list.tail == node3);
+    cr_assert(res >= 0);
+    cr_assert_eq(0, errno);
+    cr_assert(list.head != list.tail);
+    cr_assert_eq(list.head, node1);
+    cr_assert_eq(list.tail, node3);
 
-    assert(memcmp(node1->data, "Hello", 5) == 0);
-    assert(node1->prev == NULL);
-    assert(node1->next == node2);
+    cr_assert_arr_eq(node1->data, "Hello", 5);
+    cr_assert_null(node1->prev);
+    cr_assert_eq(node2, node1->next);
 
-    assert(memcmp(node2->data, ", ", 2) == 0);
-    assert(node2->prev == node1);
-    assert(node2->next == node3);
+    cr_assert_arr_eq(node2->data, ", ", 2);
+    cr_assert_eq(node1, node2->prev);
+    cr_assert_eq(node3, node2->next);
 
-    assert(memcmp(node3->data, "World!", 6) == 0);
-    assert(node3->prev == node2);
-    assert(node3->next == NULL);
+    cr_assert_arr_eq(node3->data, "World!", 6);
+    cr_assert_eq(node2, node3->prev);
+    cr_assert_null(node3->next);
 
     // cleanup
     doubly_linked_list_destroy(&list);
 }
 
-void test_doubly_linked_list_remove_throws_error_on_invalid_args() {
+Test(doubly_linked_list, test_doubly_linked_list_remove_throws_error_on_invalid_args) {
     // arrange
     errno = 0;
 
@@ -196,16 +196,16 @@ void test_doubly_linked_list_remove_throws_error_on_invalid_args() {
     int errno3 = errno;
 
     // assert
-    assert(res1 < 0);
-    assert(res2 < 0);
-    assert(res3 < 0);
+    cr_assert(res1 < 0);
+    cr_assert(res2 < 0);
+    cr_assert(res3 < 0);
 
-    assert(errno1 == EINVAL);
-    assert(errno2 == EINVAL);
-    assert(errno3 == EINVAL);
+    cr_assert_eq(EINVAL, errno1);
+    cr_assert_eq(EINVAL, errno2);
+    cr_assert_eq(EINVAL, errno3);
 }
 
-void test_doubly_linked_list_remove_throws_error_when_empty_list() {
+Test(doubly_linked_list, test_doubly_linked_list_remove_throws_error_when_empty_list) {
     // arrange
     errno = 0;
 
@@ -216,11 +216,11 @@ void test_doubly_linked_list_remove_throws_error_when_empty_list() {
     int res = doubly_linked_list_remove(&list, (void *)0x1);
 
     // assert
-    assert(res < 0);
-    assert(errno == EINVAL);
+    cr_assert(res < 0);
+    cr_assert_eq(EINVAL, errno);
 }
 
-void test_doubly_linked_list_remove_success_when_list_size_one() {
+Test(doubly_linked_list, test_doubly_linked_list_remove_success_when_list_size_one) {
     // arrange
     errno = 0;
 
@@ -234,13 +234,13 @@ void test_doubly_linked_list_remove_success_when_list_size_one() {
     int res = doubly_linked_list_remove(&list, list.head);
 
     // assert
-    assert(res >= 0);
-    assert(errno == 0);
-    assert(list.head == NULL);
-    assert(list.tail == NULL);
+    cr_assert(res >= 0);
+    cr_assert_eq(0, errno);
+    cr_assert_null(list.head);
+    cr_assert_null(list.tail);
 }
 
-void test_doubly_linked_list_remove_head_success_when_list_size_greater_than_two() {
+Test(doubly_linked_list, test_doubly_linked_list_remove_head_success_when_list_size_greater_than_two) {
     // arrange
     errno = 0;
 
@@ -262,24 +262,24 @@ void test_doubly_linked_list_remove_head_success_when_list_size_greater_than_two
     struct doubly_linked_list_node *node2 = node1->next;
 
     // assert
-    assert(res >= 0);
-    assert(errno == 0);
-    assert(list.head == node1);
-    assert(list.tail == node2);
+    cr_assert(res >= 0);
+    cr_assert_eq(0, errno);
+    cr_assert_eq(node1, list.head);
+    cr_assert_eq(node2, list.tail);
 
-    assert(memcmp(node1->data, ", ", 2) == 0);
-    assert(node1->prev == NULL);
-    assert(node1->next == node2);
+    cr_assert_arr_eq(node1->data, ", ", 2);
+    cr_assert_null(node1->prev);
+    cr_assert_eq(node2, node1->next);
 
-    assert(memcmp(node2->data, "World!", 6) == 0);
-    assert(node2->prev == node1);
-    assert(node2->next == NULL);
+    cr_assert_arr_eq(node2->data, "World!", 6);
+    cr_assert_eq(node1, node2->prev);
+    cr_assert_null(node2->next);
 
     // cleanup
     doubly_linked_list_destroy(&list);
 }
 
-void test_doubly_linked_list_remove_middle_success_when_list_size_greater_than_two() {
+Test(doubly_linked_list, test_doubly_linked_list_remove_middle_success_when_list_size_greater_than_two) {
     // arrange
     errno = 0;
 
@@ -301,24 +301,24 @@ void test_doubly_linked_list_remove_middle_success_when_list_size_greater_than_t
     struct doubly_linked_list_node *node2 = node1->next;
 
     // assert
-    assert(res >= 0);
-    assert(errno == 0);
-    assert(list.head == node1);
-    assert(list.tail == node2);
+    cr_assert(res >= 0);
+    cr_assert_eq(0, errno);
+    cr_assert_eq(node1,list.head);
+    cr_assert_eq(node2, list.tail);
 
-    assert(memcmp(node1->data, "Hello", 5) == 0);
-    assert(node1->prev == NULL);
-    assert(node1->next == node2);
+    cr_assert_arr_eq(node1->data, "Hello", 5);
+    cr_assert_null(node1->prev);
+    cr_assert_eq(node2, node1->next);
 
-    assert(memcmp(node2->data, "World!", 6) == 0);
-    assert(node2->prev == node1);
-    assert(node2->next == NULL);
+    cr_assert_arr_eq(node2->data, "World!", 6);
+    cr_assert_eq(node1, node2->prev);
+    cr_assert_null(node2->next);
 
     // cleanup
     doubly_linked_list_destroy(&list);
 }
-
-void test_doubly_linked_list_remove_tail_success_when_list_size_greater_than_two() {
+ 
+Test(doubly_linked_list, test_doubly_linked_list_remove_tail_success_when_list_size_greater_than_two) {
     // arrange
     errno = 0;
 
@@ -340,24 +340,24 @@ void test_doubly_linked_list_remove_tail_success_when_list_size_greater_than_two
     struct doubly_linked_list_node *node2 = node1->next;
 
     // assert
-    assert(res >= 0);
-    assert(errno == 0);
-    assert(list.head == node1);
-    assert(list.tail == node2);
+    cr_assert(res >= 0);
+    cr_assert_eq(0, errno);
+    cr_assert_eq(node1, list.head);
+    cr_assert_eq(node2, list.tail);
 
-    assert(memcmp(node1->data, "Hello", 5) == 0);
-    assert(node1->prev == NULL);
-    assert(node1->next == node2);
+    cr_assert_arr_eq(node1->data, "Hello", 5);
+    cr_assert_null(node1->prev);
+    cr_assert_eq(node2, node1->next);
 
-    assert(memcmp(node2->data, ", ", 2) == 0);
-    assert(node2->prev == node1);
-    assert(node2->next == NULL);
+    cr_assert_arr_eq(node2->data, ", ", 2);
+    cr_assert_eq(node1, node2->prev);
+    cr_assert_null(node2->next);
 
     // cleanup
     doubly_linked_list_destroy(&list);
 }
 
-void test_doubly_linked_list_destroy_throws_error_on_invalid_args() {
+Test(doubly_linked_list, test_doubly_linked_list_destroy_throws_error_on_invalid_args) {
     // arrange
     errno = 0;
 
@@ -365,11 +365,11 @@ void test_doubly_linked_list_destroy_throws_error_on_invalid_args() {
     int res = doubly_linked_list_destroy(NULL);
 
     // assert
-    assert(res < 0);
-    assert(errno == EINVAL);
+    cr_assert(res < 0);
+    cr_assert_eq(EINVAL, errno);
 }
 
-void test_doubly_linked_list_destroy_success() {
+Test(doubly_linked_list, test_doubly_linked_list_destroy_success) {
     // arrange
     errno = 0;
 
@@ -389,38 +389,8 @@ void test_doubly_linked_list_destroy_success() {
     int res = doubly_linked_list_destroy(&list);
 
     // assert
-    assert(res >= 0);
-    assert(errno == 0);
-    assert(list.head == NULL);
-    assert(list.tail == NULL);
-}
-
-void (*tests[])(void) = {
-    test_doubly_linked_list_init_throws_error_on_invalid_args,
-    test_doubly_linked_list_init_success,
-
-    test_doubly_linked_list_add_throws_error_on_invalid_args,
-    test_doubly_linked_list_add_success_when_empty_list,
-    test_doubly_linked_list_add_success_when_list_size_one,
-    test_doubly_linked_list_add_success_when_list_size_greater_than_one,
-
-    test_doubly_linked_list_remove_throws_error_on_invalid_args,
-    test_doubly_linked_list_remove_throws_error_when_empty_list,
-    test_doubly_linked_list_remove_success_when_list_size_one,
-    test_doubly_linked_list_remove_head_success_when_list_size_greater_than_two,
-    test_doubly_linked_list_remove_middle_success_when_list_size_greater_than_two,
-    test_doubly_linked_list_remove_tail_success_when_list_size_greater_than_two,
-
-    test_doubly_linked_list_destroy_throws_error_on_invalid_args,
-    test_doubly_linked_list_destroy_success
-};
-
-int main() {
-    int num_tests = sizeof(tests) / sizeof(tests[0]);
-
-    for (int i = 0; i < num_tests; i++) {
-        tests[i]();
-    }
-
-    return 0;
+    cr_assert(res >= 0);
+    cr_assert_eq(0, errno);
+    cr_assert_null(list.head);
+    cr_assert_null(list.tail);
 }
