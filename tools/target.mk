@@ -1,17 +1,19 @@
-ROOT_DIR := $(realpath $(dir $(lastword $(MAKEFILE_LIST)))/..)
-include $(ROOT_DIR)/tools/config.mk
+.PHONY: test debug debug-test memcheck clean
 
-# copy of /tools/target.mk, with slight changes to targets since this doesn't
-# have a `main` function
-
-.PHONY: all test debug-test clean
-
-all: $(OBJ)
+# link src obj files
+$(TARGET): $(OBJ)
+	@mkdir -p $(dir $@)
+	$(CC) $(CFLAGS) $(OBJ) $(LIB_OBJ) -o $(TARGET)
 
 # link test obj files
 $(TEST_TARGET): $(filter-out $(BUILD_DIR)/debug/src/main.o,$(DEBUG_OBJ)) $(TEST_OBJ)
 	@mkdir -p $(dir $@)
 	$(CC) $(CFLAGS) $(C_TEST_FLAGS) $^ $(LIB_OBJ) -o $(TEST_TARGET)
+
+# link debug obj files
+$(DEBUG_TARGET): $(DEBUG_OBJ)
+	@mkdir -p $(dir $@)
+	$(CC) $(CFLAGS) $(DEBUG_OBJ) $(LIB_OBJ) -o $(DEBUG_TARGET)
 
 # compile src files
 $(BUILD_DIR)/src/%.o: src/%.c
@@ -31,8 +33,14 @@ $(BUILD_DIR)/debug/src/%.o: src/%.c
 test: $(TEST_TARGET)
 	$(VALGRIND) $(VALGRIND_FLAGS) $(TEST_TARGET)
 
+debug: $(DEBUG_TARGET)
+	$(GDB) $(DEBUG_TARGET)
+
 debug-test: $(TEST_TARGET)
 	$(GDB) $(TEST_TARGET)
+
+memcheck: $(TARGET)
+	$(VALGRIND) $(VALGRIND_FLAGS) $(TARGET)
 
 clean:
 	@rm -rf $(BUILD_DIR)
