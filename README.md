@@ -10,23 +10,6 @@ queue utilizes a custom application-layer protocol called DMQP.
 - Security
 - Fault Tolerance
 
-### Quick Start
-
-#### Requirements
-- Docker
-
-Enter the Docker container:
-```bash
-# run `chmod +x ./docker.sh` if permission denied
-./scripts/docker.sh # add flag --attach to attach to running container
-```
-
-Once you've entered the Docker container, compile and start the service:
-```
-make
-./build/bin/run
-```
-
 ### Design
 
 #### Architecture
@@ -37,3 +20,14 @@ Topics, to the user, are different logical queues. Topics then route requests to
 partitions, which are horizontal shards of queues.
 
 ![Architecture diagram of the distributed message queue](.github/architecture.png)
+
+### Quick Start
+
+#### Requirements
+- Docker
+
+Enter the Docker container:
+```bash
+# run `chmod +x ./scripts/docker.sh` if permission denied
+./scripts/docker.sh # add flag --attach to attach to running container
+```
