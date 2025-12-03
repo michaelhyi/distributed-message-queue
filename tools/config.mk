@@ -5,9 +5,6 @@ MODULE := $(notdir $(CURDIR))
 CC = gcc
 CFLAGS = -I$(INCLUDE_DIR) -Wall -Wextra -Werror -pedantic -std=c11
 
-# TODO: not needed for all makefiles
-CFLAGS += -D_POSIX_C_SOURCE=200809L # allows struct sigaction to compile
-
 C_OPT_FLAGS = -O3
 C_TEST_FLAGS = -lcriterion
 C_DEBUG_FLAGS = -O0 -g

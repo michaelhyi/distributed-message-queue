@@ -1,9 +1,12 @@
 ROOT_DIR := $(realpath $(dir $(lastword $(MAKEFILE_LIST)))/..)
 include $(ROOT_DIR)/tools/config.mk
 
+CFLAGS += -D_POSIX_C_SOURCE=200809L # allows struct sigaction to compile
+
 # copy of /tools/target.mk, with slight changes to targets since this doesn't
 # have a `main` function
 
+# TODO: must fix bugs with test, debug-test
 .PHONY: all test debug-test clean
 
 all: $(OBJ)
