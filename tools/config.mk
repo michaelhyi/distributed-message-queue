@@ -1,9 +1,9 @@
 ROOT_DIR := $(realpath $(dir $(lastword $(MAKEFILE_LIST)))/..)
-INCLUDE_DIR := $(ROOT_DIR)/include
+GLOBAL_INCLUDE_DIR := $(ROOT_DIR)/include
 MODULE := $(notdir $(CURDIR))
 
 CC = gcc
-CFLAGS = -I$(INCLUDE_DIR) -Wall -Wextra -Werror -pedantic -std=c11
+CFLAGS = -I$(GLOBAL_INCLUDE_DIR) -Iinclude -Wall -Wextra -Werror -pedantic -std=c11
 
 C_OPT_FLAGS = -O3
 C_TEST_FLAGS = -lcriterion

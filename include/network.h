@@ -4,40 +4,13 @@
 /**
  * TODO:
  * 1. docs
- * 2. separate protocol from network code
- * 3. errno
- * 4. clean up resources
- * 5. unit testing?
- * 6. timeouts
- * 7. signal handling
- * 8. heartbeats
+ * 2. errno
+ * 3. clean up resources
+ * 4. unit testing?
+ * 5. timeouts
+ * 6. signal handling
+ * 7. heartbeats
  */
-
-#define DEFAULT_SERVER_PORT 8080
-#define MAX_PAYLOAD_LENGTH 1 * MB
-#define MB 1 << 20
-#define ENCRYPTED_FLAG 0x1
-
-enum message_type { PUSH, POP, PEEK, HEARTBEAT, HEARTBEAT_ACK };
-
-/**
- * flags:
- * ----------------------
- * | 31 - 1 |     0     |
- * ----------------------
- * | unused | encrypted |
- * ----------------------
- */
-struct message_header {
-    enum message_type type;
-    int flags;
-    unsigned int length;
-};
-
-struct message {
-    struct message_header header;
-    void *payload;
-};
 
 /**
  * Initializes a TCP client connection to a server.
@@ -53,26 +26,23 @@ int client_init(const char *server_host, unsigned int server_port);
  * Initializes a TCP server.
  *
  * @param server_port the port to bind the server to
+ * @param message_handler pointer to a function from the application-layer
+ * protocol that handles messages. passed down to connection handler thread to
+ * handle messages received at server
  * @returns 0 on success, -1 on error with global `errno` set
  */
-int server_init(unsigned int server_port);
+int server_init(unsigned int server_port,
+                int (*message_handler)(void *message,
+                                       unsigned int message_size));
 
 /**
- * Sends a message to a TCP connection.
+ * Reads bytes into a buffer from a TCP stream.
  *
- * @param conn_socket TCP connection to send message to
- * @param message the message to send
+ * @param conn_socket connection to read from
+ * @param buf buffer to write to
+ * @param message_size number of bytes to read
  * @returns 0 if success, -1 if error with global `errno` set
  */
-int send_message(int conn_socket, struct message message);
-
-/**
- * Receives a message from a TCP connection.
- *
- * @param conn_socket TCP connection to receive message from
- * @returns the message received at the server, `NULL` if error with global
- * `errno` set
- */
-struct message *receive_message(int conn_socket);
+int read_message(int conn_socket, void *buf, unsigned int message_size);
 
 #endif
