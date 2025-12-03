@@ -10,7 +10,7 @@ while [[ $# -gt 0 ]]; do
       shift
       ;;
     *)
-      echo "error: unknown option $1"
+      echo "unknown option $1"
       exit 1
       ;;
   esac
@@ -20,7 +20,7 @@ if $ATTACH; then
   if docker ps --format '{{.Names}}' | grep -q "^${IMAGE}$"; then
     docker exec -it "$IMAGE" /bin/bash
   else
-    echo "error: no running container ${IMAGE}"
+    echo "no running container ${IMAGE}"
     exit 1
   fi
 else
