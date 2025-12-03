@@ -52,7 +52,7 @@ struct message {
  * @returns the socket file descriptor for the client connection, -1 if error
  * with global `errno` set
  */
-int init_client(const char *server_host, unsigned int server_port);
+int client_init(const char *server_host, unsigned int server_port);
 
 /**
  * Initializes a TCP server.
@@ -60,7 +60,7 @@ int init_client(const char *server_host, unsigned int server_port);
  * @param server_port the port to bind the server to
  * @returns 0 on success, -1 on error with global `errno` set
  */
-int init_server(unsigned int server_port);
+int server_init(unsigned int server_port);
 
 /**
  * Sends a message to a TCP connection.

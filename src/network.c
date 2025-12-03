@@ -59,7 +59,7 @@ static void *connection_handler(void *arg) {
     return NULL;
 }
 
-int init_client(const char *server_host, unsigned int server_port) {
+int client_init(const char *server_host, unsigned int server_port) {
     int client_socket = socket(AF_INET, SOCK_STREAM, 0);
     if (client_socket < 0) {
         return -1;
@@ -85,7 +85,7 @@ int init_client(const char *server_host, unsigned int server_port) {
     return client_socket;
 }
 
-int init_server(unsigned int server_port) {
+int server_init(unsigned int server_port) {
     int server_socket = socket(AF_INET, SOCK_STREAM, 0);
     if (server_socket < 0) {
         return -1;
