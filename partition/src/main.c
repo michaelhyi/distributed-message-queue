@@ -1,7 +1,8 @@
+#include <getopt.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <unistd.h>
 
+#include "dmqp.h"
 #include "network.h"
 
 int main(int argc, char *argv[]) {
@@ -20,7 +21,7 @@ int main(int argc, char *argv[]) {
         }
     }
 
-    int res = server_init(server_port);
+    int res = server_init(server_port, handle_server_message);
     if (res < 0) {
         return 1;
     }
