@@ -6,15 +6,14 @@ CFLAGS += -D_POSIX_C_SOURCE=200809L # allows struct sigaction to compile
 # copy of /tools/target.mk, with slight changes to targets since this doesn't
 # have a `main` function
 
-# TODO: must fix bugs with test, debug-test
 .PHONY: all test debug-test clean
 
 all: $(OBJ)
 
 # link test obj files
-$(TEST_TARGET): $(filter-out $(BUILD_DIR)/debug/src/main.o,$(DEBUG_OBJ)) $(TEST_OBJ)
+$(TEST_TARGET): $(TEST_OBJ) $(DEBUG_OBJ)
 	@mkdir -p $(dir $@)
-	$(CC) $(CFLAGS) $(C_TEST_FLAGS) $^ $(LIB_OBJ) -o $(TEST_TARGET)
+	$(CC) $(CFLAGS) $(C_TEST_FLAGS) $^ -o $(TEST_TARGET)
 
 # compile src files
 $(BUILD_DIR)/src/%.o: src/%.c
