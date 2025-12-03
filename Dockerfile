@@ -4,6 +4,7 @@ RUN apt-get update && apt-get install -y \
 	build-essential \
 	gdb \
 	valgrind \
-    libcriterion-dev
+    libcriterion-dev \ 
+    clang-format
 
 CMD ["/bin/bash"]
