@@ -6,7 +6,7 @@ $(TARGET): $(OBJ)
 	$(CC) $(CFLAGS) $(OBJ) $(LIB_OBJ) -o $(TARGET)
 
 # link test obj files
-$(TEST_TARGET): $(filter-out $(BUILD_DIR)/debug/src/main.o,$(DEBUG_OBJ)) $(TEST_OBJ)
+$(TEST_TARGET): $(TEST_OBJ) $(filter-out $(BUILD_DIR)/debug/src/main.o,$(DEBUG_OBJ)) 
 	@mkdir -p $(dir $@)
 	$(CC) $(CFLAGS) $(C_TEST_FLAGS) $^ $(LIB_OBJ) -o $(TEST_TARGET)
 
