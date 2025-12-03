@@ -3,14 +3,13 @@
 
 /**
  * TODO:
- * 1. get small server working first
+ * 1. separate protocol from network
  * 2. errno
  * 3. clean up resources
- * 4. get small client working first
- * 5. unit testing?
- * 6. timeouts
- * 7. signal handling
- * 8. heartbeats
+ * 4. unit testing?
+ * 5. timeouts
+ * 6. signal handling
+ * 7. heartbeats
  */
 
 #define DEFAULT_SERVER_PORT 8080
@@ -48,12 +47,12 @@ struct message {
 /**
  * Initializes a TCP client connection to a server.
  * 
- * @param server_address the server address
+ * @param server_host the server host address
  * @param server_port the server port
  * @returns the socket file descriptor for the client connection, -1 if error
  * with global `errno` set
  */
-int init_client(const char *server_address, unsigned int server_port);
+int init_client(const char *server_host, unsigned int server_port);
 
 /**
  * Initializes a TCP server.

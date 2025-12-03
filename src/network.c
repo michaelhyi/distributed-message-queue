@@ -1,5 +1,6 @@
 #include "network.h"
 
+#include <arpa/inet.h>
 #include <errno.h>
 #include <netinet/in.h>
 #include <pthread.h>
@@ -58,6 +59,32 @@ static void *connection_handler(void *arg) {
     return NULL;
 }
 
+int init_client(const char *server_host, unsigned int server_port) {
+    int client_socket = socket(AF_INET, SOCK_STREAM, 0);
+    if (client_socket < 0) {
+        return -1;
+    }
+
+    struct sockaddr_in server_address;
+    memset(&server_address, 0, sizeof(server_address));
+    server_address.sin_family = AF_INET;
+    server_address.sin_port = htons(server_port);
+
+    int res = inet_pton(AF_INET, server_host, &server_address.sin_addr);
+    if (res < 0) {
+        close(client_socket);
+        return -1;
+    }
+
+    res = connect(client_socket, (const struct sockaddr *) &server_address, sizeof(server_address));
+    if (res < 0) {
+        close(client_socket);
+        return -1;
+    }
+
+    return client_socket;
+}
+
 int init_server(unsigned int server_port) {
     int server_socket = socket(AF_INET, SOCK_STREAM, 0);
     if (server_socket < 0) {
@@ -104,6 +131,20 @@ int init_server(unsigned int server_port) {
 
         pthread_t tid;
         pthread_create(&tid, NULL, connection_handler, client_socket_copy);
+    }
+
+    return 0;
+}
+
+int send_message(int conn_socket, struct message message) {
+    int n = send(conn_socket, (const void *) &message.header, sizeof(struct message_header), 0);
+    if (n < 0) {
+        return -1;
+    }
+
+    n = send(conn_socket, message.payload, message.header.length, 0);
+    if (n < 0) {
+        return -1;
     }
 
     return 0;
