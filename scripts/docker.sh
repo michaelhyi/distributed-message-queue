@@ -1,7 +1,10 @@
 #!/usr/bin/env bash
 
+set -euo pipefail
+
 IMAGE=distributed-message-queue
 ATTACH=false
+ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -24,10 +27,12 @@ if $ATTACH; then
     exit 1
   fi
 else
-    docker build -t "$IMAGE" .
+    docker stop "$IMAGE" || true
+    docker rm "$IMAGE" || true
+    docker build -f "$ROOT_DIR/Dockerfile" -t "$IMAGE" "$ROOT_DIR"
     docker run -it \
         --name "$IMAGE" \
-        -v "$(pwd)":/root \
+        -v "$ROOT_DIR":/root \
         -w /root \
         "$IMAGE"
 fi

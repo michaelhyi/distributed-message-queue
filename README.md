@@ -18,7 +18,7 @@ queue utilizes a custom application-layer protocol called DMQP.
 Enter the Docker container:
 ```bash
 # run `chmod +x ./docker.sh` if permission denied
-./docker.sh
+./scripts/docker.sh # add flag --attach to attach to running container
 ```
 
 Once you've entered the Docker container, compile and start the service:
