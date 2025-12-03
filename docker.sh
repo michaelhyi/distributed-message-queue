@@ -1,4 +1,33 @@
 #!/usr/bin/env bash
 
-docker build -t distributed-message-queue .
-docker run -it -v "$(pwd)":/root -w /root distributed-message-queue
+IMAGE=distributed-message-queue
+ATTACH=false
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --attach)
+      ATTACH=true
+      shift
+      ;;
+    *)
+      echo "error: unknown option $1"
+      exit 1
+      ;;
+  esac
+done
+
+if $ATTACH; then
+  if docker ps --format '{{.Names}}' | grep -q "^${IMAGE}$"; then
+    docker exec -it "$IMAGE" /bin/bash
+  else
+    echo "error: no running container ${IMAGE}"
+    exit 1
+  fi
+else
+    docker build -t "$IMAGE" .
+    docker run -it \
+        --name "$IMAGE" \
+        -v "$(pwd)":/root \
+        -w /root \
+        "$IMAGE"
+fi
