@@ -1,9 +1,11 @@
+# TODO: this is such a mess
+
 CC = gcc
-CFLAGS = -Iinclude -Wall -Wextra -pedantic -Werror -std=c11
+CFLAGS = -Iinclude -Wall -Wextra -Werror -pedantic -std=c11
 CFLAGS += -D_POSIX_C_SOURCE=200809L # allows struct sigaction to compile
-OPT_CFLAGS = -O3
-TEST_CFLAGS = -lcriterion
-DEBUG_CFLAGS = -O0 -g
+C_OPT_FLAGS = -O3
+C_TEST_FLAGS = -lcriterion
+C_DEBUG_FLAGS = -O0 -g
 
 GDB = gdb
 
@@ -11,37 +13,42 @@ VALGRIND = valgrind
 VALGRIND_FLAGS = --leak-check=yes
 
 BUILD_DIR = build
-TARGET = $(BUILD_DIR)/run
-TEST_TARGET := $(BUILD_DIR)/test-run
-DEBUG_TARGET := $(BUILD_DIR)/debug
+TARGET = $(BUILD_DIR)/bin/run
+TEST_TARGET := $(BUILD_DIR)/bin/test
+DEBUG_TARGET := $(BUILD_DIR)/bin/debug
 
 SRC = $(shell find src -name "*.c") 
 TEST_SRC = $(shell find test -name "*.c") 
 
 OBJ := $(patsubst %.c,$(BUILD_DIR)/%.o,$(SRC))
 TEST_OBJ := $(patsubst %.c,$(BUILD_DIR)/%.o,$(TEST_SRC))
+DEBUG_OBJ := $(patsubst %.c,$(BUILD_DIR)/debug/%.o,$(SRC))
 
 .PHONY: test debug debug-test memcheck clean
 
 $(TARGET): $(OBJ)
 	@mkdir -p $(dir $@)
-	$(CC) $(CFLAGS) $(OPT_CFLAGS) $(OBJ) -o $(TARGET)
+	$(CC) $(CFLAGS) $(OBJ) -o $(TARGET)
 
-$(BUILD_DIR)/%.o: %.c
+$(TEST_TARGET): $(filter-out $(BUILD_DIR)/debug/src/main.o,$(DEBUG_OBJ)) $(TEST_OBJ)
 	@mkdir -p $(dir $@)
-	$(CC) $(CFLAGS) -c $< -o $@
+	$(CC) $(CFLAGS) $(C_TEST_FLAGS) $^ -o $(TEST_TARGET)
 
-$(TEST_TARGET): $(filter-out $(BUILD_DIR)/src/main.o,$(OBJ)) $(TEST_OBJ)
+$(DEBUG_TARGET): $(DEBUG_OBJ)
 	@mkdir -p $(dir $@)
-	$(CC) $(CFLAGS) $(TEST_CFLAGS) $(DEBUG_CFLAGS) $^ -o $(TEST_TARGET)
+	$(CC) $(CFLAGS) $(DEBUG_OBJ) -o $(DEBUG_TARGET)
+
+$(BUILD_DIR)/src/%.o: src/%.c
+	@mkdir -p $(dir $@)
+	$(CC) $(CFLAGS) $(C_OPT_FLAGS) -c $< -o $@
 
 $(BUILD_DIR)/test/%.o: test/%.c
 	@mkdir -p $(dir $@)
-	$(CC) $(CFLAGS) $(TEST_CFLAGS) -c $< -o $@
+	$(CC) $(CFLAGS) $(C_DEBUG_FLAGS) -c $< -o $@
 
-$(DEBUG_TARGET): $(OBJ)
+$(BUILD_DIR)/debug/src/%.o: src/%.c
 	@mkdir -p $(dir $@)
-	$(CC) $(CFLAGS) $(DEBUG_CFLAGS) $(OBJ) -o $(DEBUG_TARGET)
+	$(CC) $(CFLAGS) $(C_DEBUG_FLAGS) -c $< -o $@
 
 test: $(TEST_TARGET)
 	$(VALGRIND) $(VALGRIND_FLAGS) $(TEST_TARGET)
