@@ -3,13 +3,14 @@
 
 /**
  * TODO:
- * 1. separate protocol from network
- * 2. errno
- * 3. clean up resources
- * 4. unit testing?
- * 5. timeouts
- * 6. signal handling
- * 7. heartbeats
+ * 1. docs
+ * 2. separate protocol from network code
+ * 3. errno
+ * 4. clean up resources
+ * 5. unit testing?
+ * 6. timeouts
+ * 7. signal handling
+ * 8. heartbeats
  */
 
 #define DEFAULT_SERVER_PORT 8080
