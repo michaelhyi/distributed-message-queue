@@ -12,7 +12,7 @@
 
 /**
  * Reads bytes into a buffer from a TCP stream.
- * 
+ *
  * @param fd file descriptor to read from
  * @param buf buffer to write to
  * @param length number of bytes to read
@@ -22,7 +22,7 @@ static int read_stream(int fd, void *buf, unsigned int length) {
     unsigned int total = 0;
 
     while (total < length) {
-        int n = read(fd, (char *) buf + total, length - total);
+        int n = read(fd, (char *)buf + total, length - total);
         if (n <= 0) {
             return -1;
         }
@@ -35,11 +35,11 @@ static int read_stream(int fd, void *buf, unsigned int length) {
 
 /**
  * Listens on a TCP connection.
- * 
+ *
  * @param arg pointer to connection socket. must be freed once locally copied
  */
 static void *connection_handler(void *arg) {
-    int conn_socket = *(int *) arg;
+    int conn_socket = *(int *)arg;
     free(arg);
 
     while (1) {
@@ -49,7 +49,7 @@ static void *connection_handler(void *arg) {
         }
 
         // TODO: do something with message
-        printf("received message: %s\n", (const char *) message->payload);
+        printf("received message: %s\n", (const char *)message->payload);
 
         free(message->payload);
         free(message);
@@ -76,7 +76,8 @@ int client_init(const char *server_host, unsigned int server_port) {
         return -1;
     }
 
-    res = connect(client_socket, (const struct sockaddr *) &server_address, sizeof(server_address));
+    res = connect(client_socket, (const struct sockaddr *)&server_address,
+                  sizeof(server_address));
     if (res < 0) {
         close(client_socket);
         return -1;
@@ -98,7 +99,8 @@ int server_init(unsigned int server_port) {
     server_address.sin_port = htons(server_port);
     socklen_t address_len = sizeof(server_address);
 
-    int res = bind(server_socket, (const struct sockaddr *) &server_address, address_len);
+    int res = bind(server_socket, (const struct sockaddr *)&server_address,
+                   address_len);
     if (res < 0) {
         close(server_socket);
         return -1;
@@ -116,7 +118,9 @@ int server_init(unsigned int server_port) {
         struct sockaddr_in client_address;
         socklen_t client_address_len = sizeof(client_address);
 
-        int client_socket = accept(server_socket, (struct sockaddr *) &client_address, &client_address_len);
+        int client_socket =
+            accept(server_socket, (struct sockaddr *)&client_address,
+                   &client_address_len);
         if (client_socket < 0) {
             // TODO: error handling
             continue;
@@ -126,7 +130,7 @@ int server_init(unsigned int server_port) {
         if (client_socket_copy == NULL) {
             close(client_socket);
             continue;
-        } 
+        }
         *client_socket_copy = client_socket;
 
         pthread_t tid;
@@ -137,7 +141,8 @@ int server_init(unsigned int server_port) {
 }
 
 int send_message(int conn_socket, struct message message) {
-    int n = send(conn_socket, (const void *) &message.header, sizeof(struct message_header), 0);
+    int n = send(conn_socket, (const void *)&message.header,
+                 sizeof(struct message_header), 0);
     if (n < 0) {
         return -1;
     }
@@ -151,13 +156,14 @@ int send_message(int conn_socket, struct message message) {
 }
 
 struct message *receive_message(int conn_socket) {
-    struct message *message = malloc(sizeof (struct message));
+    struct message *message = malloc(sizeof(struct message));
     if (message == NULL) {
         errno = EINVAL;
         return NULL;
     }
 
-    int res = read_stream(conn_socket, &message->header, sizeof(struct message_header));
+    int res = read_stream(conn_socket, &message->header,
+                          sizeof(struct message_header));
     if (res < 0) {
         free(message);
         return NULL;

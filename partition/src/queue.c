@@ -7,7 +7,7 @@
 /**
  * Creates a new queue node with the given data. Must be holding the queue's
  * lock.
- * 
+ *
  * @param data data to place in node
  * @returns pointer to the queue node, `NULL` if error with global `errno` set
  */
@@ -56,7 +56,7 @@ int queue_push(struct queue *queue, void *data, unsigned int data_size) {
     if (node == NULL) {
         return -1;
     }
-    
+
     if (queue->head == NULL) {
         queue->head = node;
         queue->tail = node;
@@ -115,7 +115,7 @@ int queue_destroy(struct queue *queue) {
         return -1;
     }
 
-    struct queue_node *curr = queue->head; 
+    struct queue_node *curr = queue->head;
 
     while (curr != NULL) {
         struct queue_node *temp = curr->next;

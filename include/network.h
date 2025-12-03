@@ -18,13 +18,7 @@
 #define MB 1 << 20
 #define ENCRYPTED_FLAG 0x1
 
-enum message_type {
-    PUSH,
-    POP,
-    PEEK,
-    HEARTBEAT,
-    HEARTBEAT_ACK
-};
+enum message_type { PUSH, POP, PEEK, HEARTBEAT, HEARTBEAT_ACK };
 
 /**
  * flags:
@@ -47,7 +41,7 @@ struct message {
 
 /**
  * Initializes a TCP client connection to a server.
- * 
+ *
  * @param server_host the server host address
  * @param server_port the server port
  * @returns the socket file descriptor for the client connection, -1 if error
@@ -57,7 +51,7 @@ int client_init(const char *server_host, unsigned int server_port);
 
 /**
  * Initializes a TCP server.
- * 
+ *
  * @param server_port the port to bind the server to
  * @returns 0 on success, -1 on error with global `errno` set
  */
@@ -65,7 +59,7 @@ int server_init(unsigned int server_port);
 
 /**
  * Sends a message to a TCP connection.
- * 
+ *
  * @param conn_socket TCP connection to send message to
  * @param message the message to send
  * @returns 0 if success, -1 if error with global `errno` set
@@ -74,7 +68,7 @@ int send_message(int conn_socket, struct message message);
 
 /**
  * Receives a message from a TCP connection.
- * 
+ *
  * @param conn_socket TCP connection to receive message from
  * @returns the message received at the server, `NULL` if error with global
  * `errno` set

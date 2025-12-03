@@ -16,7 +16,6 @@ int main() {
     message.header = header;
     message.payload = data;
 
-
     int client_socket = client_init("127.0.0.1", 8080);
     if (client_socket < 0) {
         return 1;

@@ -39,7 +39,7 @@ Test(queue, test_queue_push_throws_error_when_invalid_args) {
     errno = 0;
     struct queue queue;
     queue_init(&queue);
-    char *data = (char *) 0x1;
+    char *data = (char *)0x1;
 
     // act
     int res1 = queue_push(NULL, NULL, 0);

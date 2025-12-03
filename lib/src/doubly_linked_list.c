@@ -15,13 +15,15 @@ int doubly_linked_list_init(struct doubly_linked_list *list) {
     return 0;
 }
 
-int doubly_linked_list_add(struct doubly_linked_list *list, void *data, unsigned int data_size) {
+int doubly_linked_list_add(struct doubly_linked_list *list, void *data,
+                           unsigned int data_size) {
     if (list == NULL || data == NULL || data_size == 0) {
         errno = EINVAL;
         return -1;
     }
 
-    struct doubly_linked_list_node *node = malloc(sizeof(struct doubly_linked_list_node));
+    struct doubly_linked_list_node *node =
+        malloc(sizeof(struct doubly_linked_list_node));
     if (node == NULL) {
         errno = ENOMEM;
         return -1;
@@ -50,7 +52,8 @@ int doubly_linked_list_add(struct doubly_linked_list *list, void *data, unsigned
     return 0;
 }
 
-int doubly_linked_list_remove(struct doubly_linked_list *list, struct doubly_linked_list_node *node) {
+int doubly_linked_list_remove(struct doubly_linked_list *list,
+                              struct doubly_linked_list_node *node) {
     if (list == NULL || node == NULL) {
         errno = EINVAL;
         return -1;

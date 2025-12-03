@@ -10,13 +10,13 @@ int main(int argc, char *argv[]) {
     int opt;
     while ((opt = getopt(argc, argv, "p:")) != -1) {
         switch (opt) {
-            case 'p':
-                server_port = atoi(optarg);
-                break;
-            case '?':
-                return 1;
-            default:
-                break;
+        case 'p':
+            server_port = atoi(optarg);
+            break;
+        case '?':
+            return 1;
+        default:
+            break;
         }
     }
 

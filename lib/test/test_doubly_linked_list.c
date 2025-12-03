@@ -5,7 +5,8 @@
 #include <stdlib.h>
 #include <string.h>
 
-Test(doubly_linked_list, test_doubly_linked_list_init_throws_error_on_invalid_args) {
+Test(doubly_linked_list,
+     test_doubly_linked_list_init_throws_error_on_invalid_args) {
     // arrange
     errno = 0;
 
@@ -32,7 +33,8 @@ Test(doubly_linked_list, test_doubly_linked_list_init_success) {
     cr_assert_null(list.tail);
 }
 
-Test(doubly_linked_list, test_doubly_linked_list_add_throws_error_on_invalid_args) {
+Test(doubly_linked_list,
+     test_doubly_linked_list_add_throws_error_on_invalid_args) {
     // arrange
     errno = 0;
 
@@ -97,7 +99,8 @@ Test(doubly_linked_list, test_doubly_linked_list_add_success_when_empty_list) {
     doubly_linked_list_destroy(&list);
 }
 
-Test(doubly_linked_list, test_doubly_linked_list_add_success_when_list_size_one) {
+Test(doubly_linked_list,
+     test_doubly_linked_list_add_success_when_list_size_one) {
     // arrange
     errno = 0;
 
@@ -129,7 +132,8 @@ Test(doubly_linked_list, test_doubly_linked_list_add_success_when_list_size_one)
     doubly_linked_list_destroy(&list);
 }
 
-Test(doubly_linked_list, test_doubly_linked_list_add_success_when_list_size_greater_than_one) {
+Test(doubly_linked_list,
+     test_doubly_linked_list_add_success_when_list_size_greater_than_one) {
     // arrange
     errno = 0;
 
@@ -173,7 +177,8 @@ Test(doubly_linked_list, test_doubly_linked_list_add_success_when_list_size_grea
     doubly_linked_list_destroy(&list);
 }
 
-Test(doubly_linked_list, test_doubly_linked_list_remove_throws_error_on_invalid_args) {
+Test(doubly_linked_list,
+     test_doubly_linked_list_remove_throws_error_on_invalid_args) {
     // arrange
     errno = 0;
 
@@ -205,7 +210,8 @@ Test(doubly_linked_list, test_doubly_linked_list_remove_throws_error_on_invalid_
     cr_assert_eq(EINVAL, errno3);
 }
 
-Test(doubly_linked_list, test_doubly_linked_list_remove_throws_error_when_empty_list) {
+Test(doubly_linked_list,
+     test_doubly_linked_list_remove_throws_error_when_empty_list) {
     // arrange
     errno = 0;
 
@@ -220,7 +226,8 @@ Test(doubly_linked_list, test_doubly_linked_list_remove_throws_error_when_empty_
     cr_assert_eq(EINVAL, errno);
 }
 
-Test(doubly_linked_list, test_doubly_linked_list_remove_success_when_list_size_one) {
+Test(doubly_linked_list,
+     test_doubly_linked_list_remove_success_when_list_size_one) {
     // arrange
     errno = 0;
 
@@ -240,7 +247,9 @@ Test(doubly_linked_list, test_doubly_linked_list_remove_success_when_list_size_o
     cr_assert_null(list.tail);
 }
 
-Test(doubly_linked_list, test_doubly_linked_list_remove_head_success_when_list_size_greater_than_two) {
+Test(
+    doubly_linked_list,
+    test_doubly_linked_list_remove_head_success_when_list_size_greater_than_two) {
     // arrange
     errno = 0;
 
@@ -279,7 +288,9 @@ Test(doubly_linked_list, test_doubly_linked_list_remove_head_success_when_list_s
     doubly_linked_list_destroy(&list);
 }
 
-Test(doubly_linked_list, test_doubly_linked_list_remove_middle_success_when_list_size_greater_than_two) {
+Test(
+    doubly_linked_list,
+    test_doubly_linked_list_remove_middle_success_when_list_size_greater_than_two) {
     // arrange
     errno = 0;
 
@@ -303,7 +314,7 @@ Test(doubly_linked_list, test_doubly_linked_list_remove_middle_success_when_list
     // assert
     cr_assert(res >= 0);
     cr_assert_eq(0, errno);
-    cr_assert_eq(node1,list.head);
+    cr_assert_eq(node1, list.head);
     cr_assert_eq(node2, list.tail);
 
     cr_assert_arr_eq(node1->data, "Hello", 5);
@@ -317,8 +328,10 @@ Test(doubly_linked_list, test_doubly_linked_list_remove_middle_success_when_list
     // cleanup
     doubly_linked_list_destroy(&list);
 }
- 
-Test(doubly_linked_list, test_doubly_linked_list_remove_tail_success_when_list_size_greater_than_two) {
+
+Test(
+    doubly_linked_list,
+    test_doubly_linked_list_remove_tail_success_when_list_size_greater_than_two) {
     // arrange
     errno = 0;
 
@@ -357,7 +370,8 @@ Test(doubly_linked_list, test_doubly_linked_list_remove_tail_success_when_list_s
     doubly_linked_list_destroy(&list);
 }
 
-Test(doubly_linked_list, test_doubly_linked_list_destroy_throws_error_on_invalid_args) {
+Test(doubly_linked_list,
+     test_doubly_linked_list_destroy_throws_error_on_invalid_args) {
     // arrange
     errno = 0;
 
