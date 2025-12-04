@@ -12,7 +12,8 @@
 
 struct connection_handler_args {
     int conn_socket;
-    int (*message_handler)(void *message, unsigned int message_size);
+    int (*message_handler)(void *message, unsigned int message_size,
+                           int conn_socket);
 };
 
 /**
@@ -28,12 +29,12 @@ static void *connection_handler(void *arg) {
 
     while (1) {
         char buf[1024];
-        int res = read_message(args.conn_socket, buf, sizeof(buf));
+        int res = receive_message(args.conn_socket, buf, sizeof(buf));
         if (res < 0) {
             break;
         }
 
-        args.message_handler(buf, sizeof(buf));
+        args.message_handler(buf, sizeof(buf), args.conn_socket);
     }
 
     close(args.conn_socket);
@@ -68,8 +69,8 @@ int client_init(const char *server_host, unsigned int server_port) {
 }
 
 int server_init(unsigned int server_port,
-                int (*message_handler)(void *message,
-                                       unsigned int message_size)) {
+                int (*message_handler)(void *message, unsigned int message_size,
+                                       int conn_socket)) {
     int server_socket = socket(AF_INET, SOCK_STREAM, 0);
     if (server_socket < 0) {
         return -1;
@@ -125,7 +126,7 @@ int server_init(unsigned int server_port,
     return 0;
 }
 
-int read_message(int conn_socket, void *buf, unsigned int message_size) {
+int receive_message(int conn_socket, void *buf, unsigned int message_size) {
     unsigned int total = 0;
 
     while (total < message_size) {

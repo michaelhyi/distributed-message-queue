@@ -34,9 +34,12 @@ struct dmqp_message {
  *
  * @param message message received at server
  * @param message_size number of bytes received at server
+ * @param conn_socket the TCP connection that received the message. included in
+ * case the handler needs more bytes than `message_size`
  * @returns 0 if success, -1 if error with global `errno` set
  */
-int handle_server_message(void *message, unsigned int message_size);
+int handle_server_message(void *message, unsigned int message_size,
+                          int conn_socket);
 
 /**
  * Handles a message received at a DMQP server.

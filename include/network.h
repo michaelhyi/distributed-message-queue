@@ -32,8 +32,8 @@ int client_init(const char *server_host, unsigned int server_port);
  * @returns 0 on success, -1 on error with global `errno` set
  */
 int server_init(unsigned int server_port,
-                int (*message_handler)(void *message,
-                                       unsigned int message_size));
+                int (*message_handler)(void *message, unsigned int message_size,
+                                       int conn_socket));
 
 /**
  * Reads bytes into a buffer from a TCP stream.
@@ -43,6 +43,6 @@ int server_init(unsigned int server_port,
  * @param message_size number of bytes to read
  * @returns 0 if success, -1 if error with global `errno` set
  */
-int read_message(int conn_socket, void *buf, unsigned int message_size);
+int receive_message(int conn_socket, void *buf, unsigned int message_size);
 
 #endif
