@@ -13,6 +13,13 @@ extern pthread_mutex_t queue_lock;
  *
  * @returns 0 if success, -1 if error with global `errno` set
  */
-int partition_init();
+int partition_init(void);
+
+/**
+ * Destroys a partition.
+ *
+ * @returns 0 if success, -1 if error with global `errno` set
+ */
+int partition_destroy(void);
 
 #endif
