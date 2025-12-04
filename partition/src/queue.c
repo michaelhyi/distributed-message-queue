@@ -71,7 +71,7 @@ int queue_push(struct queue *queue, void *data, unsigned int data_size) {
     return 0;
 }
 
-struct queue_node *queue_pop(struct queue *queue) {
+void *queue_pop(struct queue *queue) {
     if (queue == NULL) {
         errno = EINVAL;
         return NULL;
@@ -91,10 +91,12 @@ struct queue_node *queue_pop(struct queue *queue) {
         queue->head = queue->head->next;
     }
 
-    return node;
+    void *data = node->data;
+    free(node);
+    return data;
 }
 
-struct queue_node *queue_peek(struct queue *queue) {
+void *queue_peek(struct queue *queue) {
     if (queue == NULL) {
         errno = EINVAL;
         return NULL;
@@ -106,7 +108,7 @@ struct queue_node *queue_peek(struct queue *queue) {
     }
 
     struct queue_node *node = queue->head;
-    return node;
+    return node->data;
 }
 
 int queue_destroy(struct queue *queue) {

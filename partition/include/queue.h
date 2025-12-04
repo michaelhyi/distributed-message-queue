@@ -36,7 +36,7 @@ int queue_push(struct queue *queue, void *data, unsigned int data_size);
  * @returns the node popped from the queue, `NULL` if error with global `errno`
  * set
  */
-struct queue_node *queue_pop(struct queue *queue);
+void *queue_pop(struct queue *queue);
 
 /**
  * Gets the head of a queue.
@@ -44,7 +44,7 @@ struct queue_node *queue_pop(struct queue *queue);
  * @param queue the queue to peek
  * @returns the head node of the queue, `NULL` if error with global `errno` set
  */
-struct queue_node *queue_peek(struct queue *queue);
+void *queue_peek(struct queue *queue);
 
 /**
  * Destroys a queue. No threads should hold the queue's lock.

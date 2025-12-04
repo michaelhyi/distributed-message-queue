@@ -173,7 +173,7 @@ Test(queue, test_queue_push_success_when_size_is_greater_than_one) {
 Test(queue, test_queue_pop_throws_error_when_invalid_args) {
     // act
     errno = 0;
-    struct queue_node *res = queue_pop(NULL);
+    void *res = queue_pop(NULL);
 
     // assert
     cr_assert_null(res);
@@ -187,7 +187,7 @@ Test(queue, test_queue_pop_returns_null_when_empty) {
     queue_init(&queue);
 
     // act
-    struct queue_node *res = queue_pop(&queue);
+    void *res = queue_pop(&queue);
 
     // assert
     cr_assert_null(res);
@@ -206,17 +206,16 @@ Test(queue, test_queue_pop_success_when_size_is_one) {
     queue_push(&queue, data, strlen(data));
 
     // act
-    struct queue_node *res = queue_pop(&queue);
+    void *res = queue_pop(&queue);
 
     // assert
     cr_assert_not_null(res);
     cr_assert_eq(0, errno);
     cr_assert_null(queue.head);
     cr_assert_null(queue.tail);
-    cr_assert_arr_eq(res->data, data, strlen(data));
+    cr_assert_arr_eq(res, data, strlen(data));
 
     // cleanup
-    free(res->data);
     free(res);
     queue_destroy(&queue);
 }
@@ -240,20 +239,19 @@ Test(queue, test_queue_pop_success_when_size_is_greater_than_one) {
     queue_push(&queue, data, strlen(data));
 
     // act
-    struct queue_node *res = queue_pop(&queue);
+    void *res = queue_pop(&queue);
     struct queue_node *node1 = queue.head;
     struct queue_node *node2 = node1->next;
     struct queue_node *node3 = node2->next;
 
     // assert
     cr_assert_eq(0, errno);
-    cr_assert_arr_eq(res->data, "Hello", 5);
+    cr_assert_arr_eq(res, "Hello", 5);
     cr_assert_arr_eq(node1->data, ", ", 2);
     cr_assert_arr_eq(node2->data, "World", 5);
     cr_assert_arr_eq(node3->data, "!", 1);
 
     // cleanup
-    free(res->data);
     free(res);
     queue_destroy(&queue);
 }
@@ -261,7 +259,7 @@ Test(queue, test_queue_pop_success_when_size_is_greater_than_one) {
 Test(queue, test_queue_peek_throws_error_when_invalid_args) {
     // act
     errno = 0;
-    struct queue_node *res = queue_peek(NULL);
+    void *res = queue_peek(NULL);
 
     // assert
     cr_assert_null(res);
@@ -275,7 +273,7 @@ Test(queue, test_queue_peek_returns_null_when_empty) {
     queue_init(&queue);
 
     // act
-    struct queue_node *res = queue_peek(&queue);
+    void *res = queue_peek(&queue);
 
     // assert
     cr_assert_null(res);
@@ -304,11 +302,11 @@ Test(queue, test_queue_peek_success) {
     queue_push(&queue, data, strlen(data));
 
     // act
-    struct queue_node *res = queue_peek(&queue);
+    void *res = queue_peek(&queue);
 
     // assert
     cr_assert_eq(0, errno);
-    cr_assert_arr_eq(res->data, "Hello", 5);
+    cr_assert_arr_eq(res, "Hello", 5);
 
     // cleanup
     queue_destroy(&queue);
