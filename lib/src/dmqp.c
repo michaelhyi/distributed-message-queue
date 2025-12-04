@@ -28,22 +28,20 @@ int handle_server_message(void *message, unsigned int message_size,
     }
 
     int res;
-    if (message_size - sizeof(struct dmqp_header) <=
-        dmqp_message.header.length) { // payload already received
-        memcpy(dmqp_message.payload,
-               (char *)message + sizeof(struct dmqp_header),
-               dmqp_message.header.length);
+    char *payload = (char *)message + sizeof(struct dmqp_header);
+    unsigned int available_bytes = message_size - sizeof(struct dmqp_header);
+    unsigned int required_bytes = dmqp_message.header.length;
+
+    if (available_bytes >= required_bytes) { // payload already received
+        memcpy(dmqp_message.payload, payload, dmqp_message.header.length);
     } else { // payload not fully received, request more bytes from
              // `conn_socket`
-        memcpy(dmqp_message.payload,
-               (char *)message + sizeof(struct dmqp_header),
-               message_size - sizeof(struct dmqp_header));
+        memcpy(dmqp_message.payload, payload, available_bytes);
 
+        unsigned int remaining_bytes = required_bytes - available_bytes;
         res = receive_message(conn_socket,
-                              (char *)dmqp_message.payload + message_size -
-                                  sizeof(struct dmqp_header),
-                              dmqp_message.header.length - message_size +
-                                  sizeof(struct dmqp_header));
+                              (char *)dmqp_message.payload + available_bytes,
+                              remaining_bytes);
         if (res < 0) {
             free(dmqp_message.payload);
             return -1;
