@@ -3,6 +3,7 @@
 #include <errno.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 
 /**
  * Creates a new queue node with the given data. Must be holding the queue's
@@ -23,13 +24,15 @@ static struct queue_node *create_node(void *data, unsigned int data_size) {
         return NULL;
     }
 
-    node->data = malloc(data_size);
-    if (node->data == NULL) {
+    node->entry.data = malloc(data_size);
+    if (node->entry.data == NULL) {
         free(node);
         errno = ENOMEM;
         return NULL;
     }
-    memcpy(node->data, data, data_size);
+    memcpy(node->entry.data, data, data_size);
+    node->entry.size = data_size;
+    time(&node->entry.timestamp);
 
     node->next = NULL;
     return node;
@@ -71,15 +74,15 @@ int queue_push(struct queue *queue, void *data, unsigned int data_size) {
     return 0;
 }
 
-void *queue_pop(struct queue *queue) {
-    if (queue == NULL) {
+int queue_pop(struct queue *queue, struct queue_entry *out_entry) {
+    if (queue == NULL || out_entry == NULL) {
         errno = EINVAL;
-        return NULL;
+        return -1;
     }
 
     if (queue->head == NULL) {
         errno = ENODATA;
-        return NULL;
+        return -1;
     }
 
     struct queue_node *node = queue->head;
@@ -91,24 +94,24 @@ void *queue_pop(struct queue *queue) {
         queue->head = queue->head->next;
     }
 
-    void *data = node->data;
+    *out_entry = node->entry;
     free(node);
-    return data;
+    return 0;
 }
 
-void *queue_peek(struct queue *queue) {
-    if (queue == NULL) {
+int queue_peek(struct queue *queue, struct queue_entry *out_entry) {
+    if (queue == NULL || out_entry == NULL) {
         errno = EINVAL;
-        return NULL;
+        return -1;
     }
 
     if (queue->head == NULL) {
         errno = ENODATA;
-        return NULL;
+        return -1;
     }
 
-    struct queue_node *node = queue->head;
-    return node->data;
+    *out_entry = queue->head->entry;
+    return 0;
 }
 
 int queue_destroy(struct queue *queue) {
@@ -121,7 +124,7 @@ int queue_destroy(struct queue *queue) {
 
     while (curr != NULL) {
         struct queue_node *temp = curr->next;
-        free(curr->data);
+        free(curr->entry.data);
         free(curr);
         curr = temp;
     }
