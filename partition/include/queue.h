@@ -1,6 +1,9 @@
 #ifndef QUEUE_H
 #define QUEUE_H
 
+// TODO: is it inefficient to peek all data first instead of metadata, during
+// mapreduce?
+
 struct queue_entry {
     void *data;
     unsigned int size;
@@ -39,19 +42,19 @@ int queue_push(struct queue *queue, void *data, unsigned int data_size);
  * Pops data off a queue.
  *
  * @param queue the queue to update
- * @param out_entry output param returning the popped queue entry
+ * @param entry output param returning the popped queue entry
  * @returns 0 if success, -1 if error with global `errno` set
  */
-int queue_pop(struct queue *queue, struct queue_entry *out_entry);
+int queue_pop(struct queue *queue, struct queue_entry *entry);
 
 /**
  * Gets the head of a queue.
  *
  * @param queue the queue to peek
- * @param out_entry output param returning the head queue entry
+ * @param entry output param returning the head queue entry
  * @returns 0 if success, -1 if error with global `errno` set
  */
-int queue_peek(struct queue *queue, struct queue_entry *out_entry);
+int queue_peek(struct queue *queue, struct queue_entry *entry);
 
 /**
  * Destroys a queue. No threads should hold the queue's lock.

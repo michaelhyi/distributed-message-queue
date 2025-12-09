@@ -74,8 +74,8 @@ int queue_push(struct queue *queue, void *data, unsigned int data_size) {
     return 0;
 }
 
-int queue_pop(struct queue *queue, struct queue_entry *out_entry) {
-    if (queue == NULL || out_entry == NULL) {
+int queue_pop(struct queue *queue, struct queue_entry *entry) {
+    if (queue == NULL || entry == NULL) {
         errno = EINVAL;
         return -1;
     }
@@ -94,13 +94,13 @@ int queue_pop(struct queue *queue, struct queue_entry *out_entry) {
         queue->head = queue->head->next;
     }
 
-    *out_entry = node->entry;
+    *entry = node->entry;
     free(node);
     return 0;
 }
 
-int queue_peek(struct queue *queue, struct queue_entry *out_entry) {
-    if (queue == NULL || out_entry == NULL) {
+int queue_peek(struct queue *queue, struct queue_entry *entry) {
+    if (queue == NULL || entry == NULL) {
         errno = EINVAL;
         return -1;
     }
@@ -110,7 +110,7 @@ int queue_peek(struct queue *queue, struct queue_entry *out_entry) {
         return -1;
     }
 
-    *out_entry = queue->head->entry;
+    *entry = queue->head->entry;
     return 0;
 }
 
