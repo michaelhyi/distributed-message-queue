@@ -34,7 +34,8 @@ struct dmqp_message {
 };
 
 /**
- * Handles a message received at a TCP server.
+ * Handles a message received at a TCP server by parsing the message using the
+ * DMQP format and and then handling the message.
  *
  * @param message message received at server
  * @param message_size number of bytes received at server
@@ -43,6 +44,18 @@ struct dmqp_message {
  */
 int handle_server_message(void *message, unsigned int message_size,
                           int conn_socket);
+
+/**
+ * Parses a DMQP message received at a TCP server.
+ *
+ * @param message message received at server
+ * @param message_size number of bytes received at server
+ * @param conn_socket socket of connection where the message was received
+ * @param dmqp_message output param to return the parsed dmqp message
+ * @returns 0 if success, -1 if error with global `errno` set
+ */
+int parse_dmqp_message(void *message, unsigned int message_size,
+                       int conn_socket, struct dmqp_message *dmqp_message);
 
 /**
  * Handles a message received at a DMQP server.
