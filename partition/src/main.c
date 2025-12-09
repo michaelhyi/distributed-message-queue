@@ -1,9 +1,8 @@
 #include <getopt.h>
-#include <stdio.h>
 #include <stdlib.h>
 
 #include "dmqp.h"
-#include "network.h"
+#include "partition.h"
 
 int main(int argc, char *argv[]) {
     unsigned int server_port = DEFAULT_SERVER_PORT;
@@ -21,7 +20,12 @@ int main(int argc, char *argv[]) {
         }
     }
 
-    int res = server_init(server_port, handle_server_message);
+    int res = partition_init(server_port);
+    if (res < 0) {
+        return 1;
+    }
+
+    res = partition_destroy();
     if (res < 0) {
         return 1;
     }

@@ -48,7 +48,7 @@ int handle_server_message(void *message, unsigned int message_size,
         }
     }
 
-    res = handle_dmqp_message(dmqp_message);
+    res = handle_dmqp_message(dmqp_message, conn_socket);
     if (res < 0) {
         free(dmqp_message.payload);
         return -1;

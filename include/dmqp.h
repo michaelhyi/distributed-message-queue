@@ -6,21 +6,25 @@
 #define DEFAULT_SERVER_PORT 8080
 #define MAX_PAYLOAD_LENGTH 1 * MB
 
-#define ENCRYPTED_FLAG 0x1
+#define ENCRYPTED_FLAG 1 << 8
+#define STATUS_CODE_MASK 0xFF
 
-enum dmqp_method { PUSH, POP, PEEK, HEARTBEAT, HEARTBEAT_ACK };
+enum dmqp_method { RESPONSE, HEARTBEAT, PUSH, POP, PEEK };
 
 /**
  * flags:
- * ----------------------
- * | 31 - 1 |     0     |
- * ----------------------
- * | unused | encrypted |
- * ----------------------
+ * ------------------------------------
+ * | 31 - 9 |     8     |    7 - 0    |
+ * ------------------------------------
+ * | unused | encrypted | status_code |
+ * ------------------------------------
+ *
+ * status_code is an errno
  */
 struct dmqp_header {
     enum dmqp_method method;
     int flags;
+    long queue_entry_timestamp;
     unsigned int length;
 };
 
@@ -34,8 +38,7 @@ struct dmqp_message {
  *
  * @param message message received at server
  * @param message_size number of bytes received at server
- * @param conn_socket the TCP connection that received the message. included in
- * case the handler needs more bytes than `message_size`
+ * @param conn_socket socket of connection where the message was received
  * @returns 0 if success, -1 if error with global `errno` set
  */
 int handle_server_message(void *message, unsigned int message_size,
@@ -45,8 +48,9 @@ int handle_server_message(void *message, unsigned int message_size,
  * Handles a message received at a DMQP server.
  *
  * @param message message received at server
+ * @param conn_socket socket of connection where the message was received
  * @returns 0 if success, -1 if error with global `errno` set
  */
-int handle_dmqp_message(struct dmqp_message message);
+int handle_dmqp_message(struct dmqp_message message, int conn_socket);
 
 #endif
