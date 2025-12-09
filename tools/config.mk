@@ -10,6 +10,7 @@ C_TEST_FLAGS = -lcriterion
 C_DEBUG_FLAGS = -O0 -g
 
 GDB = gdb
+GDB_FLAGS = -ex "set follow-fork-mode child"
 
 VALGRIND = valgrind
 VALGRIND_FLAGS = --leak-check=yes

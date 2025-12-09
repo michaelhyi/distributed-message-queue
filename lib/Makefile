@@ -34,7 +34,7 @@ test: $(TEST_TARGET)
 	$(VALGRIND) $(VALGRIND_FLAGS) $(TEST_TARGET)
 
 debug-test: $(TEST_TARGET)
-	$(GDB) $(TEST_TARGET)
+	$(GDB) $(GDB_FLAGS) $(TEST_TARGET)
 
 clean:
 	@rm -rf $(BUILD_DIR)
