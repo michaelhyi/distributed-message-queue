@@ -1,7 +1,7 @@
 #ifndef DMQP_H
 #define DMQP_H
 
-#define MB 1 << 20
+#define MB (1 << 20)
 
 #define DEFAULT_SERVER_PORT 8080
 #define MAX_PAYLOAD_LENGTH 1 * MB
@@ -57,6 +57,7 @@ int handle_server_message(void *message, unsigned int message_size,
 int parse_dmqp_message(void *message, unsigned int message_size,
                        int conn_socket, struct dmqp_message *dmqp_message);
 
+// TODO: rename conn_socket to reply_socket
 /**
  * Handles a message received at a DMQP server.
  *
@@ -65,5 +66,57 @@ int parse_dmqp_message(void *message, unsigned int message_size,
  * @returns 0 if success, -1 if error with global `errno` set
  */
 int handle_dmqp_message(struct dmqp_message message, int conn_socket);
+
+/**
+ * Handles a DMQP message with method response.
+ *
+ * @param reply_socket socket to reply on
+ * @returns 0 if success, -1 if error with global `errno` set
+ */
+int handle_dmqp_response(int reply_socket);
+
+/**
+ * Handles a DMQP message with method heartbeat.
+ *
+ * @param reply_socket socket to reply on
+ * @returns 0 if success, -1 if error with global `errno` set
+ */
+int handle_dmqp_heartbeat(int reply_socket);
+
+/**
+ * Handles a DMQP message with method push.
+ *
+ * @param message message received by server
+ * @param reply_socket socket to reply on
+ * @returns 0 if success, -1 if error with global `errno` set
+ */
+int handle_dmqp_push(struct dmqp_message message, int reply_socket);
+
+/**
+ * Handles a DMQP message with method pop.
+ *
+ * @param message message received by server
+ * @param reply_socket socket to reply on
+ * @returns 0 if success, -1 if error with global `errno` set
+ */
+int handle_dmqp_pop(int reply_socket);
+
+/**
+ * Handles a DMQP message with method peek.
+ *
+ * @param message message received by server
+ * @param reply_socket socket to reply on
+ * @returns 0 if success, -1 if error with global `errno` set
+ */
+int handle_dmqp_peek(int reply_socket);
+
+/**
+ * Handles a DMQP message with unknown method.
+ *
+ * @param message message received by server
+ * @param reply_socket socket to reply on
+ * @returns 0 if success, -1 if error with global `errno` set
+ */
+int handle_dmqp_unknown_method(int reply_socket);
 
 #endif
