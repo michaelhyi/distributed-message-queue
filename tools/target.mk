@@ -1,4 +1,4 @@
-.PHONY: test debug debug-test memcheck clean
+.PHONY: test debug debug-test debug-test-attach valgrind valgrind-test clean
 
 # link src obj files
 $(TARGET): $(OBJ)
@@ -31,16 +31,21 @@ $(BUILD_DIR)/debug/src/%.o: src/%.c
 	$(CC) $(CFLAGS) $(C_DEBUG_FLAGS) -c $< -o $@
 
 test: $(TEST_TARGET)
-	$(VALGRIND) $(VALGRIND_FLAGS) $(TEST_TARGET)
 
 debug: $(DEBUG_TARGET)
 	$(GDB) $(GDB_FLAGS) $(DEBUG_TARGET)
 
 debug-test: $(TEST_TARGET)
-	$(GDB) $(GDB_FLAGS) $(TEST_TARGET)
+	./$(TEST_TARGET) $(DEBUG_TEST_FLAGS)
 
-memcheck: $(TARGET)
+debug-test-attach: $(TEST_TARGET)
+	$(GDB) ./$(TEST_TARGET) $(GDB_FLAGS) 
+
+valgrind: $(TARGET)
 	$(VALGRIND) $(VALGRIND_FLAGS) $(TARGET)
+
+valgrind-test:
+	$(VALGRIND) $(VALGRIND_FLAGS) $(TEST_TARGET)
 
 clean:
 	@rm -rf $(BUILD_DIR)

@@ -3,6 +3,7 @@ FROM ubuntu:latest
 RUN apt-get update && apt-get install -y \
 	build-essential \
 	gdb \
+	gdbserver \
 	valgrind \
     clang-format \
     libcriterion-dev

@@ -6,9 +6,10 @@ CFLAGS += -D_POSIX_C_SOURCE=200809L # allows struct sigaction to compile
 # copy of /tools/target.mk, with slight changes to targets since this doesn't
 # have a `main` function
 
-.PHONY: all test debug-test clean
+.PHONY: all test debug-test debug-test-attach valgrind-test clean
 
 all: $(OBJ)
+test: $(TEST_TARGET)
 
 # link test obj files
 $(TEST_TARGET): $(TEST_OBJ) $(DEBUG_OBJ)
@@ -30,11 +31,14 @@ $(BUILD_DIR)/debug/src/%.o: src/%.c
 	@mkdir -p $(dir $@)
 	$(CC) $(CFLAGS) $(C_DEBUG_FLAGS) -c $< -o $@
 
-test: $(TEST_TARGET)
-	$(VALGRIND) $(VALGRIND_FLAGS) $(TEST_TARGET)
-
 debug-test: $(TEST_TARGET)
-	$(GDB) $(GDB_FLAGS) $(TEST_TARGET)
+	./$(TEST_TARGET) $(DEBUG_TEST_FLAGS)
+
+debug-test-attach: $(TEST_TARGET)
+	$(GDB) ./$(TEST_TARGET) $(GDB_FLAGS) 
+
+valgrind-test:
+	$(VALGRIND) $(VALGRIND_FLAGS) $(TEST_TARGET)
 
 clean:
 	@rm -rf $(BUILD_DIR)

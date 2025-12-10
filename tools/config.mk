@@ -10,10 +10,11 @@ C_TEST_FLAGS = -lcriterion
 C_DEBUG_FLAGS = -O0 -g
 
 GDB = gdb
-GDB_FLAGS = -ex "set follow-fork-mode child"
+GDB_FLAGS = -x $(ROOT_DIR)/tools/criterion.gdb
+DEBUG_TEST_FLAGS = --debug=gdb
 
 VALGRIND = valgrind
-VALGRIND_FLAGS = --leak-check=yes
+VALGRIND_FLAGS = --leak-check=yes --trace-children=yes
 
 BUILD_DIR = build
 TARGET := $(BUILD_DIR)/bin/$(MODULE)
