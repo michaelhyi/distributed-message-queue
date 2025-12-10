@@ -9,7 +9,6 @@
 #include "dmqp.h"
 #include "network.h"
 
-// TODO: set to on ALL tests
 TestSuite(partition, .timeout = 10);
 
 Test(partition, test_partition_destroy_success) {

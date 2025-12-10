@@ -13,6 +13,8 @@ int handle_dmqp_message(struct dmqp_message message, int conn_socket) {
     return 0;
 }
 
+TestSuite(dmqp, .timeout = 10);
+
 Test(dmqp, test_handle_server_message_throws_error_when_invalid_args) {
     // arrange
     errno = 0;

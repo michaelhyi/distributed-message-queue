@@ -5,6 +5,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+TestSuite(doubly_linked_list, .timeout = 10);
+
 Test(doubly_linked_list,
      test_doubly_linked_list_init_throws_error_on_invalid_args) {
     // arrange
