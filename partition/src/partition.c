@@ -45,9 +45,9 @@ int partition_destroy(void) {
     return 0;
 }
 
-int handle_dmqp_message(struct dmqp_message message, int conn_socket) {
+int handle_dmqp_message(struct dmqp_message message, int reply_socket) {
     if ((message.header.length > 0 && message.payload == NULL) ||
-        message.header.length > MAX_PAYLOAD_LENGTH || conn_socket < 0) {
+        message.header.length > MAX_PAYLOAD_LENGTH || reply_socket < 0) {
         errno = EINVAL;
         return -1;
     }
@@ -56,7 +56,7 @@ int handle_dmqp_message(struct dmqp_message message, int conn_socket) {
 
     switch (message.header.method) {
     case RESPONSE:
-        res = handle_dmqp_response(conn_socket);
+        res = handle_dmqp_response(reply_socket);
         if (res < 0) {
             return -1;
         }
@@ -64,35 +64,35 @@ int handle_dmqp_message(struct dmqp_message message, int conn_socket) {
         errno = EPROTO;
         return -1;
     case HEARTBEAT:
-        res = handle_dmqp_heartbeat(conn_socket);
+        res = handle_dmqp_heartbeat(reply_socket);
         if (res < 0) {
             return -1;
         }
 
         break;
     case PUSH:
-        res = handle_dmqp_push(message, conn_socket);
+        res = handle_dmqp_push(message, reply_socket);
         if (res < 0) {
             return -1;
         }
 
         break;
     case POP:
-        res = handle_dmqp_pop(conn_socket);
+        res = handle_dmqp_pop(reply_socket);
         if (res < 0) {
             return -1;
         }
 
         break;
     case PEEK:
-        res = handle_dmqp_peek(conn_socket);
+        res = handle_dmqp_peek(reply_socket);
         if (res < 0) {
             return -1;
         }
 
         break;
     default:
-        res = handle_dmqp_unknown_method(conn_socket);
+        res = handle_dmqp_unknown_method(reply_socket);
         if (res < 0) {
             return -1;
         }
