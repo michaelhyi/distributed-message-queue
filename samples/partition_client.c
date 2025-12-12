@@ -13,7 +13,7 @@ int main() {
     }
 
     int res;
-    struct dmqp_header header = {.flags = 0, .timestamp = 0};
+    struct dmqp_header header = {.status_code = 0, .timestamp = 0};
     struct dmqp_message message;
     char *data[] = {"Michael Yi", "Christian Beckering", "Philip Mitchell"};
 
@@ -39,7 +39,7 @@ int main() {
 
         printf("received message:\n");
         printf("method: %d\n", message.header.method);
-        printf("flags: %d\n", message.header.flags);
+        printf("status_code: %d\n", message.header.status_code);
         printf("timestamp: %ld\n", message.header.timestamp);
         printf("length: %d\n", message.header.length);
         printf("payload: %s\n", (char *)message.payload);
@@ -65,7 +65,7 @@ int main() {
 
     printf("received message:\n");
     printf("method: %d\n", message.header.method);
-    printf("flags: %d\n", message.header.flags);
+    printf("status_code: %d\n", message.header.status_code);
     printf("timestamp: %ld\n", message.header.timestamp);
     printf("length: %d\n", message.header.length);
     printf("payload: %s\n", (char *)message.payload);
@@ -90,7 +90,7 @@ int main() {
 
     printf("received message:\n");
     printf("method: %d\n", message.header.method);
-    printf("flags: %d\n", message.header.flags);
+    printf("status_code: %d\n", message.header.status_code);
     printf("timestamp: %ld\n", message.header.timestamp);
     printf("length: %d\n", message.header.length);
     printf("payload: %s\n", (char *)message.payload);
@@ -115,7 +115,7 @@ int main() {
 
     printf("received message:\n");
     printf("method: %d\n", message.header.method);
-    printf("flags: %d\n", message.header.flags);
+    printf("status_code: %d\n", message.header.status_code);
     printf("timestamp: %ld\n", message.header.timestamp);
     printf("length: %d\n", message.header.length);
     printf("payload: %s\n", (char *)message.payload);
@@ -140,7 +140,7 @@ int main() {
 
     printf("received message:\n");
     printf("method: %d\n", message.header.method);
-    printf("flags: %d\n", message.header.flags);
+    printf("status_code: %d\n", message.header.status_code);
     printf("timestamp: %ld\n", message.header.timestamp);
     printf("length: %d\n", message.header.length);
     printf("payload: %s\n", (char *)message.payload);

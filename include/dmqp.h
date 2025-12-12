@@ -3,13 +3,9 @@
 
 #include <stdint.h>
 
-#define MB (1 << 20)
-
 #define DEFAULT_SERVER_PORT 8080
+#define MB (1 << 20)
 #define MAX_PAYLOAD_LENGTH 1 * MB
-
-#define ENCRYPTED_FLAG 1 << 8
-#define STATUS_CODE_MASK 0xFF
 
 enum dmqp_method {
     DMQP_RESPONSE,
@@ -19,21 +15,17 @@ enum dmqp_method {
     DMQP_PEEK
 };
 
-/**
- * flags:
- * ------------------------------------
- * | 31 - 9 |     8     |    7 - 0    |
- * ------------------------------------
- * | unused | encrypted | status_code |
- * ------------------------------------
- *
- * status_code is an errno
- */
+// All header fields are expected to be in network-byte order (big endian).
 struct dmqp_header {
-    uint8_t method;
-    int16_t flags;
-    int64_t timestamp;
-    uint32_t length;
+    uint8_t method;     // casted to `enum dmqp_method`
+    uint8_t topic_id;   // id of topic to push data on. set by top-level server.
+    int8_t status_code; // errno
+    uint32_t length;    // payload length
+    int64_t timestamp;  // unix epoch, 1 second resolution. set by the top-level
+                        // server on a DMQP_PUSH request, indiciating the
+                        // timestamp at which data was received for in-order
+                        // delivery. set by the partition on a DMQP_PEEK request
+                        // to handle in-order popping
 };
 
 struct dmqp_message {
@@ -42,7 +34,8 @@ struct dmqp_message {
 };
 
 /**
- * Reads a DMQP message from a file descriptor.
+ * Reads a DMQP message from a file descriptor. Converts header fields to be
+ * little endian.
  *
  * @param fd file descriptor to read from
  * @param buf DMQP message buffer to write to
@@ -51,7 +44,8 @@ struct dmqp_message {
 int read_dmqp_message(int fd, struct dmqp_message *buf);
 
 /**
- * Sends a DMQP message to a socket.
+ * Sends a DMQP message to a socket. Converts header fields to network-byte
+ * order (big endian).
  *
  * @param socket socket to write to
  * @param buf DMQP message buffer to send

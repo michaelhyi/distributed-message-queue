@@ -10,6 +10,7 @@
  * 5. timeouts
  * 6. signal handling
  * 7. heartbeats
+ * 8. TLS
  */
 
 /**

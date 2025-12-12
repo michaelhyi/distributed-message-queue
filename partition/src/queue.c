@@ -32,6 +32,7 @@ static struct queue_node *create_node(void *data, unsigned int data_size) {
     }
     memcpy(node->entry.data, data, data_size);
     node->entry.size = data_size;
+    // TODO: should read timestamp from server request
     time(&node->entry.timestamp);
 
     node->next = NULL;

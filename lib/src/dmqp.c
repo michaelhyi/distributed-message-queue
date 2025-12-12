@@ -81,6 +81,7 @@ int handle_dmqp_message(int socket) {
     int ret = 0;
     switch (buf.header.method) {
     case DMQP_RESPONSE:
+        // TODO: error handling should be unique per implementation
         ret = -1;
         res = handle_dmqp_response(socket);
         if (res < 0) {
