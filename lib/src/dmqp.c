@@ -3,74 +3,130 @@
 #include <errno.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/socket.h>
 
 #include "network.h"
 
-int handle_server_message(void *message, unsigned int message_size,
-                          int conn_socket) {
-    if (message == NULL || conn_socket < 0) {
+int read_dmqp_message(int fd, struct dmqp_message *buf) {
+    if (fd < 0 || buf == NULL) {
         errno = EINVAL;
         return -1;
     }
 
-    struct dmqp_message dmqp_message;
-    int res =
-        parse_dmqp_message(message, message_size, conn_socket, &dmqp_message);
+    int res = receive_message(fd, &buf->header, sizeof(struct dmqp_header));
     if (res < 0) {
-        free(dmqp_message.payload);
         return -1;
     }
 
-    res = handle_dmqp_message(dmqp_message, conn_socket);
-    if (res < 0) {
-        free(dmqp_message.payload);
-        return -1;
-    }
-
-    free(dmqp_message.payload);
-    return 0;
-}
-
-int parse_dmqp_message(void *message, unsigned int message_size,
-                       int conn_socket, struct dmqp_message *dmqp_message) {
-    if (message == NULL || message_size < sizeof(struct dmqp_header) ||
-        conn_socket < 0 || dmqp_message == NULL) {
-        errno = EINVAL;
-        return -1;
-    }
-
-    dmqp_message->header = *(struct dmqp_header *)message;
-    if (dmqp_message->header.length > MAX_PAYLOAD_LENGTH) {
+    // TODO: validate method exists?
+    if (buf->header.length > MAX_PAYLOAD_LENGTH) {
         errno = EMSGSIZE;
         return -1;
     }
 
-    dmqp_message->payload = malloc(dmqp_message->header.length);
-    if (dmqp_message->payload == NULL) {
+    buf->payload = malloc(buf->header.length);
+    if (buf->payload == NULL) {
         errno = ENOMEM;
         return -1;
     }
 
-    int res;
-    char *payload = (char *)message + sizeof(struct dmqp_header);
-    unsigned int available_bytes = message_size - sizeof(struct dmqp_header);
-    unsigned int required_bytes = dmqp_message->header.length;
-
-    if (available_bytes >= required_bytes) { // payload already received
-        memcpy(dmqp_message->payload, payload, dmqp_message->header.length);
-    } else { // payload not fully received, request more bytes from
-             // `conn_socket`
-        memcpy(dmqp_message->payload, payload, available_bytes);
-
-        unsigned int remaining_bytes = required_bytes - available_bytes;
-        res = receive_message(conn_socket,
-                              (char *)dmqp_message->payload + available_bytes,
-                              remaining_bytes);
-        if (res < 0) {
-            free(dmqp_message->payload);
-            return -1;
-        }
+    res = receive_message(fd, buf->payload, buf->header.length);
+    if (res < 0) {
+        free(buf->payload);
+        return -1;
     }
 
     return 0;
+}
+
+int send_dmqp_message(int socket, const struct dmqp_message *buf, int flags) {
+    // TODO: validate that method exists?
+    if (socket < 0 || buf == NULL || buf->header.length > MAX_PAYLOAD_LENGTH) {
+        errno = EINVAL;
+        return -1;
+    }
+
+    int res = send(socket, &buf->header, sizeof(struct dmqp_header), flags);
+    if (res < 0) {
+        return -1;
+    }
+
+    res = send(socket, buf->payload, buf->header.length, flags);
+    if (res < 0) {
+        return -1;
+    }
+
+    return 0;
+}
+
+int handle_dmqp_message(int socket) {
+    if (socket < 0) {
+        errno = EINVAL;
+        return -1;
+    }
+
+    struct dmqp_message buf;
+    int res = read_dmqp_message(socket, &buf);
+    if (res < 0) {
+        return -1;
+    }
+
+    // TODO: validate buf
+    //     if ((message.header.length > 0 && message.payload == NULL) ||
+    //     message.header.length > MAX_PAYLOAD_LENGTH || reply_socket < 0) {
+    //     errno = EINVAL;
+    //     return -1;
+    // }
+
+    int ret = 0;
+    switch (buf.header.method) {
+    case RESPONSE:
+        ret = -1;
+        res = handle_dmqp_response(socket);
+        if (res < 0) {
+            goto cleanup;
+        }
+
+        errno = EPROTO;
+        goto cleanup;
+    case HEARTBEAT:
+        res = handle_dmqp_heartbeat(socket);
+        if (res < 0) {
+            ret = -1;
+        }
+
+        goto cleanup;
+    case PUSH:
+        res = handle_dmqp_push(buf, socket);
+        if (res < 0) {
+            ret = -1;
+        }
+
+        goto cleanup;
+    case POP:
+        res = handle_dmqp_pop(socket);
+        if (res < 0) {
+            ret = -1;
+        }
+
+        goto cleanup;
+    case PEEK:
+        res = handle_dmqp_peek(socket);
+        if (res < 0) {
+            ret = -1;
+        }
+
+        goto cleanup;
+    default:
+        res = handle_dmqp_unknown_method(socket);
+        if (res < 0) {
+            ret = -1;
+        }
+
+        goto cleanup;
+    }
+
+cleanup:
+    free(buf.payload);
+    return ret;
 }

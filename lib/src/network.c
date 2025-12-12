@@ -8,12 +8,15 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/socket.h>
+#include <sys/time.h>
 #include <unistd.h>
 
 struct connection_handler_args {
-    int conn_socket;
-    int (*message_handler)(void *message, unsigned int message_size,
-                           int conn_socket);
+    int socket; // socket of connection
+    int (*message_handler)(
+        int socket); // handler that reads a message, parses it, and serves it.
+                     // takes in the socket of connection as an argument to
+                     // handle responses
 };
 
 /**
@@ -28,16 +31,13 @@ static void *connection_handler(void *arg) {
     free(arg);
 
     while (1) {
-        char buf[1024];
-        int res = receive_message(args.conn_socket, buf, sizeof(buf));
+        int res = args.message_handler(args.socket);
         if (res < 0) {
             break;
         }
-
-        args.message_handler(buf, sizeof(buf), args.conn_socket);
     }
 
-    close(args.conn_socket);
+    close(args.socket);
     return NULL;
 }
 
@@ -68,9 +68,7 @@ int client_init(const char *server_host, unsigned int server_port) {
     return client_socket;
 }
 
-int server_init(unsigned int server_port,
-                int (*message_handler)(void *message, unsigned int message_size,
-                                       int conn_socket)) {
+int server_init(unsigned int server_port, int (*message_handler)(int socket)) {
     int server_socket = socket(AF_INET, SOCK_STREAM, 0);
     if (server_socket < 0) {
         return -1;
@@ -110,13 +108,21 @@ int server_init(unsigned int server_port,
             continue;
         }
 
+        struct timeval timeout = {.tv_sec = 10, .tv_usec = 0};
+        res = setsockopt(client_socket, SOL_SOCKET, SO_RCVTIMEO,
+                         (const void *)&timeout, sizeof(timeout));
+        if (res < 0) {
+            // TODO: error handling
+            continue;
+        }
+
         struct connection_handler_args *args =
             malloc(sizeof(struct connection_handler_args));
         if (args == NULL) {
             // TODO: error handling
             continue;
         }
-        args->conn_socket = client_socket;
+        args->socket = client_socket;
         args->message_handler = message_handler;
 
         pthread_t tid;

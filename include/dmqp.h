@@ -34,37 +34,32 @@ struct dmqp_message {
 };
 
 /**
- * Handles a message received at a TCP server by parsing the message using the
- * DMQP format and and then handling the message.
+ * Reads a DMQP message from a file descriptor.
  *
- * @param message message received at server
- * @param message_size number of bytes received at server
- * @param reply_socket socket to reply on
+ * @param fd file descriptor to read from
+ * @param buf DMQP message buffer to write to
  * @returns 0 if success, -1 if error with global `errno` set
  */
-int handle_server_message(void *message, unsigned int message_size,
-                          int reply_socket);
+int read_dmqp_message(int fd, struct dmqp_message *buf);
 
 /**
- * Parses a DMQP message received at a TCP server.
+ * Sends a DMQP message to a socket.
  *
- * @param message message received at server
- * @param message_size number of bytes received at server
- * @param reply_socket socket to reply on
- * @param dmqp_message output param to return the parsed dmqp message
+ * @param socket socket to write to
+ * @param buf DMQP message buffer to send
+ * @param flags same flags param as send syscall
  * @returns 0 if success, -1 if error with global `errno` set
  */
-int parse_dmqp_message(void *message, unsigned int message_size,
-                       int reply_socket, struct dmqp_message *dmqp_message);
+int send_dmqp_message(int socket, const struct dmqp_message *buf, int flags);
 
 /**
- * Handles a message received at a DMQP server.
+ * Handles a message received at a DMQP server by parsing the message using the
+ * DMQP format and and then serving the request.
  *
- * @param message message received at server
- * @param reply_socket socket to reply on
+ * @param socket socket that sent message
  * @returns 0 if success, -1 if error with global `errno` set
  */
-int handle_dmqp_message(struct dmqp_message message, int reply_socket);
+int handle_dmqp_message(int socket);
 
 /**
  * Handles a DMQP message with method response.

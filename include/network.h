@@ -31,9 +31,7 @@ int client_init(const char *server_host, unsigned int server_port);
  * handle messages received at server
  * @returns 0 on success, -1 on error with global `errno` set
  */
-int server_init(unsigned int server_port,
-                int (*message_handler)(void *message, unsigned int message_size,
-                                       int conn_socket));
+int server_init(unsigned int server_port, int (*message_handler)(int socket));
 
 /**
  * Reads bytes into a buffer from a TCP stream.

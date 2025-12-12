@@ -10,6 +10,7 @@ CFLAGS += -D_POSIX_C_SOURCE=200809L # allows struct sigaction to compile
 
 all: $(OBJ)
 test: $(TEST_TARGET)
+debug: $(DEBUG_OBJ)
 
 # link test obj files
 $(TEST_TARGET): $(TEST_OBJ) $(DEBUG_OBJ)
