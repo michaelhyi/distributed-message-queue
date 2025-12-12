@@ -13,7 +13,7 @@ $(TEST_TARGET): $(TEST_OBJ) $(filter-out $(BUILD_DIR)/debug/src/main.o,$(DEBUG_O
 # link debug obj files
 $(DEBUG_TARGET): $(DEBUG_OBJ)
 	@mkdir -p $(dir $@)
-	$(CC) $(CFLAGS) $(DEBUG_OBJ) $(LIB_OBJ) -o $(DEBUG_TARGET)
+	$(CC) $(CFLAGS) $(DEBUG_OBJ) $(DEBUG_LIB_OBJ) -o $(DEBUG_TARGET)
 
 # compile src files
 $(BUILD_DIR)/src/%.o: src/%.c
