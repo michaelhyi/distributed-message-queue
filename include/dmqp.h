@@ -1,6 +1,8 @@
 #ifndef DMQP_H
 #define DMQP_H
 
+#include <stdint.h>
+
 #define MB (1 << 20)
 
 #define DEFAULT_SERVER_PORT 8080
@@ -9,7 +11,13 @@
 #define ENCRYPTED_FLAG 1 << 8
 #define STATUS_CODE_MASK 0xFF
 
-enum dmqp_method { RESPONSE, HEARTBEAT, PUSH, POP, PEEK };
+enum dmqp_method {
+    DMQP_RESPONSE,
+    DMQP_HEARTBEAT,
+    DMQP_PUSH,
+    DMQP_POP,
+    DMQP_PEEK
+};
 
 /**
  * flags:
@@ -22,10 +30,10 @@ enum dmqp_method { RESPONSE, HEARTBEAT, PUSH, POP, PEEK };
  * status_code is an errno
  */
 struct dmqp_header {
-    enum dmqp_method method;
-    int flags;
-    long queue_entry_timestamp;
-    unsigned int length;
+    uint8_t method;
+    int16_t flags;
+    int64_t timestamp;
+    uint32_t length;
 };
 
 struct dmqp_message {
@@ -53,8 +61,8 @@ int read_dmqp_message(int fd, struct dmqp_message *buf);
 int send_dmqp_message(int socket, const struct dmqp_message *buf, int flags);
 
 /**
- * Handles a message received at a DMQP server by parsing the message using the
- * DMQP format and and then serving the request.
+ * Handles a message received at a DMQP server by reading the message
+ * from a socket and serving the request.
  *
  * @param socket socket that sent message
  * @returns 0 if success, -1 if error with global `errno` set

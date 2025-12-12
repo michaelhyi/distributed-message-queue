@@ -13,12 +13,12 @@ int main() {
     }
 
     int res;
-    struct dmqp_header header = {.flags = 0, .queue_entry_timestamp = 0};
+    struct dmqp_header header = {.flags = 0, .timestamp = 0};
     struct dmqp_message message;
     char *data[] = {"Michael Yi", "Christian Beckering", "Philip Mitchell"};
 
     for (int i = 0; i < 3; i++) {
-        header.method = PUSH;
+        header.method = DMQP_PUSH;
         header.length = strlen(data[i]);
         message.header = header;
         message.payload = data[i];
@@ -40,13 +40,12 @@ int main() {
         printf("received message:\n");
         printf("method: %d\n", message.header.method);
         printf("flags: %d\n", message.header.flags);
-        printf("queue_entry_timestamp: %ld\n",
-               message.header.queue_entry_timestamp);
+        printf("timestamp: %ld\n", message.header.timestamp);
         printf("length: %d\n", message.header.length);
         printf("payload: %s\n", (char *)message.payload);
     }
 
-    header.method = PEEK;
+    header.method = DMQP_PEEK;
     header.length = 0;
     message.header = header;
     message.payload = NULL;
@@ -67,12 +66,11 @@ int main() {
     printf("received message:\n");
     printf("method: %d\n", message.header.method);
     printf("flags: %d\n", message.header.flags);
-    printf("queue_entry_timestamp: %ld\n",
-           message.header.queue_entry_timestamp);
+    printf("timestamp: %ld\n", message.header.timestamp);
     printf("length: %d\n", message.header.length);
     printf("payload: %s\n", (char *)message.payload);
 
-    header.method = POP;
+    header.method = DMQP_POP;
     header.length = 0;
     message.header = header;
     message.payload = NULL;
@@ -93,12 +91,11 @@ int main() {
     printf("received message:\n");
     printf("method: %d\n", message.header.method);
     printf("flags: %d\n", message.header.flags);
-    printf("queue_entry_timestamp: %ld\n",
-           message.header.queue_entry_timestamp);
+    printf("timestamp: %ld\n", message.header.timestamp);
     printf("length: %d\n", message.header.length);
     printf("payload: %s\n", (char *)message.payload);
 
-    header.method = PEEK;
+    header.method = DMQP_PEEK;
     header.length = 0;
     message.header = header;
     message.payload = NULL;
@@ -119,12 +116,11 @@ int main() {
     printf("received message:\n");
     printf("method: %d\n", message.header.method);
     printf("flags: %d\n", message.header.flags);
-    printf("queue_entry_timestamp: %ld\n",
-           message.header.queue_entry_timestamp);
+    printf("timestamp: %ld\n", message.header.timestamp);
     printf("length: %d\n", message.header.length);
     printf("payload: %s\n", (char *)message.payload);
 
-    header.method = POP;
+    header.method = DMQP_POP;
     header.length = 0;
     message.header = header;
     message.payload = NULL;
@@ -145,8 +141,7 @@ int main() {
     printf("received message:\n");
     printf("method: %d\n", message.header.method);
     printf("flags: %d\n", message.header.flags);
-    printf("queue_entry_timestamp: %ld\n",
-           message.header.queue_entry_timestamp);
+    printf("timestamp: %ld\n", message.header.timestamp);
     printf("length: %d\n", message.header.length);
     printf("payload: %s\n", (char *)message.payload);
     return 0;

@@ -52,10 +52,8 @@ int handle_dmqp_response(int reply_socket) {
         return -1;
     }
 
-    struct dmqp_header res_header = {.method = RESPONSE,
-                                     .flags = EPROTO,
-                                     .length = 0,
-                                     .queue_entry_timestamp = 0};
+    struct dmqp_header res_header = {
+        .method = DMQP_RESPONSE, .flags = EPROTO, .length = 0, .timestamp = 0};
 
     int res = send(reply_socket, &res_header, sizeof(struct dmqp_header), 0);
     if (res < 0) {
@@ -71,10 +69,8 @@ int handle_dmqp_heartbeat(int reply_socket) {
         return -1;
     }
 
-    struct dmqp_header res_header = {.method = RESPONSE,
-                                     .flags = 0,
-                                     .length = 0,
-                                     .queue_entry_timestamp = 0};
+    struct dmqp_header res_header = {
+        .method = DMQP_RESPONSE, .flags = 0, .length = 0, .timestamp = 0};
 
     int res = send(reply_socket, &res_header, sizeof(struct dmqp_header), 0);
     if (res < 0) {
@@ -121,10 +117,10 @@ release_lock:
 
 reply:
     // TODO: handle encryption
-    res_header.method = RESPONSE;
+    res_header.method = DMQP_RESPONSE;
     res_header.flags = errno;
     res_header.length = 0;
-    res_header.queue_entry_timestamp = 0;
+    res_header.timestamp = 0;
 
     res = send(reply_socket, &res_header, sizeof(struct dmqp_header), 0);
     if (res < 0) {
@@ -171,10 +167,10 @@ release_lock:
 
 reply:
     // TODO: handle encryption
-    res_header.method = RESPONSE;
+    res_header.method = DMQP_RESPONSE;
     res_header.flags = errno;
     res_header.length = entry.size;
-    res_header.queue_entry_timestamp = entry.timestamp;
+    res_header.timestamp = entry.timestamp;
 
     res = send(reply_socket, &res_header, sizeof(struct dmqp_header), 0);
     if (res < 0) {
@@ -233,10 +229,10 @@ release_lock:
 
 reply:
     // TODO: handle encryption
-    res_header.method = RESPONSE;
+    res_header.method = DMQP_RESPONSE;
     res_header.flags = errno;
     res_header.length = entry.size;
-    res_header.queue_entry_timestamp = entry.timestamp;
+    res_header.timestamp = entry.timestamp;
 
     res = send(reply_socket, &res_header, sizeof(struct dmqp_header), 0);
     if (res < 0) {
@@ -260,10 +256,8 @@ int handle_dmqp_unknown_method(int reply_socket) {
         return -1;
     }
 
-    struct dmqp_header res_header = {.method = RESPONSE,
-                                     .flags = ENOSYS,
-                                     .length = 0,
-                                     .queue_entry_timestamp = 0};
+    struct dmqp_header res_header = {
+        .method = DMQP_RESPONSE, .flags = ENOSYS, .length = 0, .timestamp = 0};
 
     int res = send(reply_socket, &res_header, sizeof(struct dmqp_header), 0);
     if (res < 0) {

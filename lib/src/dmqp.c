@@ -80,7 +80,7 @@ int handle_dmqp_message(int socket) {
 
     int ret = 0;
     switch (buf.header.method) {
-    case RESPONSE:
+    case DMQP_RESPONSE:
         ret = -1;
         res = handle_dmqp_response(socket);
         if (res < 0) {
@@ -89,28 +89,28 @@ int handle_dmqp_message(int socket) {
 
         errno = EPROTO;
         goto cleanup;
-    case HEARTBEAT:
+    case DMQP_HEARTBEAT:
         res = handle_dmqp_heartbeat(socket);
         if (res < 0) {
             ret = -1;
         }
 
         goto cleanup;
-    case PUSH:
+    case DMQP_PUSH:
         res = handle_dmqp_push(buf, socket);
         if (res < 0) {
             ret = -1;
         }
 
         goto cleanup;
-    case POP:
+    case DMQP_POP:
         res = handle_dmqp_pop(socket);
         if (res < 0) {
             ret = -1;
         }
 
         goto cleanup;
-    case PEEK:
+    case DMQP_PEEK:
         res = handle_dmqp_peek(socket);
         if (res < 0) {
             ret = -1;
