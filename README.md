@@ -31,3 +31,10 @@ Enter the Docker container:
 # run `chmod +x ./scripts/docker.sh` if permission denied
 ./scripts/docker.sh # add flag --attach to attach to running container
 ```
+
+Compile and start a partition:
+```bash
+cd partition
+make
+./build/bin/partition
+```
