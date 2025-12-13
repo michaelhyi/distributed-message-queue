@@ -2,6 +2,7 @@ ROOT_DIR := $(realpath $(dir $(lastword $(MAKEFILE_LIST)))/..)
 include $(ROOT_DIR)/tools/config.mk
 
 CFLAGS += -D_POSIX_C_SOURCE=200809L # allows struct sigaction to compile
+CFLAGS += -D_GNU_SOURCE 			# allows for include <endian.h>
 
 # copy of /tools/target.mk, with slight changes to targets since this doesn't
 # have a `main` function

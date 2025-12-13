@@ -2,9 +2,388 @@
 
 #include <criterion/criterion.h>
 #include <errno.h>
+#include <sys/socket.h>
 #include <unistd.h>
 
+#include "network.h"
+
+// used to validate propagation to downstream handlers
+static unsigned int dmqp_response_count = 0;
+static unsigned int dmqp_heartbeat_count = 0;
+static unsigned int dmqp_push_count = 0;
+static unsigned int dmqp_pop_count = 0;
+static unsigned int dmqp_peek_count = 0;
+static unsigned int dmqp_unknown_method_count = 0;
+
+int handle_dmqp_response(const struct dmqp_message *message, int reply_socket) {
+    (void)message;
+    (void)reply_socket;
+    dmqp_response_count++;
+    return 0;
+}
+
+int handle_dmqp_heartbeat(const struct dmqp_message *message,
+                          int reply_socket) {
+    (void)message;
+    (void)reply_socket;
+    dmqp_heartbeat_count++;
+    return 0;
+}
+
+int handle_dmqp_push(const struct dmqp_message *message, int reply_socket) {
+    (void)message;
+    (void)reply_socket;
+    dmqp_push_count++;
+    return 0;
+}
+
+int handle_dmqp_pop(const struct dmqp_message *message, int reply_socket) {
+    (void)message;
+    (void)reply_socket;
+    dmqp_pop_count++;
+    return 0;
+}
+
+int handle_dmqp_peek(const struct dmqp_message *message, int reply_socket) {
+    (void)message;
+    (void)reply_socket;
+    dmqp_peek_count++;
+    return 0;
+}
+
+int handle_dmqp_unknown_method(const struct dmqp_message *message,
+                               int reply_socket) {
+    (void)message;
+    (void)reply_socket;
+    dmqp_unknown_method_count++;
+    return 0;
+}
+
 TestSuite(dmqp, .timeout = 10);
+
+Test(dmqp, test_read_dmqp_message_throws_when_invalid_args) {
+    // arrange
+    errno = 0;
+    int fd = 0;
+    struct dmqp_message buf;
+
+    // act
+    int res1 = read_dmqp_message(-1, NULL);
+    int errno1 = errno;
+
+    // arrange
+    errno = 0;
+
+    // act
+    int res2 = read_dmqp_message(-1, &buf);
+    int errno2 = errno;
+
+    // arrange
+    errno = 0;
+
+    // act
+    int res3 = read_dmqp_message(fd, NULL);
+    int errno3 = errno;
+
+    cr_assert(res1 < 0);
+    cr_assert(res2 < 0);
+    cr_assert(res3 < 0);
+    cr_assert_eq(errno1, EINVAL);
+    cr_assert_eq(errno2, EINVAL);
+    cr_assert_eq(errno3, EINVAL);
+}
+
+Test(dmqp, test_read_dmqp_message_throws_when_payload_too_big) {
+    // arrange
+    errno = 0;
+
+    // 1MB + 1B in little endian: 0b 0000 0000 0001 0000 0000 0000 0000 0001
+    //                            0x    0    0    1    0    0    0    0    1
+    //                            0x00100001
+    // 1MB + 1B in big endian (network byte order): 0x01001000
+    struct dmqp_header header = {.timestamp = 0,
+                                 .length = 0x01001000,
+                                 .method = 0,
+                                 .topic_id = 0,
+                                 .status_code = 0};
+
+    int fds[2];
+    socketpair(AF_UNIX, SOCK_STREAM, 0, fds);
+    send(fds[1], &header, sizeof(struct dmqp_header), 0);
+    close(fds[1]);
+
+    struct dmqp_message buf;
+
+    // act
+    int res = read_dmqp_message(fds[0], &buf);
+
+    // assert
+    cr_assert(res < 0);
+    cr_assert_eq(errno, EMSGSIZE);
+
+    // cleanup
+    close(fds[0]);
+}
+
+Test(dmqp, test_read_dmqp_message_success_when_no_payload) {
+    // arrange
+    errno = 0;
+
+    // 5 in little endian: 0x0000000000000005
+    // 5 in big endian:    0x0500000000000000
+    // no need to convert method and topic_id, since they're only a byte
+    struct dmqp_header header = {.timestamp = 0x0500000000000000,
+                                 .length = 0,
+                                 .method = DMQP_PUSH,
+                                 .topic_id = 3,
+                                 .status_code = 0};
+
+    int fds[2];
+    socketpair(AF_UNIX, SOCK_STREAM, 0, fds);
+    send(fds[1], &header, sizeof(struct dmqp_header), 0);
+    close(fds[1]);
+
+    struct dmqp_message buf = {.payload = NULL};
+
+    // act
+    int res = read_dmqp_message(fds[0], &buf);
+
+    // assert
+    cr_assert(res >= 0);
+    cr_assert_eq(errno, 0);
+    cr_assert_eq(buf.header.timestamp, 5);
+    cr_assert_eq(buf.header.length, 0);
+    cr_assert_eq(buf.header.method, DMQP_PUSH);
+    cr_assert_eq(buf.header.topic_id, 3);
+    cr_assert_eq(buf.header.status_code, 0);
+    cr_assert_null(buf.payload);
+
+    // cleanup
+    close(fds[0]);
+}
+
+Test(dmqp, test_read_dmqp_message_success) {
+    // arrange
+    errno = 0;
+
+    // 5 in little endian:  0x0000000000000005
+    // 5 in big endian:     0x0500000000000000
+    // 13 in little endian: 0x0000000D
+    // 13 in big endian:    0x0D000000
+    // no need to convert method and topic_id, since they're only a byte
+    struct dmqp_header header = {.timestamp = 0x0500000000000000,
+                                 .length = 0x0D000000,
+                                 .method = DMQP_PUSH,
+                                 .topic_id = 3,
+                                 .status_code = 0};
+
+    int fds[2];
+    socketpair(AF_UNIX, SOCK_STREAM, 0, fds);
+    send(fds[1], &header, sizeof(struct dmqp_header), 0);
+    send(fds[1], "Hello, World!", 13, 0);
+    close(fds[1]);
+
+    struct dmqp_message buf = {.payload = NULL};
+
+    // act
+    int res = read_dmqp_message(fds[0], &buf);
+
+    // assert
+    cr_assert(res >= 0);
+    cr_assert_eq(errno, 0);
+    cr_assert_eq(buf.header.timestamp, 5);
+    cr_assert_eq(buf.header.length, 13);
+    cr_assert_eq(buf.header.method, DMQP_PUSH);
+    cr_assert_eq(buf.header.topic_id, 3);
+    cr_assert_eq(buf.header.status_code, 0);
+    cr_assert_arr_eq(buf.payload, "Hello, World!", 13);
+
+    // cleanup
+    close(fds[0]);
+}
+
+Test(dmqp, test_send_dmqp_message_throws_when_invalid_args) {
+    // arrange
+    errno = 0;
+    int fd = 0;
+    struct dmqp_header header = {.length = 5};
+    struct dmqp_message buf = {.header = header, .payload = NULL};
+
+    // act
+    int res1 = send_dmqp_message(-1, NULL, 0);
+    int errno1 = errno;
+
+    // arrange
+    errno = 0;
+
+    // act
+    int res2 = send_dmqp_message(-1, &buf, 0);
+    int errno2 = errno;
+
+    // arrange
+    errno = 0;
+
+    // act
+    int res3 = send_dmqp_message(fd, NULL, 0);
+    int errno3 = errno;
+
+    // arrange
+    errno = 0;
+
+    // act
+    int res4 = send_dmqp_message(fd, &buf, 0);
+    int errno4 = errno;
+
+    cr_assert(res1 < 0);
+    cr_assert(res2 < 0);
+    cr_assert(res3 < 0);
+    cr_assert(res4 < 0);
+    cr_assert_eq(errno1, EINVAL);
+    cr_assert_eq(errno2, EINVAL);
+    cr_assert_eq(errno3, EINVAL);
+    cr_assert_eq(errno4, EINVAL);
+}
+
+Test(dmqp, test_send_dmqp_message_throws_when_payload_too_big) {
+    // arrange
+    errno = 0;
+
+    struct dmqp_header header = {.timestamp = 0,
+                                 .length = MB + 1,
+                                 .method = 0,
+                                 .topic_id = 0,
+                                 .status_code = 0};
+
+    int fds[2];
+    socketpair(AF_UNIX, SOCK_STREAM, 0, fds);
+
+    struct dmqp_message buf = {.header = header, .payload = "Hello, World!"};
+
+    // act
+    int res = send_dmqp_message(fds[1], &buf, 0);
+    close(fds[1]);
+
+    // assert
+    cr_assert(res < 0);
+    cr_assert_eq(errno, EMSGSIZE);
+
+    // assert that `send_dmqp_message` didn't send anything
+    cr_assert(recv(fds[0], &buf, 1, MSG_PEEK | MSG_DONTWAIT) <= 0);
+
+    // cleanup
+    close(fds[0]);
+}
+
+Test(dmqp, test_send_dmqp_message_success_when_no_payload) {
+    // arrange
+    errno = 0;
+
+    struct dmqp_header header = {.timestamp = 5,
+                                 .length = 0,
+                                 .method = DMQP_PUSH,
+                                 .topic_id = 3,
+                                 .status_code = 0};
+
+    int fds[2];
+    socketpair(AF_UNIX, SOCK_STREAM, 0, fds);
+
+    struct dmqp_message buf = {.header = header, .payload = NULL};
+
+    // act
+    int res1 = send_dmqp_message(fds[1], &buf, 0);
+    int errno1 = errno;
+
+    // arrange
+    errno = 0;
+
+    // act
+    int res2 = read_stream(fds[0], &buf.header, sizeof(struct dmqp_header));
+    int errno2 = errno;
+
+    // assert
+    cr_assert(res1 >= 0);
+    cr_assert(res2 >= 0);
+    cr_assert_eq(errno1, 0);
+    cr_assert_eq(errno2, 0);
+
+    // assert that `send_dmqp_message` didn't send a payload
+    cr_assert(recv(fds[0], &buf, 1, MSG_PEEK | MSG_DONTWAIT) <= 0);
+
+    // 5 in little endian: 0x0000000000000005
+    // 5 in big endian:    0x0500000000000000
+    // no need to convert method and topic_id, since they're only a byte
+    cr_assert_eq(buf.header.timestamp, 0x0500000000000000);
+    cr_assert_eq(buf.header.length, 0);
+    cr_assert_eq(buf.header.method, DMQP_PUSH);
+    cr_assert_eq(buf.header.topic_id, 3);
+    cr_assert_eq(buf.header.status_code, 0);
+    cr_assert_null(buf.payload);
+
+    // cleanup
+    close(fds[0]);
+    close(fds[1]);
+}
+
+Test(dmqp, test_send_dmqp_message_success) {
+    // arrange
+    errno = 0;
+
+    int fds[2];
+    socketpair(AF_UNIX, SOCK_STREAM, 0, fds);
+
+    char payload[] = "Hello, World!";
+    struct dmqp_header header = {.timestamp = 5,
+                                 .length = 13,
+                                 .method = DMQP_PUSH,
+                                 .topic_id = 3,
+                                 .status_code = 0};
+    struct dmqp_message buf = {.header = header, .payload = payload};
+
+    // act
+    int res1 = send_dmqp_message(fds[1], &buf, 0);
+    int errno1 = errno;
+    close(fds[1]);
+
+    // arrange
+    errno = 0;
+
+    // act
+    int res2 = read_stream(fds[0], &buf.header, sizeof(struct dmqp_header));
+    int errno2 = errno;
+
+    // arrange
+    errno = 0;
+
+    // act
+    int res3 = read_stream(fds[0], buf.payload, 13);
+    int errno3 = errno;
+
+    // assert
+    cr_assert(res1 >= 0);
+    cr_assert(res2 >= 0);
+    cr_assert(res3 >= 0);
+    cr_assert_eq(errno1, 0);
+    cr_assert_eq(errno2, 0);
+    cr_assert_eq(errno3, 0);
+
+    // 5 in little endian:  0x0000000000000005
+    // 5 in big endian:     0x0500000000000000
+    // 13 in little endian: 0x0000000D
+    // 13 in big endian:    0x0D000000
+    // no need to convert method and topic_id, since they're only a byte
+    cr_assert_eq(buf.header.timestamp, 0x0500000000000000);
+    cr_assert_eq(buf.header.length, 0x0D000000);
+    cr_assert_eq(buf.header.method, DMQP_PUSH);
+    cr_assert_eq(buf.header.topic_id, 3);
+    cr_assert_eq(buf.header.status_code, 0);
+    cr_assert_arr_eq(buf.payload, "Hello, World!", 13);
+
+    // assert that `send_dmqp_message` didn't send anything else
+    cr_assert(recv(fds[0], &buf, 1, MSG_PEEK | MSG_DONTWAIT) <= 0);
+
+    // cleanup
+    close(fds[0]);
+}
 
 Test(dmqp, test_handle_dmqp_message_throws_error_when_invalid_args) {
     // arrange
@@ -18,154 +397,290 @@ Test(dmqp, test_handle_dmqp_message_throws_error_when_invalid_args) {
     cr_assert_eq(errno, EINVAL);
 }
 
-// TODO: post refactor unit tests
+Test(dmqp, test_handle_dmqp_message_success_when_method_is_dmqp_response) {
+    // arrange
+    errno = 0;
+    dmqp_response_count = 0;
+    dmqp_heartbeat_count = 0;
+    dmqp_push_count = 0;
+    dmqp_pop_count = 0;
+    dmqp_peek_count = 0;
+    dmqp_unknown_method_count = 0;
 
-// Test(dmqp, test_handle_server_message_success) {
-//     // arrange
-//     errno = 0;
-//     char *data = "Hello, World!";
-//     struct dmqp_header header = {
-//         .method = PUSH, .flags = ENCRYPTED_FLAG, .length = strlen(data) + 1};
+    struct dmqp_header header = {.timestamp = 0,
+                                 .length = 0,
+                                 .method = DMQP_RESPONSE,
+                                 .topic_id = 0,
+                                 .status_code = 0};
+    struct dmqp_message buf = {.header = header, .payload = NULL};
 
-//     char message[sizeof(struct dmqp_header) + header.length];
-//     memcpy(message, &header, sizeof(struct dmqp_header));
-//     memcpy((char *)message + sizeof(struct dmqp_header), data,
-//     header.length);
+    int fds[2];
+    socketpair(AF_UNIX, SOCK_STREAM, 0, fds);
 
-//     // act
-//     int res = handle_server_message(message, 1024, 1);
+    // act
+    int res1 = send_dmqp_message(fds[1], &buf, 0);
+    int errno1 = errno;
+    close(fds[1]);
 
-//     // assert
-//     cr_assert(res >= 0);
-//     cr_assert_eq(errno, 0);
+    // arrange
+    errno = 0;
 
-//     // should not have memory leaks
-// }
+    // act
+    int res2 = handle_dmqp_message(fds[0]);
+    int errno2 = errno;
 
-// Test(dmqp, test_parse_dmqp_message_throws_error_when_invalid_args) {
-//     // arrange
-//     errno = 0;
-//     struct dmqp_message message;
+    // assert
+    cr_assert(res1 >= 0);
+    cr_assert(res2 >= 0);
+    cr_assert_eq(errno1, 0);
+    cr_assert_eq(errno2, 0);
+    cr_assert_eq(dmqp_response_count, 1);
+    cr_assert_eq(dmqp_heartbeat_count, 0);
+    cr_assert_eq(dmqp_push_count, 0);
+    cr_assert_eq(dmqp_pop_count, 0);
+    cr_assert_eq(dmqp_peek_count, 0);
+    cr_assert_eq(dmqp_unknown_method_count, 0);
 
-//     // act
-//     int res1 =
-//         parse_dmqp_message(NULL, sizeof(struct dmqp_header) - 1, -1, NULL);
-//     int errno1 = errno;
+    // cleanup
+    close(fds[0]);
+}
 
-//     // arrange
-//     errno = 0;
+Test(dmqp, test_handle_dmqp_message_success_when_method_is_dmqp_heartbeat) {
+    // arrange
+    errno = 0;
+    dmqp_response_count = 0;
+    dmqp_heartbeat_count = 0;
+    dmqp_push_count = 0;
+    dmqp_pop_count = 0;
+    dmqp_peek_count = 0;
+    dmqp_unknown_method_count = 0;
 
-//     // act
-//     int res2 =
-//         parse_dmqp_message(&message, sizeof(struct dmqp_header) - 1, -1,
-//         NULL);
-//     int errno2 = errno;
+    struct dmqp_header header = {.timestamp = 0,
+                                 .length = 0,
+                                 .method = DMQP_HEARTBEAT,
+                                 .topic_id = 0,
+                                 .status_code = 0};
+    struct dmqp_message buf = {.header = header, .payload = NULL};
 
-//     // arrange
-//     errno = 0;
+    int fds[2];
+    socketpair(AF_UNIX, SOCK_STREAM, 0, fds);
 
-//     // act
-//     int res3 =
-//         parse_dmqp_message(&message, sizeof(struct dmqp_header), -1, NULL);
-//     int errno3 = errno;
+    // act
+    int res1 = send_dmqp_message(fds[1], &buf, 0);
+    close(fds[1]);
+    int errno1 = errno;
 
-//     // arrange
-//     errno = 0;
+    // arrange
+    errno = 0;
 
-//     // act
-//     int res4 =
-//         parse_dmqp_message(&message, sizeof(struct dmqp_header), 0, NULL);
-//     int errno4 = errno;
+    // act
+    int res2 = handle_dmqp_message(fds[0]);
+    int errno2 = errno;
 
-//     // assert
-//     cr_assert(res1 < 0);
-//     cr_assert(res2 < 0);
-//     cr_assert(res3 < 0);
-//     cr_assert(res4 < 0);
-//     cr_assert_eq(EINVAL, errno1);
-//     cr_assert_eq(EINVAL, errno2);
-//     cr_assert_eq(EINVAL, errno3);
-//     cr_assert_eq(EINVAL, errno4);
-// }
+    // assert
+    cr_assert(res1 >= 0);
+    cr_assert(res2 >= 0);
+    cr_assert_eq(errno1, 0);
+    cr_assert_eq(errno2, 0);
+    cr_assert_eq(dmqp_response_count, 0);
+    cr_assert_eq(dmqp_heartbeat_count, 1);
+    cr_assert_eq(dmqp_push_count, 0);
+    cr_assert_eq(dmqp_pop_count, 0);
+    cr_assert_eq(dmqp_peek_count, 0);
+    cr_assert_eq(dmqp_unknown_method_count, 0);
 
-// Test(dmqp, test_handle_parse_dmqp_message_throws_error_when_payload_too_big)
-// {
-//     // arrange
-//     errno = 0;
-//     struct dmqp_header header;
-//     header.length = 1 << 30;
+    // cleanup
+    close(fds[0]);
+}
 
-//     struct dmqp_message message;
+Test(dmqp, test_handle_dmqp_message_success_when_method_is_dmqp_push) {
+    // arrange
+    errno = 0;
+    dmqp_response_count = 0;
+    dmqp_heartbeat_count = 0;
+    dmqp_push_count = 0;
+    dmqp_pop_count = 0;
+    dmqp_peek_count = 0;
+    dmqp_unknown_method_count = 0;
 
-//     // act
-//     int res = parse_dmqp_message(&header, 1024, 1, &message);
+    struct dmqp_header header = {.timestamp = 0,
+                                 .length = 13,
+                                 .method = DMQP_PUSH,
+                                 .topic_id = 0,
+                                 .status_code = 0};
+    struct dmqp_message buf = {.header = header, .payload = "Hello, World!"};
 
-//     // assert
-//     cr_assert(res < 0);
-//     cr_assert_eq(EMSGSIZE, errno);
-// }
+    int fds[2];
+    socketpair(AF_UNIX, SOCK_STREAM, 0, fds);
 
-// Test(dmqp, test_parse_dmqp_message_success) {
-//     // arrange
-//     errno = 0;
-//     char *data = "Hello, World!";
-//     struct dmqp_header header = {
-//         .method = PUSH, .flags = ENCRYPTED_FLAG, .length = strlen(data) + 1};
+    // act
+    int res1 = send_dmqp_message(fds[1], &buf, 0);
+    int errno1 = errno;
+    close(fds[1]);
 
-//     char message[sizeof(struct dmqp_header) + header.length];
-//     memcpy(message, &header, sizeof(struct dmqp_header));
-//     memcpy((char *)message + sizeof(struct dmqp_header), data,
-//     header.length);
+    // arrange
+    errno = 0;
 
-//     struct dmqp_message dmqp_message;
+    // act
+    int res2 = handle_dmqp_message(fds[0]);
+    int errno2 = errno;
 
-//     // act
-//     int res = parse_dmqp_message(message, 1024, 1, &dmqp_message);
+    // assert
+    cr_assert(res1 >= 0);
+    cr_assert(res2 >= 0);
+    cr_assert_eq(errno1, 0);
+    cr_assert_eq(errno2, 0);
+    cr_assert_eq(dmqp_response_count, 0);
+    cr_assert_eq(dmqp_heartbeat_count, 0);
+    cr_assert_eq(dmqp_push_count, 1);
+    cr_assert_eq(dmqp_pop_count, 0);
+    cr_assert_eq(dmqp_peek_count, 0);
+    cr_assert_eq(dmqp_unknown_method_count, 0);
 
-//     // assert
-//     cr_assert(res >= 0);
-//     cr_assert_eq(errno, 0);
-//     cr_assert_eq(dmqp_message.header.method, PUSH);
-//     cr_assert_neq(dmqp_message.header.flags & ENCRYPTED_FLAG, 0);
-//     cr_assert_eq(dmqp_message.header.length, strlen(data) + 1);
-//     cr_assert_str_eq(dmqp_message.payload, data);
+    // cleanup
+    close(fds[0]);
+}
 
-//     // cleanup
-//     free(dmqp_message.payload);
-// }
+Test(dmqp, test_handle_dmqp_message_success_when_method_is_dmqp_pop) {
+    // arrange
+    errno = 0;
+    dmqp_response_count = 0;
+    dmqp_heartbeat_count = 0;
+    dmqp_push_count = 0;
+    dmqp_pop_count = 0;
+    dmqp_peek_count = 0;
+    dmqp_unknown_method_count = 0;
 
-// Test(dmqp, test_handle_server_message_request_additional_bytes_success) {
-//     // arrange
-//     errno = 0;
-//     char *data = "Hello, World!";
-//     struct dmqp_header header = {
-//         .method = PUSH, .flags = ENCRYPTED_FLAG, .length = strlen(data) + 1};
+    struct dmqp_header header = {.timestamp = 0,
+                                 .length = 0,
+                                 .method = DMQP_POP,
+                                 .topic_id = 0,
+                                 .status_code = 0};
+    struct dmqp_message buf = {.header = header, .payload = NULL};
 
-//     char message[sizeof(struct dmqp_header) + header.length];
-//     memcpy(message, &header, sizeof(struct dmqp_header));
-//     memcpy((char *)message + sizeof(struct dmqp_header), data,
-//     header.length);
+    int fds[2];
+    socketpair(AF_UNIX, SOCK_STREAM, 0, fds);
 
-//     struct dmqp_message dmqp_message;
+    // act
+    int res1 = send_dmqp_message(fds[1], &buf, 0);
+    int errno1 = errno;
+    close(fds[1]);
 
-//     int mock_sockets[2];
-//     pipe(mock_sockets);
-//     write(mock_sockets[1], "World!", 7);
-//     close(mock_sockets[1]);
+    // arrange
+    errno = 0;
 
-//     // act
-//     int res = parse_dmqp_message(message, sizeof(struct dmqp_header) + 7,
-//                                  mock_sockets[0], &dmqp_message);
+    // act
+    int res2 = handle_dmqp_message(fds[0]);
+    int errno2 = errno;
 
-//     // assert
-//     cr_assert(res >= 0);
-//     cr_assert_eq(errno, 0);
-//     cr_assert_eq(dmqp_message.header.method, PUSH);
-//     cr_assert_neq(dmqp_message.header.flags & ENCRYPTED_FLAG, 0);
-//     cr_assert_eq(dmqp_message.header.length, strlen(data) + 1);
-//     cr_assert_str_eq(dmqp_message.payload, data);
+    // assert
+    cr_assert(res1 >= 0);
+    cr_assert(res2 >= 0);
+    cr_assert_eq(errno1, 0);
+    cr_assert_eq(errno2, 0);
+    cr_assert_eq(dmqp_response_count, 0);
+    cr_assert_eq(dmqp_heartbeat_count, 0);
+    cr_assert_eq(dmqp_push_count, 0);
+    cr_assert_eq(dmqp_pop_count, 1);
+    cr_assert_eq(dmqp_peek_count, 0);
+    cr_assert_eq(dmqp_unknown_method_count, 0);
 
-//     // cleanup
-//     close(mock_sockets[0]);
-//     free(dmqp_message.payload);
-// }
+    // cleanup
+    close(fds[0]);
+}
+
+Test(dmqp, test_handle_dmqp_message_success_when_method_is_dmqp_peek) {
+    // arrange
+    errno = 0;
+    dmqp_response_count = 0;
+    dmqp_heartbeat_count = 0;
+    dmqp_push_count = 0;
+    dmqp_pop_count = 0;
+    dmqp_peek_count = 0;
+    dmqp_unknown_method_count = 0;
+
+    struct dmqp_header header = {.timestamp = 0,
+                                 .length = 0,
+                                 .method = DMQP_PEEK,
+                                 .topic_id = 0,
+                                 .status_code = 0};
+    struct dmqp_message buf = {.header = header, .payload = NULL};
+
+    int fds[2];
+    socketpair(AF_UNIX, SOCK_STREAM, 0, fds);
+
+    // act
+    int res1 = send_dmqp_message(fds[1], &buf, 0);
+    int errno1 = errno;
+    close(fds[1]);
+
+    // arrange
+    errno = 0;
+
+    // act
+    int res2 = handle_dmqp_message(fds[0]);
+    int errno2 = errno;
+
+    // assert
+    cr_assert(res1 >= 0);
+    cr_assert(res2 >= 0);
+    cr_assert_eq(errno1, 0);
+    cr_assert_eq(errno2, 0);
+    cr_assert_eq(dmqp_response_count, 0);
+    cr_assert_eq(dmqp_heartbeat_count, 0);
+    cr_assert_eq(dmqp_push_count, 0);
+    cr_assert_eq(dmqp_pop_count, 0);
+    cr_assert_eq(dmqp_peek_count, 1);
+    cr_assert_eq(dmqp_unknown_method_count, 0);
+
+    // cleanup
+    close(fds[0]);
+}
+
+Test(dmqp, test_handle_dmqp_message_success_when_method_is_unknown) {
+    // arrange
+    errno = 0;
+    dmqp_response_count = 0;
+    dmqp_heartbeat_count = 0;
+    dmqp_push_count = 0;
+    dmqp_pop_count = 0;
+    dmqp_peek_count = 0;
+    dmqp_unknown_method_count = 0;
+
+    struct dmqp_header header = {.timestamp = 0,
+                                 .length = 0,
+                                 .method = DMQP_PEEK + 1,
+                                 .topic_id = 0,
+                                 .status_code = 0};
+    struct dmqp_message buf = {.header = header, .payload = NULL};
+
+    int fds[2];
+    socketpair(AF_UNIX, SOCK_STREAM, 0, fds);
+
+    // act
+    int res1 = send_dmqp_message(fds[1], &buf, 0);
+    int errno1 = errno;
+    close(fds[1]);
+
+    // arrange
+    errno = 0;
+
+    // act
+    int res2 = handle_dmqp_message(fds[0]);
+    int errno2 = errno;
+
+    // assert
+    cr_assert(res1 >= 0);
+    cr_assert(res2 >= 0);
+    cr_assert_eq(errno1, 0);
+    cr_assert_eq(errno2, 0);
+    cr_assert_eq(dmqp_response_count, 0);
+    cr_assert_eq(dmqp_heartbeat_count, 0);
+    cr_assert_eq(dmqp_push_count, 0);
+    cr_assert_eq(dmqp_pop_count, 0);
+    cr_assert_eq(dmqp_peek_count, 0);
+    cr_assert_eq(dmqp_unknown_method_count, 1);
+
+    // cleanup
+    close(fds[0]);
+}
