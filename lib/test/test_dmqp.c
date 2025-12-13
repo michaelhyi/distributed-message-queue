@@ -30,7 +30,6 @@
 
 // used to validate propagation to downstream handlers
 static unsigned int dmqp_response_count = 0;
-static unsigned int dmqp_heartbeat_count = 0;
 static unsigned int dmqp_push_count = 0;
 static unsigned int dmqp_pop_count = 0;
 static unsigned int dmqp_peek_count = 0;
@@ -40,14 +39,6 @@ int handle_dmqp_response(const struct dmqp_message *message, int reply_socket) {
     (void)message;
     (void)reply_socket;
     dmqp_response_count++;
-    return 0;
-}
-
-int handle_dmqp_heartbeat(const struct dmqp_message *message,
-                          int reply_socket) {
-    (void)message;
-    (void)reply_socket;
-    dmqp_heartbeat_count++;
     return 0;
 }
 
@@ -442,7 +433,6 @@ Test(dmqp, test_handle_dmqp_message_success_when_method_is_dmqp_response) {
     // arrange
     errno = 0;
     dmqp_response_count = 0;
-    dmqp_heartbeat_count = 0;
     dmqp_push_count = 0;
     dmqp_pop_count = 0;
     dmqp_peek_count = 0;
@@ -476,55 +466,6 @@ Test(dmqp, test_handle_dmqp_message_success_when_method_is_dmqp_response) {
     cr_assert_eq(errno1, 0);
     cr_assert_eq(errno2, 0);
     cr_assert_eq(dmqp_response_count, 1);
-    cr_assert_eq(dmqp_heartbeat_count, 0);
-    cr_assert_eq(dmqp_push_count, 0);
-    cr_assert_eq(dmqp_pop_count, 0);
-    cr_assert_eq(dmqp_peek_count, 0);
-    cr_assert_eq(dmqp_unknown_method_count, 0);
-
-    // cleanup
-    close(fds[0]);
-}
-
-Test(dmqp, test_handle_dmqp_message_success_when_method_is_dmqp_heartbeat) {
-    // arrange
-    errno = 0;
-    dmqp_response_count = 0;
-    dmqp_heartbeat_count = 0;
-    dmqp_push_count = 0;
-    dmqp_pop_count = 0;
-    dmqp_peek_count = 0;
-    dmqp_unknown_method_count = 0;
-
-    struct dmqp_header header = {.timestamp = 0,
-                                 .length = 0,
-                                 .method = DMQP_HEARTBEAT,
-                                 .topic_id = 0,
-                                 .status_code = 0};
-    struct dmqp_message buf = {.header = header, .payload = NULL};
-
-    int fds[2];
-    socketpair(AF_UNIX, SOCK_STREAM, 0, fds);
-
-    // act
-    int res1 = send_dmqp_message(fds[1], &buf, 0);
-    close(fds[1]);
-    int errno1 = errno;
-
-    // arrange
-    errno = 0;
-
-    // act
-    int res2 = handle_dmqp_message(fds[0]);
-    int errno2 = errno;
-
-    // assert
-    cr_assert(res1 >= 0);
-    cr_assert(res2 >= 0);
-    cr_assert_eq(errno1, 0);
-    cr_assert_eq(errno2, 0);
-    cr_assert_eq(dmqp_response_count, 0);
-    cr_assert_eq(dmqp_heartbeat_count, 1);
     cr_assert_eq(dmqp_push_count, 0);
     cr_assert_eq(dmqp_pop_count, 0);
     cr_assert_eq(dmqp_peek_count, 0);
@@ -538,7 +479,6 @@ Test(dmqp, test_handle_dmqp_message_success_when_method_is_dmqp_push) {
     // arrange
     errno = 0;
     dmqp_response_count = 0;
-    dmqp_heartbeat_count = 0;
     dmqp_push_count = 0;
     dmqp_pop_count = 0;
     dmqp_peek_count = 0;
@@ -572,7 +512,6 @@ Test(dmqp, test_handle_dmqp_message_success_when_method_is_dmqp_push) {
     cr_assert_eq(errno1, 0);
     cr_assert_eq(errno2, 0);
     cr_assert_eq(dmqp_response_count, 0);
-    cr_assert_eq(dmqp_heartbeat_count, 0);
     cr_assert_eq(dmqp_push_count, 1);
     cr_assert_eq(dmqp_pop_count, 0);
     cr_assert_eq(dmqp_peek_count, 0);
@@ -586,7 +525,6 @@ Test(dmqp, test_handle_dmqp_message_success_when_method_is_dmqp_pop) {
     // arrange
     errno = 0;
     dmqp_response_count = 0;
-    dmqp_heartbeat_count = 0;
     dmqp_push_count = 0;
     dmqp_pop_count = 0;
     dmqp_peek_count = 0;
@@ -620,7 +558,6 @@ Test(dmqp, test_handle_dmqp_message_success_when_method_is_dmqp_pop) {
     cr_assert_eq(errno1, 0);
     cr_assert_eq(errno2, 0);
     cr_assert_eq(dmqp_response_count, 0);
-    cr_assert_eq(dmqp_heartbeat_count, 0);
     cr_assert_eq(dmqp_push_count, 0);
     cr_assert_eq(dmqp_pop_count, 1);
     cr_assert_eq(dmqp_peek_count, 0);
@@ -634,7 +571,6 @@ Test(dmqp, test_handle_dmqp_message_success_when_method_is_dmqp_peek) {
     // arrange
     errno = 0;
     dmqp_response_count = 0;
-    dmqp_heartbeat_count = 0;
     dmqp_push_count = 0;
     dmqp_pop_count = 0;
     dmqp_peek_count = 0;
@@ -668,7 +604,6 @@ Test(dmqp, test_handle_dmqp_message_success_when_method_is_dmqp_peek) {
     cr_assert_eq(errno1, 0);
     cr_assert_eq(errno2, 0);
     cr_assert_eq(dmqp_response_count, 0);
-    cr_assert_eq(dmqp_heartbeat_count, 0);
     cr_assert_eq(dmqp_push_count, 0);
     cr_assert_eq(dmqp_pop_count, 0);
     cr_assert_eq(dmqp_peek_count, 1);
@@ -682,7 +617,6 @@ Test(dmqp, test_handle_dmqp_message_success_when_method_is_unknown) {
     // arrange
     errno = 0;
     dmqp_response_count = 0;
-    dmqp_heartbeat_count = 0;
     dmqp_push_count = 0;
     dmqp_pop_count = 0;
     dmqp_peek_count = 0;
@@ -716,7 +650,6 @@ Test(dmqp, test_handle_dmqp_message_success_when_method_is_unknown) {
     cr_assert_eq(errno1, 0);
     cr_assert_eq(errno2, 0);
     cr_assert_eq(dmqp_response_count, 0);
-    cr_assert_eq(dmqp_heartbeat_count, 0);
     cr_assert_eq(dmqp_push_count, 0);
     cr_assert_eq(dmqp_pop_count, 0);
     cr_assert_eq(dmqp_peek_count, 0);

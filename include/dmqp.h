@@ -11,7 +11,6 @@
 
 enum dmqp_method {
     DMQP_RESPONSE,
-    DMQP_HEARTBEAT,
     DMQP_PUSH,
     DMQP_POP,
     DMQP_PEEK
@@ -92,18 +91,6 @@ int handle_dmqp_message(int socket);
  * @returns 0 if success, -1 if error with global `errno` set
  */
 int handle_dmqp_response(const struct dmqp_message *message, int reply_socket);
-
-/**
- * Handles a DMQP message with method `DMQP_HEARTBEAT`.
- *
- * Throws an error if `message` is null, the method is not `DMQP_HEARTBEAT`, or
- * `reply_socket` is invalid.
- *
- * @param message message received by server
- * @param reply_socket socket to reply on
- * @returns 0 if success, -1 if error with global `errno` set
- */
-int handle_dmqp_heartbeat(const struct dmqp_message *message, int reply_socket);
 
 /**
  * Handles a DMQP message with method `DMQP_PUSH`.

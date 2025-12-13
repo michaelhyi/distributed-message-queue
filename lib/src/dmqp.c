@@ -192,9 +192,6 @@ int handle_dmqp_message(int socket) {
     case DMQP_RESPONSE:
         res = handle_dmqp_response(&buf, socket);
         break;
-    case DMQP_HEARTBEAT:
-        res = handle_dmqp_heartbeat(&buf, socket);
-        break;
     case DMQP_PUSH:
         res = handle_dmqp_push(&buf, socket);
         break;
