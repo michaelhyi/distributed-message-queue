@@ -22,13 +22,26 @@ struct connection_handler_args {
 /**
  * Listens on a TCP connection.
  *
+ * Throws an error if `arg` is null, `arg->socket` is invalid, or
+ * `arg->message_handler` is null.
+ *
  * @param arg pointer to args of type `struct connection_handler_args`. must be
  * free once copied locally
  */
 static void *connection_handler(void *arg) {
+    if (arg == NULL) {
+        errno = EINVAL;
+        goto cleanup;
+    }
+
     struct connection_handler_args args =
         *(struct connection_handler_args *)arg;
     free(arg);
+
+    if (args.socket < 0 || args.message_handler == NULL) {
+        errno = EINVAL;
+        goto cleanup;
+    }
 
     while (1) {
         int res = args.message_handler(args.socket);
@@ -37,11 +50,17 @@ static void *connection_handler(void *arg) {
         }
     }
 
+cleanup:
     close(args.socket);
     return NULL;
 }
 
-int client_init(const char *server_host, unsigned int server_port) {
+int client_init(const char *server_host, unsigned short server_port) {
+    if (server_host == NULL) {
+        errno = EINVAL;
+        return -1;
+    }
+
     int client_socket = socket(AF_INET, SOCK_STREAM, 0);
     if (client_socket < 0) {
         return -1;
@@ -68,7 +87,13 @@ int client_init(const char *server_host, unsigned int server_port) {
     return client_socket;
 }
 
-int server_init(unsigned int server_port, int (*message_handler)(int socket)) {
+int server_init(unsigned short server_port,
+                int (*message_handler)(int socket)) {
+    if (message_handler == NULL) {
+        errno = EINVAL;
+        return -1;
+    }
+
     int server_socket = socket(AF_INET, SOCK_STREAM, 0);
     if (server_socket < 0) {
         return -1;
@@ -104,22 +129,28 @@ int server_init(unsigned int server_port, int (*message_handler)(int socket)) {
             accept(server_socket, (struct sockaddr *)&client_address,
                    &client_address_len);
         if (client_socket < 0) {
-            // TODO: error handling
             continue;
         }
 
-        struct timeval timeout = {.tv_sec = 10, .tv_usec = 0};
+        struct timeval timeout = {.tv_sec = 30, .tv_usec = 0};
         res = setsockopt(client_socket, SOL_SOCKET, SO_RCVTIMEO,
                          (const void *)&timeout, sizeof(timeout));
         if (res < 0) {
-            // TODO: error handling
+            close(client_socket);
+            continue;
+        }
+
+        int keepalive = 1;
+        res = setsockopt(client_socket, SOL_SOCKET, SO_KEEPALIVE, &keepalive, sizeof(keepalive));
+        if (res < 0) {
+            close(client_socket);
             continue;
         }
 
         struct connection_handler_args *args =
             malloc(sizeof(struct connection_handler_args));
         if (args == NULL) {
-            // TODO: error handling
+            close(client_socket);
             continue;
         }
         args->socket = client_socket;
@@ -129,10 +160,18 @@ int server_init(unsigned int server_port, int (*message_handler)(int socket)) {
         pthread_create(&tid, NULL, connection_handler, args);
     }
 
+    // TODO: cleanup all threads
+    errno = 0;
+    close(server_socket);
     return 0;
 }
 
 ssize_t read_all(int fd, void *buf, size_t count) {
+    if (buf == NULL) {
+        errno = EINVAL;
+        return -1;
+    }
+
     unsigned int total = 0;
 
     while (total < count) {
@@ -148,6 +187,11 @@ ssize_t read_all(int fd, void *buf, size_t count) {
 }
 
 ssize_t send_all(int socket, const void *buffer, size_t length, int flags) {
+    if (socket < 0 || buffer == NULL) {
+        errno = EINVAL;
+        return -1;
+    }
+
     unsigned int total = 0;
 
     while (total < length) {

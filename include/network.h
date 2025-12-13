@@ -6,40 +6,40 @@
 
 /**
  * TODO:
- * 1. docs
- * 2. errno
- * 3. clean up resources
- * 4. unit testing?
- * 5. timeouts
- * 6. signal handling
- * 7. heartbeats
- * 8. TLS
- * 9. TCP keepalive to replace heartbeats
+ * 1. TLS
+ * 2. unit testing?
+ * 3. separate dmqp_client_init and dmqp_server init?
+ * 4. signal handling
  */
 
 /**
  * Initializes a client connection to a server.
  *
+ * Throws an error if `server_host` is null or any socket operations fail.
+ *
  * @param server_host the server host address
  * @param server_port the server port
- * @returns the socket file descriptor of the client, -1 if error
- * with global `errno` set
+ * @returns the socket of the client, -1 if error with global `errno` set
  */
-int client_init(const char *server_host, unsigned int server_port);
+int client_init(const char *server_host, unsigned short server_port);
 
 /**
  * Initializes a server.
  *
+ * Throws an error if `message_handler` is null or any socket operations fail.
+ *
  * @param server_port the port to bind the server to
- * @param message_handler pointer to a function from the application-layer
- * protocol that handles messages. passed down to connection handler thread to
- * handle messages received at server
+ * @param message_handler function from the application-layer protocol that
+ * handles messages. passed down to connection handler thread to handle messages
+ * received at server
  * @returns 0 on success, -1 on error with global `errno` set
  */
-int server_init(unsigned int server_port, int (*message_handler)(int socket));
+int server_init(unsigned short server_port, int (*message_handler)(int socket));
 
 /**
  * Reads all bytes into a buffer from a file descriptor.
+ *
+ * Throws an error if `buf` is null or the `read` syscall fails.
  *
  * @param fd file descriptor to read from
  * @param buf buffer to write to
@@ -51,6 +51,9 @@ ssize_t read_all(int fd, void *buf, size_t count);
 
 /**
  * Sends all bytes from a buffer to a socket.
+ *
+ * Throws an error if `socket` is invalid, `buffer` is null, or if then `send`
+ * syscall fails.
  *
  * @param socket socket to send to
  * @param buffer buffer to send
