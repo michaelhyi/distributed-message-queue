@@ -79,7 +79,7 @@ int handle_dmqp_message(int socket);
 /**
  * Handles a DMQP message with method `DMQP_RESPONSE`.
  *
- * Throws an error if `message` is null, the method is not `DMQP_RESONSE`, or
+ * Throws an error if `message` is null, the method is not `DMQP_RESPONSE`, or
  * `reply_socket` is invalid.
  *
  * @param message message received by server

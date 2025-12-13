@@ -1,11 +1,32 @@
 #include "dmqp.h"
 
+#include <arpa/inet.h>
 #include <criterion/criterion.h>
 #include <errno.h>
 #include <sys/socket.h>
 #include <unistd.h>
 
 #include "network.h"
+
+#if defined(__linux__)
+#include <endian.h>
+#define ntohll(x) be64toh(x)
+#define htonll(x) htobe64(x)
+#elif defined(__APPLE__) || defined(__FreeBSD__)
+#include <sys/endian.h>
+#define ntohll(x) be64toh(x)
+#define htonll(x) htobe64(x)
+#else // Fallback implementation
+#if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
+#define ntohll(x)                                                              \
+    ((((uint64_t)ntohl((uint32_t)(x))) << 32) | ntohl((uint32_t)((x) >> 32)))
+#define htonll(x)                                                              \
+    ((((uint64_t)htonl((uint32_t)(x))) << 32) | htonl((uint32_t)((x) >> 32)))
+#else
+#define ntohll(x) (x)
+#define htonll(x) (x)
+#endif
+#endif
 
 // used to validate propagation to downstream handlers
 static unsigned int dmqp_response_count = 0;
@@ -97,12 +118,8 @@ Test(dmqp, test_read_dmqp_message_throws_when_payload_too_big) {
     // arrange
     errno = 0;
 
-    // 1MB + 1B in little endian: 0b 0000 0000 0001 0000 0000 0000 0000 0001
-    //                            0x    0    0    1    0    0    0    0    1
-    //                            0x00100001
-    // 1MB + 1B in big endian (network byte order): 0x01001000
     struct dmqp_header header = {.timestamp = 0,
-                                 .length = 0x01001000,
+                                 .length = htonl(1 * MB + 1),
                                  .method = 0,
                                  .topic_id = 0,
                                  .status_code = 0};
@@ -129,10 +146,8 @@ Test(dmqp, test_read_dmqp_message_success_when_no_payload) {
     // arrange
     errno = 0;
 
-    // 5 in little endian: 0x0000000000000005
-    // 5 in big endian:    0x0500000000000000
     // no need to convert method and topic_id, since they're only a byte
-    struct dmqp_header header = {.timestamp = 0x0500000000000000,
+    struct dmqp_header header = {.timestamp = htonll(5),
                                  .length = 0,
                                  .method = DMQP_PUSH,
                                  .topic_id = 3,
@@ -166,13 +181,9 @@ Test(dmqp, test_read_dmqp_message_success) {
     // arrange
     errno = 0;
 
-    // 5 in little endian:  0x0000000000000005
-    // 5 in big endian:     0x0500000000000000
-    // 13 in little endian: 0x0000000D
-    // 13 in big endian:    0x0D000000
     // no need to convert method and topic_id, since they're only a byte
-    struct dmqp_header header = {.timestamp = 0x0500000000000000,
-                                 .length = 0x0D000000,
+    struct dmqp_header header = {.timestamp = htonll(5),
+                                 .length = htonl(13),
                                  .method = DMQP_PUSH,
                                  .topic_id = 3,
                                  .status_code = 0};
@@ -199,13 +210,14 @@ Test(dmqp, test_read_dmqp_message_success) {
     cr_assert_arr_eq(buf.payload, "Hello, World!", 13);
 
     // cleanup
+    free(buf.payload);
     close(fds[0]);
 }
 
 Test(dmqp, test_send_dmqp_message_throws_when_invalid_args) {
     // arrange
     errno = 0;
-    int fd = 0;
+    int fd = socket(AF_INET, SOCK_STREAM, 0);
     struct dmqp_header header = {.length = 5};
     struct dmqp_message buf = {.header = header, .payload = NULL};
 
@@ -242,6 +254,9 @@ Test(dmqp, test_send_dmqp_message_throws_when_invalid_args) {
     cr_assert_eq(errno2, EINVAL);
     cr_assert_eq(errno3, EINVAL);
     cr_assert_eq(errno4, EINVAL);
+
+    // assert that `send_dmqp_message` didn't send anything
+    cr_assert(recv(fd, &buf, 1, MSG_PEEK | MSG_DONTWAIT) <= 0);
 }
 
 Test(dmqp, test_send_dmqp_message_throws_when_payload_too_big) {
@@ -249,7 +264,7 @@ Test(dmqp, test_send_dmqp_message_throws_when_payload_too_big) {
     errno = 0;
 
     struct dmqp_header header = {.timestamp = 0,
-                                 .length = MB + 1,
+                                 .length = 1 * MB + 1,
                                  .method = 0,
                                  .topic_id = 0,
                                  .status_code = 0};
@@ -309,10 +324,8 @@ Test(dmqp, test_send_dmqp_message_success_when_no_payload) {
     // assert that `send_dmqp_message` didn't send a payload
     cr_assert(recv(fds[0], &buf, 1, MSG_PEEK | MSG_DONTWAIT) <= 0);
 
-    // 5 in little endian: 0x0000000000000005
-    // 5 in big endian:    0x0500000000000000
     // no need to convert method and topic_id, since they're only a byte
-    cr_assert_eq(buf.header.timestamp, 0x0500000000000000);
+    cr_assert_eq(buf.header.timestamp, htonll(5));
     cr_assert_eq(buf.header.length, 0);
     cr_assert_eq(buf.header.method, DMQP_PUSH);
     cr_assert_eq(buf.header.topic_id, 3);
@@ -366,13 +379,9 @@ Test(dmqp, test_send_dmqp_message_success) {
     cr_assert_eq(errno2, 0);
     cr_assert_eq(errno3, 0);
 
-    // 5 in little endian:  0x0000000000000005
-    // 5 in big endian:     0x0500000000000000
-    // 13 in little endian: 0x0000000D
-    // 13 in big endian:    0x0D000000
     // no need to convert method and topic_id, since they're only a byte
-    cr_assert_eq(buf.header.timestamp, 0x0500000000000000);
-    cr_assert_eq(buf.header.length, 0x0D000000);
+    cr_assert_eq(buf.header.timestamp, htonll(5));
+    cr_assert_eq(buf.header.length, htonl(13));
     cr_assert_eq(buf.header.method, DMQP_PUSH);
     cr_assert_eq(buf.header.topic_id, 3);
     cr_assert_eq(buf.header.status_code, 0);
