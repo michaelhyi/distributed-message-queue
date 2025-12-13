@@ -141,7 +141,8 @@ int server_init(unsigned short server_port,
         }
 
         int keepalive = 1;
-        res = setsockopt(client_socket, SOL_SOCKET, SO_KEEPALIVE, &keepalive, sizeof(keepalive));
+        res = setsockopt(client_socket, SOL_SOCKET, SO_KEEPALIVE, &keepalive,
+                         sizeof(keepalive));
         if (res < 0) {
             close(client_socket);
             continue;

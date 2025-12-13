@@ -9,12 +9,7 @@
 #define MAX_PAYLOAD_LENGTH 1 * MB
 #define DMQP_HEADER_SIZE 16
 
-enum dmqp_method {
-    DMQP_RESPONSE,
-    DMQP_PUSH,
-    DMQP_POP,
-    DMQP_PEEK
-};
+enum dmqp_method { DMQP_RESPONSE, DMQP_PUSH, DMQP_POP, DMQP_PEEK };
 
 // All header fields are expected to be in network byte order (big endian).
 struct dmqp_header {

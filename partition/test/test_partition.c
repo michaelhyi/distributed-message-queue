@@ -109,7 +109,7 @@ Test(partition, test_partition_destroy_success) {
 //     close(mock_sockets[1]);
 
 //     struct dmqp_header res_header;
-//     receive_message(mock_sockets[0], &res_header, sizeof(struct
+//     read_all(mock_sockets[0], &res_header, sizeof(struct
 //     dmqp_header));
 
 //     // assert
@@ -142,7 +142,7 @@ Test(partition, test_partition_destroy_success) {
 //     close(mock_sockets[1]);
 
 //     struct dmqp_header res_header;
-//     receive_message(mock_sockets[0], &res_header, sizeof(struct
+//     read_all(mock_sockets[0], &res_header, sizeof(struct
 //     dmqp_header));
 
 //     // assert
@@ -175,7 +175,7 @@ Test(partition, test_partition_destroy_success) {
 //     close(mock_sockets[1]);
 
 //     struct dmqp_header res_header;
-//     receive_message(mock_sockets[0], &res_header, sizeof(struct
+//     read_all(mock_sockets[0], &res_header, sizeof(struct
 //     dmqp_header));
 
 //     // assert
@@ -227,7 +227,7 @@ Test(partition, test_partition_destroy_success) {
 //     close(mock_sockets[1]);
 
 //     struct dmqp_header res_header1;
-//     receive_message(mock_sockets[0], &res_header1, sizeof(struct
+//     read_all(mock_sockets[0], &res_header1, sizeof(struct
 //     dmqp_header)); close(mock_sockets[0]);
 
 //     // arrange
@@ -240,7 +240,7 @@ Test(partition, test_partition_destroy_success) {
 //     close(mock_sockets[1]);
 
 //     struct dmqp_header res_header2;
-//     receive_message(mock_sockets[0], &res_header2, sizeof(struct
+//     read_all(mock_sockets[0], &res_header2, sizeof(struct
 //     dmqp_header)); close(mock_sockets[0]);
 
 //     // arrange
@@ -253,7 +253,7 @@ Test(partition, test_partition_destroy_success) {
 //     close(mock_sockets[1]);
 
 //     struct dmqp_header res_header3;
-//     receive_message(mock_sockets[0], &res_header3, sizeof(struct
+//     read_all(mock_sockets[0], &res_header3, sizeof(struct
 //     dmqp_header)); close(mock_sockets[0]);
 
 //     // assert
@@ -303,7 +303,7 @@ Test(partition, test_partition_destroy_success) {
 //     close(mock_sockets[1]);
 
 //     struct dmqp_header res_header;
-//     receive_message(mock_sockets[0], &res_header, sizeof(struct
+//     read_all(mock_sockets[0], &res_header, sizeof(struct
 //     dmqp_header));
 
 //     // assert
@@ -348,11 +348,11 @@ Test(partition, test_partition_destroy_success) {
 //     close(mock_sockets[1]);
 
 //     struct dmqp_header res_header;
-//     receive_message(mock_sockets[0], &res_header, sizeof(struct
+//     read_all(mock_sockets[0], &res_header, sizeof(struct
 //     dmqp_header));
 
 //     void *payload = malloc(res_header.length);
-//     receive_message(mock_sockets[0], payload, res_header.length);
+//     read_all(mock_sockets[0], payload, res_header.length);
 
 //     // assert
 //     cr_assert(res >= 0);
@@ -390,7 +390,7 @@ Test(partition, test_partition_destroy_success) {
 //     close(mock_sockets[1]);
 
 //     struct dmqp_header res_header;
-//     receive_message(mock_sockets[0], &res_header, sizeof(struct
+//     read_all(mock_sockets[0], &res_header, sizeof(struct
 //     dmqp_header));
 
 //     // assert
@@ -435,11 +435,11 @@ Test(partition, test_partition_destroy_success) {
 //     close(mock_sockets[1]);
 
 //     struct dmqp_header res_header;
-//     receive_message(mock_sockets[0], &res_header, sizeof(struct
+//     read_all(mock_sockets[0], &res_header, sizeof(struct
 //     dmqp_header));
 
 //     void *payload = malloc(res_header.length);
-//     receive_message(mock_sockets[0], payload, res_header.length);
+//     read_all(mock_sockets[0], payload, res_header.length);
 
 //     // assert
 //     cr_assert(res >= 0);
