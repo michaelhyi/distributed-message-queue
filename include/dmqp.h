@@ -17,7 +17,7 @@ enum dmqp_method {
 
 // All header fields are expected to be in network byte order (big endian).
 struct dmqp_header {
-    int64_t timestamp;  // unix epoch, 1 second resolution. set by the top-level
+    uint64_t timestamp;  // unix epoch, 1 second resolution. set by the top-level
                         // server on a DMQP_PUSH request, indiciating the
                         // timestamp at which data was received for in-order
                         // delivery. set by the partition on a DMQP_PEEK request
