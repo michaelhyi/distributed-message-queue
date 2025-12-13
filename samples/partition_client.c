@@ -29,7 +29,7 @@ int main() {
             return 1;
         }
 
-        printf("pushed: %s\n", (char *)message.payload);
+        printf("pushed: %s\n\n", (char *)message.payload);
 
         res = read_dmqp_message(fd, &message);
         if (res < 0) {
@@ -42,7 +42,7 @@ int main() {
         printf("status_code: %d\n", message.header.status_code);
         printf("timestamp: %ld\n", message.header.timestamp);
         printf("length: %d\n", message.header.length);
-        printf("payload: %s\n", (char *)message.payload);
+        printf("payload: %s\n\n", (char *)message.payload);
     }
 
     header.method = DMQP_PEEK;
@@ -55,7 +55,7 @@ int main() {
         return 1;
     }
 
-    printf("peeked\n");
+    printf("peeked\n\n");
 
     res = read_dmqp_message(fd, &message);
     if (res < 0) {
@@ -68,7 +68,7 @@ int main() {
     printf("status_code: %d\n", message.header.status_code);
     printf("timestamp: %ld\n", message.header.timestamp);
     printf("length: %d\n", message.header.length);
-    printf("payload: %s\n", (char *)message.payload);
+    printf("payload: %s\n\n", (char *)message.payload);
 
     header.method = DMQP_POP;
     header.length = 0;
@@ -80,7 +80,7 @@ int main() {
         return 1;
     }
 
-    printf("popped\n");
+    printf("popped\n\n");
 
     res = read_dmqp_message(fd, &message);
     if (res < 0) {
@@ -93,7 +93,7 @@ int main() {
     printf("status_code: %d\n", message.header.status_code);
     printf("timestamp: %ld\n", message.header.timestamp);
     printf("length: %d\n", message.header.length);
-    printf("payload: %s\n", (char *)message.payload);
+    printf("payload: %s\n\n", (char *)message.payload);
 
     header.method = DMQP_PEEK;
     header.length = 0;
@@ -105,7 +105,7 @@ int main() {
         return 1;
     }
 
-    printf("peeked\n");
+    printf("peeked\n\n");
 
     res = read_dmqp_message(fd, &message);
     if (res < 0) {
@@ -118,7 +118,7 @@ int main() {
     printf("status_code: %d\n", message.header.status_code);
     printf("timestamp: %ld\n", message.header.timestamp);
     printf("length: %d\n", message.header.length);
-    printf("payload: %s\n", (char *)message.payload);
+    printf("payload: %s\n\n", (char *)message.payload);
 
     header.method = DMQP_POP;
     header.length = 0;
@@ -130,7 +130,7 @@ int main() {
         return 1;
     }
 
-    printf("popped\n");
+    printf("popped\n\n");
 
     res = read_dmqp_message(fd, &message);
     if (res < 0) {
@@ -143,6 +143,31 @@ int main() {
     printf("status_code: %d\n", message.header.status_code);
     printf("timestamp: %ld\n", message.header.timestamp);
     printf("length: %d\n", message.header.length);
-    printf("payload: %s\n", (char *)message.payload);
+    printf("payload: %s\n\n", (char *)message.payload);
+
+    header.method = DMQP_PEEK;
+    header.length = 0;
+    message.header = header;
+    message.payload = NULL;
+    res = send_dmqp_message(fd, &message, 0);
+    if (res < 0) {
+        fprintf(stderr, "failed to send message\n");
+        return 1;
+    }
+
+    printf("peeked\n\n");
+
+    res = read_dmqp_message(fd, &message);
+    if (res < 0) {
+        fprintf(stderr, "failed to receive message\n");
+        return 1;
+    }
+
+    printf("received message:\n");
+    printf("method: %d\n", message.header.method);
+    printf("status_code: %d\n", message.header.status_code);
+    printf("timestamp: %ld\n", message.header.timestamp);
+    printf("length: %d\n", message.header.length);
+    printf("payload: %s\n\n", (char *)message.payload);
     return 0;
 }

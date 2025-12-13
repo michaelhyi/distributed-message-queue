@@ -46,8 +46,8 @@ int partition_destroy(void) {
 }
 
 // TODO: test all these
-int handle_dmqp_response(int reply_socket) {
-    if (reply_socket < 0) {
+int handle_dmqp_response(const struct dmqp_message *message, int reply_socket) {
+    if (message == NULL || reply_socket < 0) {
         errno = EINVAL;
         return -1;
     }
@@ -56,9 +56,10 @@ int handle_dmqp_response(int reply_socket) {
                                      .status_code = EPROTO,
                                      .length = 0,
                                      .timestamp = 0};
+    struct dmqp_message res_message = {.header = res_header};
 
-    int res = send(reply_socket, &res_header, sizeof(struct dmqp_header), 0);
-    if (res < 0) {
+    ssize_t n = send_dmqp_message(reply_socket, &res_message, 0);
+    if (n < DMQP_HEADER_SIZE) {
         return -1;
     }
 
@@ -66,9 +67,10 @@ int handle_dmqp_response(int reply_socket) {
     return -1;
 }
 
-int handle_dmqp_push(struct dmqp_message message, int reply_socket) {
-    if ((message.header.length > 0 && message.payload == NULL) ||
-        message.header.length > MAX_PAYLOAD_LENGTH || reply_socket < 0) {
+int handle_dmqp_push(const struct dmqp_message *message, int reply_socket) {
+    if (message == NULL ||
+        (message->header.length > 0 && message->payload == NULL) ||
+        message->header.length > MAX_PAYLOAD_LENGTH || reply_socket < 0) {
         errno = EINVAL;
         return -1;
     }
@@ -83,7 +85,7 @@ int handle_dmqp_push(struct dmqp_message message, int reply_socket) {
         goto reply;
     }
 
-    res = queue_push(&queue, message.payload, message.header.length);
+    res = queue_push(&queue, message->payload, message->header.length);
     if (res < 0) {
         if (errno != ENODATA) {
             errno = EIO;
@@ -106,17 +108,18 @@ reply:
     res_header.status_code = errno;
     res_header.length = 0;
     res_header.timestamp = 0;
+    struct dmqp_message res_message = {.header = res_header};
 
-    res = send(reply_socket, &res_header, sizeof(struct dmqp_header), 0);
-    if (res < 0) {
+    ssize_t n = send_dmqp_message(reply_socket, &res_message, 0);
+    if (n < DMQP_HEADER_SIZE) {
         return -1;
     }
 
     return ret;
 }
 
-int handle_dmqp_pop(int reply_socket) {
-    if (reply_socket < 0) {
+int handle_dmqp_pop(const struct dmqp_message *message, int reply_socket) {
+    if (message == NULL || reply_socket < 0) {
         errno = EINVAL;
         return -1;
     }
@@ -155,15 +158,11 @@ reply:
     res_header.status_code = errno;
     res_header.length = entry.size;
     res_header.timestamp = entry.timestamp;
+    struct dmqp_message res_message = {.header = res_header,
+                                       .payload = entry.data};
 
-    res = send(reply_socket, &res_header, sizeof(struct dmqp_header), 0);
-    if (res < 0) {
-        ret = -1;
-        goto cleanup;
-    }
-
-    res = send(reply_socket, entry.data, res_header.length, 0);
-    if (res < 0) {
+    ssize_t n = send_dmqp_message(reply_socket, &res_message, 0);
+    if (n < DMQP_HEADER_SIZE) {
         ret = -1;
         goto cleanup;
     }
@@ -176,8 +175,8 @@ cleanup:
     return ret;
 }
 
-int handle_dmqp_peek(int reply_socket) {
-    if (reply_socket < 0) {
+int handle_dmqp_peek(const struct dmqp_message *message, int reply_socket) {
+    if (message == NULL || reply_socket < 0) {
         errno = EINVAL;
         return -1;
     }
@@ -216,15 +215,11 @@ reply:
     res_header.status_code = errno;
     res_header.length = entry.size;
     res_header.timestamp = entry.timestamp;
+    struct dmqp_message res_message = {.header = res_header,
+                                       .payload = entry.data};
 
-    res = send(reply_socket, &res_header, sizeof(struct dmqp_header), 0);
-    if (res < 0) {
-        ret = -1;
-        goto cleanup;
-    }
-
-    res = send(reply_socket, entry.data, res_header.length, 0);
-    if (res < 0) {
+    ssize_t n = send_dmqp_message(reply_socket, &res_message, 0);
+    if (n < DMQP_HEADER_SIZE) {
         ret = -1;
         goto cleanup;
     }
@@ -233,8 +228,9 @@ cleanup:
     return ret;
 }
 
-int handle_dmqp_unknown_method(int reply_socket) {
-    if (reply_socket < 0) {
+int handle_dmqp_unknown_method(const struct dmqp_message *message,
+                               int reply_socket) {
+    if (message == NULL || reply_socket < 0) {
         errno = EINVAL;
         return -1;
     }
@@ -243,9 +239,10 @@ int handle_dmqp_unknown_method(int reply_socket) {
                                      .status_code = ENOSYS,
                                      .length = 0,
                                      .timestamp = 0};
+    struct dmqp_message res_message = {.header = res_header};
 
-    int res = send(reply_socket, &res_header, sizeof(struct dmqp_header), 0);
-    if (res < 0) {
+    ssize_t n = send_dmqp_message(reply_socket, &res_message, 0);
+    if (n < DMQP_HEADER_SIZE) {
         return -1;
     }
 

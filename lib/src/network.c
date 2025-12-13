@@ -20,7 +20,7 @@ struct connection_handler_args {
 };
 
 /**
- * Listens on a TCP connection.
+ * Listens on a connection.
  *
  * Throws an error if `arg` is null, `arg->socket` is invalid, or
  * `arg->message_handler` is null.
@@ -29,13 +29,16 @@ struct connection_handler_args {
  * free once copied locally
  */
 static void *connection_handler(void *arg) {
+    struct connection_handler_args args = {
+        .socket = -1,
+        .message_handler = NULL}; // initialized to prevent compiler error
+
     if (arg == NULL) {
         errno = EINVAL;
         goto cleanup;
     }
 
-    struct connection_handler_args args =
-        *(struct connection_handler_args *)arg;
+    args = *(struct connection_handler_args *)arg;
     free(arg);
 
     if (args.socket < 0 || args.message_handler == NULL) {
@@ -51,7 +54,10 @@ static void *connection_handler(void *arg) {
     }
 
 cleanup:
-    close(args.socket);
+    if (args.socket >= 0) {
+        close(args.socket);
+    }
+
     return NULL;
 }
 
