@@ -21,6 +21,28 @@ partitions, which are horizontal shards of queues.
 
 ![Architecture diagram of the distributed message queue](.github/architecture.png)
 
+#### Networking
+
+This distributed system uses a custom application-layer protocol called DMQP.
+DMQP stands for Distributed Message Queue Protocol. A DMQP message uses the
+following format:
+
+```
++-------------------------------------------------------------------------------+
+|                            Timestamp (8 bytes)                                |
++-------------------------------------------------------------------------------+
+|                              Length (4 bytes)                                 |
++-------------------------------------------------------------------------------+
+| Method (1 byte) | Topic ID (1 byte) | Status Code (1 byte) | Unusued (1 byte) |
++-------------------------------------------------------------------------------+
+|                             Payload (Max 1MB)                                 |
++-------------------------------------------------------------------------------+
+```
+
+DMQP uses TCP with persistent connections, leveraging keepalive to preserve
+resources only for active queue producers while maximizing throughput. DMQP
+also uses TLS encrpytion and a timeout of 30 seconds on each socket.
+
 ### Quick Start
 
 #### Requirements
