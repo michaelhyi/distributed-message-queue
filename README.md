@@ -33,7 +33,7 @@ following format:
 +-------------------------------------------------------------------------------+
 |                              Length (4 bytes)                                 |
 +-------------------------------------------------------------------------------+
-| Method (1 byte) | Topic ID (1 byte) | Status Code (1 byte) | Unused (1 byte) |
+| Method (1 byte) | Topic ID (1 byte) | Status Code (1 byte) | Unused (1 byte)  |
 +-------------------------------------------------------------------------------+
 |                             Payload (Max 1MB)                                 |
 +-------------------------------------------------------------------------------+
@@ -41,7 +41,7 @@ following format:
 
 DMQP uses TCP with persistent connections, leveraging keepalive to preserve
 resources only for active queue producers while maximizing throughput. DMQP
-also uses TLS encrpytion and a timeout of 30 seconds on each socket.
+also uses TLS encryption and a timeout of 30 seconds on each socket.
 
 ### Quick Start
 
