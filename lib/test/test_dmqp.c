@@ -126,7 +126,7 @@ Test(dmqp, test_read_dmqp_message_throws_when_payload_too_big) {
 
     int fds[2];
     socketpair(AF_UNIX, SOCK_STREAM, 0, fds);
-    send_all(fds[1], header_wire, sizeof(struct dmqp_header), 0);
+    send_all(fds[1], header_wire, DMQP_HEADER_SIZE, 0);
     close(fds[1]);
 
     struct dmqp_message buf;
@@ -163,7 +163,7 @@ Test(dmqp, test_read_dmqp_message_success_when_no_payload) {
 
     int fds[2];
     socketpair(AF_UNIX, SOCK_STREAM, 0, fds);
-    send_all(fds[1], header_wire, sizeof(struct dmqp_header), 0);
+    send_all(fds[1], header_wire, DMQP_HEADER_SIZE, 0);
     close(fds[1]);
 
     struct dmqp_message buf = {.payload = NULL};
@@ -207,7 +207,7 @@ Test(dmqp, test_read_dmqp_message_success) {
 
     int fds[2];
     socketpair(AF_UNIX, SOCK_STREAM, 0, fds);
-    send_all(fds[1], header_wire, sizeof(struct dmqp_header), 0);
+    send_all(fds[1], header_wire, DMQP_HEADER_SIZE, 0);
     send_all(fds[1], "Hello, World!", 13, 0);
     close(fds[1]);
 
