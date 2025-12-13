@@ -6,6 +6,7 @@
 #define DEFAULT_SERVER_PORT 8080
 #define MB (1 << 20)
 #define MAX_PAYLOAD_LENGTH 1 * MB
+#define DMQP_HEADER_SIZE 16
 
 enum dmqp_method {
     DMQP_RESPONSE,
@@ -17,7 +18,7 @@ enum dmqp_method {
 
 // All header fields are expected to be in network byte order (big endian).
 struct dmqp_header {
-    uint64_t timestamp;  // unix epoch, 1 second resolution. set by the top-level
+    uint64_t timestamp; // unix epoch, 1 second resolution. set by the top-level
                         // server on a DMQP_PUSH request, indiciating the
                         // timestamp at which data was received for in-order
                         // delivery. set by the partition on a DMQP_PEEK request

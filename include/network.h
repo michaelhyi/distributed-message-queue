@@ -1,6 +1,9 @@
 #ifndef NETWORK_H
 #define NETWORK_H
 
+#include <stddef.h>
+#include <sys/types.h>
+
 /**
  * TODO:
  * 1. docs
@@ -11,20 +14,21 @@
  * 6. signal handling
  * 7. heartbeats
  * 8. TLS
+ * 9. TCP keepalive to replace heartbeats
  */
 
 /**
- * Initializes a TCP client connection to a server.
+ * Initializes a client connection to a server.
  *
  * @param server_host the server host address
  * @param server_port the server port
- * @returns the socket file descriptor for the client connection, -1 if error
+ * @returns the socket file descriptor of the client, -1 if error
  * with global `errno` set
  */
 int client_init(const char *server_host, unsigned int server_port);
 
 /**
- * Initializes a TCP server.
+ * Initializes a server.
  *
  * @param server_port the port to bind the server to
  * @param message_handler pointer to a function from the application-layer
@@ -35,13 +39,24 @@ int client_init(const char *server_host, unsigned int server_port);
 int server_init(unsigned int server_port, int (*message_handler)(int socket));
 
 /**
- * Reads bytes into a buffer from a TCP stream.
+ * Reads bytes into a buffer from a stream.
  *
- * @param conn_socket connection to read from
+ * @param fd file descriptor to read from
  * @param buf buffer to write to
- * @param message_size number of bytes to read
+ * @param count number of bytes to read
  * @returns 0 if success, -1 if error with global `errno` set
  */
-int receive_message(int conn_socket, void *buf, unsigned int message_size);
+int read_stream(int fd, void *buf, unsigned int count);
+
+/**
+ * Sends all bytes from a buffer.
+ *
+ * @param socket socket to send to
+ * @param buffer buffer to send
+ * @param length number of bytes to read
+ * @param flags same flags param as that of `send` syscall
+ * @returns 0 if success, -1 if error with global `errno` set
+ */
+ssize_t send_all(int socket, const void *buffer, size_t length, int flags);
 
 #endif

@@ -118,15 +118,24 @@ Test(dmqp, test_read_dmqp_message_throws_when_payload_too_big) {
     // arrange
     errno = 0;
 
-    struct dmqp_header header = {.timestamp = 0,
-                                 .length = htonl(1 * MB + 1),
-                                 .method = 0,
-                                 .topic_id = 0,
-                                 .status_code = 0};
+    // below is the wire format for
+    // struct dmqp_header header = {.timestamp = 0,
+    //                              .length = htonl(1 * MB + 1),
+    //                              .method = 0,
+    //                              .topic_id = 0,
+    //                           .status_code = 0};
+    char header_wire[DMQP_HEADER_SIZE];
+    uint32_t length = htonl(1 * MB + 1);
+
+    memset(header_wire, 0, 8);
+    memcpy(header_wire + 8, &length, 4);
+    header_wire[13] = 0;
+    header_wire[14] = 0;
+    header_wire[15] = 0;
 
     int fds[2];
     socketpair(AF_UNIX, SOCK_STREAM, 0, fds);
-    send(fds[1], &header, sizeof(struct dmqp_header), 0);
+    send_all(fds[1], header_wire, sizeof(struct dmqp_header), 0);
     close(fds[1]);
 
     struct dmqp_message buf;
@@ -146,16 +155,24 @@ Test(dmqp, test_read_dmqp_message_success_when_no_payload) {
     // arrange
     errno = 0;
 
-    // no need to convert method and topic_id, since they're only a byte
-    struct dmqp_header header = {.timestamp = htonll(5),
-                                 .length = 0,
-                                 .method = DMQP_PUSH,
-                                 .topic_id = 3,
-                                 .status_code = 0};
+    // below is the wire format for
+    // struct dmqp_header header = {.timestamp = htonll(5),
+    //                              .length = 0,
+    //                              .method = DMQP_PUSH,
+    //                              .topic_id = 3,
+    //                              .status_code = 0};
+    char header_wire[DMQP_HEADER_SIZE];
+    uint64_t timestamp = htonll(5);
+
+    memcpy(header_wire, &timestamp, 8);
+    memset(header_wire + 8, 0, 4);
+    header_wire[13] = DMQP_PUSH;
+    header_wire[14] = 3;
+    header_wire[15] = 0;
 
     int fds[2];
     socketpair(AF_UNIX, SOCK_STREAM, 0, fds);
-    send(fds[1], &header, sizeof(struct dmqp_header), 0);
+    send_all(fds[1], header_wire, sizeof(struct dmqp_header), 0);
     close(fds[1]);
 
     struct dmqp_message buf = {.payload = NULL};
@@ -181,17 +198,26 @@ Test(dmqp, test_read_dmqp_message_success) {
     // arrange
     errno = 0;
 
-    // no need to convert method and topic_id, since they're only a byte
-    struct dmqp_header header = {.timestamp = htonll(5),
-                                 .length = htonl(13),
-                                 .method = DMQP_PUSH,
-                                 .topic_id = 3,
-                                 .status_code = 0};
+    // below is the wire format for
+    // struct dmqp_header header = {.timestamp = htonll(5),
+    //                              .length = htonl(13),
+    //                              .method = DMQP_PUSH,
+    //                              .topic_id = 3,
+    //                              .status_code = 0};
+    char header_wire[DMQP_HEADER_SIZE];
+    uint64_t timestamp = htonll(5);
+    uint32_t length = htonl(13);
+
+    memcpy(header_wire, &timestamp, 8);
+    memcpy(header_wire + 8, &length, 4);
+    header_wire[13] = DMQP_PUSH;
+    header_wire[14] = 3;
+    header_wire[15] = 0;
 
     int fds[2];
     socketpair(AF_UNIX, SOCK_STREAM, 0, fds);
-    send(fds[1], &header, sizeof(struct dmqp_header), 0);
-    send(fds[1], "Hello, World!", 13, 0);
+    send_all(fds[1], header_wire, sizeof(struct dmqp_header), 0);
+    send_all(fds[1], "Hello, World!", 13, 0);
     close(fds[1]);
 
     struct dmqp_message buf = {.payload = NULL};
@@ -273,6 +299,7 @@ Test(dmqp, test_send_dmqp_message_throws_when_payload_too_big) {
     socketpair(AF_UNIX, SOCK_STREAM, 0, fds);
 
     struct dmqp_message buf = {.header = header, .payload = "Hello, World!"};
+    char header_wire_buf[DMQP_HEADER_SIZE];
 
     // act
     int res = send_dmqp_message(fds[1], &buf, 0);
@@ -283,7 +310,7 @@ Test(dmqp, test_send_dmqp_message_throws_when_payload_too_big) {
     cr_assert_eq(errno, EMSGSIZE);
 
     // assert that `send_dmqp_message` didn't send anything
-    cr_assert(recv(fds[0], &buf, 1, MSG_PEEK | MSG_DONTWAIT) <= 0);
+    cr_assert(recv(fds[0], header_wire_buf, 1, MSG_PEEK | MSG_DONTWAIT) <= 0);
 
     // cleanup
     close(fds[0]);
@@ -303,6 +330,10 @@ Test(dmqp, test_send_dmqp_message_success_when_no_payload) {
     socketpair(AF_UNIX, SOCK_STREAM, 0, fds);
 
     struct dmqp_message buf = {.header = header, .payload = NULL};
+    char header_wire_buf[DMQP_HEADER_SIZE];
+
+    uint64_t expected_timestamp = htonll(5);
+    uint32_t expected_length = 0;
 
     // act
     int res1 = send_dmqp_message(fds[1], &buf, 0);
@@ -312,7 +343,7 @@ Test(dmqp, test_send_dmqp_message_success_when_no_payload) {
     errno = 0;
 
     // act
-    int res2 = read_stream(fds[0], &buf.header, sizeof(struct dmqp_header));
+    int res2 = read_stream(fds[0], header_wire_buf, DMQP_HEADER_SIZE);
     int errno2 = errno;
 
     // assert
@@ -324,13 +355,11 @@ Test(dmqp, test_send_dmqp_message_success_when_no_payload) {
     // assert that `send_dmqp_message` didn't send a payload
     cr_assert(recv(fds[0], &buf, 1, MSG_PEEK | MSG_DONTWAIT) <= 0);
 
-    // no need to convert method and topic_id, since they're only a byte
-    cr_assert_eq(buf.header.timestamp, htonll(5));
-    cr_assert_eq(buf.header.length, 0);
-    cr_assert_eq(buf.header.method, DMQP_PUSH);
-    cr_assert_eq(buf.header.topic_id, 3);
-    cr_assert_eq(buf.header.status_code, 0);
-    cr_assert_null(buf.payload);
+    cr_assert_arr_eq(header_wire_buf, &expected_timestamp, 8);
+    cr_assert_arr_eq(header_wire_buf + 8, &expected_length, 4);
+    cr_assert_eq(header_wire_buf[13], DMQP_PUSH);
+    cr_assert_eq(header_wire_buf[14], 3);
+    cr_assert_eq(header_wire_buf[15], 0);
 
     // cleanup
     close(fds[0]);
@@ -351,6 +380,10 @@ Test(dmqp, test_send_dmqp_message_success) {
                                  .topic_id = 3,
                                  .status_code = 0};
     struct dmqp_message buf = {.header = header, .payload = payload};
+    char header_wire_buf[DMQP_HEADER_SIZE];
+
+    uint64_t expected_timestamp = htonll(5);
+    uint32_t expected_length = htonl(13);
 
     // act
     int res1 = send_dmqp_message(fds[1], &buf, 0);
@@ -361,7 +394,7 @@ Test(dmqp, test_send_dmqp_message_success) {
     errno = 0;
 
     // act
-    int res2 = read_stream(fds[0], &buf.header, sizeof(struct dmqp_header));
+    int res2 = read_stream(fds[0], header_wire_buf, DMQP_HEADER_SIZE);
     int errno2 = errno;
 
     // arrange
@@ -379,12 +412,11 @@ Test(dmqp, test_send_dmqp_message_success) {
     cr_assert_eq(errno2, 0);
     cr_assert_eq(errno3, 0);
 
-    // no need to convert method and topic_id, since they're only a byte
-    cr_assert_eq(buf.header.timestamp, htonll(5));
-    cr_assert_eq(buf.header.length, htonl(13));
-    cr_assert_eq(buf.header.method, DMQP_PUSH);
-    cr_assert_eq(buf.header.topic_id, 3);
-    cr_assert_eq(buf.header.status_code, 0);
+    cr_assert_arr_eq(header_wire_buf, &expected_timestamp, 8);
+    cr_assert_arr_eq(header_wire_buf + 8, &expected_length, 4);
+    cr_assert_eq(header_wire_buf[13], DMQP_PUSH);
+    cr_assert_eq(header_wire_buf[14], 3);
+    cr_assert_eq(header_wire_buf[15], 0);
     cr_assert_arr_eq(buf.payload, "Hello, World!", 13);
 
     // assert that `send_dmqp_message` didn't send anything else

@@ -132,11 +132,26 @@ int server_init(unsigned int server_port, int (*message_handler)(int socket)) {
     return 0;
 }
 
-int receive_message(int conn_socket, void *buf, unsigned int message_size) {
+int read_stream(int fd, void *buf, unsigned int count) {
     unsigned int total = 0;
 
-    while (total < message_size) {
-        int n = read(conn_socket, (char *)buf + total, message_size - total);
+    while (total < count) {
+        int n = read(fd, (char *)buf + total, count - total);
+        if (n <= 0) {
+            return -1;
+        }
+
+        total += n;
+    }
+
+    return 0;
+}
+
+ssize_t send_all(int socket, const void *buffer, size_t length, int flags) {
+    unsigned int total = 0;
+
+    while (total < length) {
+        ssize_t n = send(socket, (char *)buffer + total, length - total, flags);
         if (n <= 0) {
             return -1;
         }
