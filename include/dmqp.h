@@ -2,6 +2,7 @@
 #define DMQP_H
 
 #include <stdint.h>
+#include <sys/types.h>
 
 #define DEFAULT_SERVER_PORT 8080
 #define MB (1 << 20)
@@ -44,24 +45,27 @@ struct dmqp_message {
  *
  * @param fd file descriptor to read from
  * @param buf DMQP message buffer to write to
- * @returns 0 if success, -1 if error with global `errno` set
+ * @returns the number of bytes read if success, -1 if error with global `errno`
+ * set
  */
-int read_dmqp_message(int fd, struct dmqp_message *buf);
+ssize_t read_dmqp_message(int fd, struct dmqp_message *buf);
 
 /**
  * Sends a DMQP message to a socket. Converts header fields to network byte
  * order (big endian).
  *
- * Throws an error if `socket` is invalid, `buf` is null, the message has a
+ * Throws an error if `socket` is invalid, `buffer` is null, the message has a
  * specified length but no payload, the message's payload is too large, or if
  * send fails.
  *
  * @param socket socket to write to
- * @param buf DMQP message buffer to send
+ * @param buffer DMQP message buffer to send
  * @param flags same flags param as send syscall
- * @returns 0 if success, -1 if error with global `errno` set
+ * @returns the number of bytes sent if success, -1 if error with global `errno`
+ * set
  */
-int send_dmqp_message(int socket, const struct dmqp_message *buf, int flags);
+ssize_t send_dmqp_message(int socket, const struct dmqp_message *buffer,
+                          int flags);
 
 /**
  * Handles a message received at a DMQP server by reading the message

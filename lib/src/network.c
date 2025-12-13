@@ -132,7 +132,7 @@ int server_init(unsigned int server_port, int (*message_handler)(int socket)) {
     return 0;
 }
 
-int read_stream(int fd, void *buf, unsigned int count) {
+ssize_t read_all(int fd, void *buf, size_t count) {
     unsigned int total = 0;
 
     while (total < count) {
@@ -144,7 +144,7 @@ int read_stream(int fd, void *buf, unsigned int count) {
         total += n;
     }
 
-    return 0;
+    return total;
 }
 
 ssize_t send_all(int socket, const void *buffer, size_t length, int flags) {
@@ -159,5 +159,5 @@ ssize_t send_all(int socket, const void *buffer, size_t length, int flags) {
         total += n;
     }
 
-    return 0;
+    return total;
 }

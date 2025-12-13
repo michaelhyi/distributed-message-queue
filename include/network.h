@@ -39,23 +39,25 @@ int client_init(const char *server_host, unsigned int server_port);
 int server_init(unsigned int server_port, int (*message_handler)(int socket));
 
 /**
- * Reads bytes into a buffer from a stream.
+ * Reads all bytes into a buffer from a file descriptor.
  *
  * @param fd file descriptor to read from
  * @param buf buffer to write to
  * @param count number of bytes to read
- * @returns 0 if success, -1 if error with global `errno` set
+ * @returns the number of bytes read if success, -1 if error with global `errno`
+ * set
  */
-int read_stream(int fd, void *buf, unsigned int count);
+ssize_t read_all(int fd, void *buf, size_t count);
 
 /**
- * Sends all bytes from a buffer.
+ * Sends all bytes from a buffer to a socket.
  *
  * @param socket socket to send to
  * @param buffer buffer to send
  * @param length number of bytes to read
  * @param flags same flags param as that of `send` syscall
- * @returns 0 if success, -1 if error with global `errno` set
+ * @returns the number of bytes sent if success, -1 if error with global `errno`
+ * set
  */
 ssize_t send_all(int socket, const void *buffer, size_t length, int flags);
 

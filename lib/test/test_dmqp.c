@@ -89,26 +89,26 @@ Test(dmqp, test_read_dmqp_message_throws_when_invalid_args) {
     struct dmqp_message buf;
 
     // act
-    int res1 = read_dmqp_message(-1, NULL);
+    ssize_t n1 = read_dmqp_message(-1, NULL);
     int errno1 = errno;
 
     // arrange
     errno = 0;
 
     // act
-    int res2 = read_dmqp_message(-1, &buf);
+    ssize_t n2 = read_dmqp_message(-1, &buf);
     int errno2 = errno;
 
     // arrange
     errno = 0;
 
     // act
-    int res3 = read_dmqp_message(fd, NULL);
+    ssize_t n3 = read_dmqp_message(fd, NULL);
     int errno3 = errno;
 
-    cr_assert(res1 < 0);
-    cr_assert(res2 < 0);
-    cr_assert(res3 < 0);
+    cr_assert(n1 < 0);
+    cr_assert(n2 < 0);
+    cr_assert(n3 < 0);
     cr_assert_eq(errno1, EINVAL);
     cr_assert_eq(errno2, EINVAL);
     cr_assert_eq(errno3, EINVAL);
@@ -141,10 +141,10 @@ Test(dmqp, test_read_dmqp_message_throws_when_payload_too_big) {
     struct dmqp_message buf;
 
     // act
-    int res = read_dmqp_message(fds[0], &buf);
+    ssize_t n = read_dmqp_message(fds[0], &buf);
 
     // assert
-    cr_assert(res < 0);
+    cr_assert(n < 0);
     cr_assert_eq(errno, EMSGSIZE);
 
     // cleanup
@@ -178,10 +178,10 @@ Test(dmqp, test_read_dmqp_message_success_when_no_payload) {
     struct dmqp_message buf = {.payload = NULL};
 
     // act
-    int res = read_dmqp_message(fds[0], &buf);
+    ssize_t n = read_dmqp_message(fds[0], &buf);
 
     // assert
-    cr_assert(res >= 0);
+    cr_assert_eq(n, DMQP_HEADER_SIZE);
     cr_assert_eq(errno, 0);
     cr_assert_eq(buf.header.timestamp, 5);
     cr_assert_eq(buf.header.length, 0);
@@ -223,10 +223,10 @@ Test(dmqp, test_read_dmqp_message_success) {
     struct dmqp_message buf = {.payload = NULL};
 
     // act
-    int res = read_dmqp_message(fds[0], &buf);
+    ssize_t n = read_dmqp_message(fds[0], &buf);
 
     // assert
-    cr_assert(res >= 0);
+    cr_assert_eq(n, DMQP_HEADER_SIZE + 13);
     cr_assert_eq(errno, 0);
     cr_assert_eq(buf.header.timestamp, 5);
     cr_assert_eq(buf.header.length, 13);
@@ -248,34 +248,34 @@ Test(dmqp, test_send_dmqp_message_throws_when_invalid_args) {
     struct dmqp_message buf = {.header = header, .payload = NULL};
 
     // act
-    int res1 = send_dmqp_message(-1, NULL, 0);
+    ssize_t n1 = send_dmqp_message(-1, NULL, 0);
     int errno1 = errno;
 
     // arrange
     errno = 0;
 
     // act
-    int res2 = send_dmqp_message(-1, &buf, 0);
+    ssize_t n2 = send_dmqp_message(-1, &buf, 0);
     int errno2 = errno;
 
     // arrange
     errno = 0;
 
     // act
-    int res3 = send_dmqp_message(fd, NULL, 0);
+    ssize_t n3 = send_dmqp_message(fd, NULL, 0);
     int errno3 = errno;
 
     // arrange
     errno = 0;
 
     // act
-    int res4 = send_dmqp_message(fd, &buf, 0);
+    ssize_t n4 = send_dmqp_message(fd, &buf, 0);
     int errno4 = errno;
 
-    cr_assert(res1 < 0);
-    cr_assert(res2 < 0);
-    cr_assert(res3 < 0);
-    cr_assert(res4 < 0);
+    cr_assert(n1 < 0);
+    cr_assert(n2 < 0);
+    cr_assert(n3 < 0);
+    cr_assert(n4 < 0);
     cr_assert_eq(errno1, EINVAL);
     cr_assert_eq(errno2, EINVAL);
     cr_assert_eq(errno3, EINVAL);
@@ -302,11 +302,11 @@ Test(dmqp, test_send_dmqp_message_throws_when_payload_too_big) {
     char header_wire_buf[DMQP_HEADER_SIZE];
 
     // act
-    int res = send_dmqp_message(fds[1], &buf, 0);
+    ssize_t n = send_dmqp_message(fds[1], &buf, 0);
     close(fds[1]);
 
     // assert
-    cr_assert(res < 0);
+    cr_assert(n < 0);
     cr_assert_eq(errno, EMSGSIZE);
 
     // assert that `send_dmqp_message` didn't send anything
@@ -336,19 +336,19 @@ Test(dmqp, test_send_dmqp_message_success_when_no_payload) {
     uint32_t expected_length = 0;
 
     // act
-    int res1 = send_dmqp_message(fds[1], &buf, 0);
+    ssize_t n1 = send_dmqp_message(fds[1], &buf, 0);
     int errno1 = errno;
 
     // arrange
     errno = 0;
 
     // act
-    int res2 = read_stream(fds[0], header_wire_buf, DMQP_HEADER_SIZE);
+    ssize_t n2 = read_all(fds[0], header_wire_buf, DMQP_HEADER_SIZE);
     int errno2 = errno;
 
     // assert
-    cr_assert(res1 >= 0);
-    cr_assert(res2 >= 0);
+    cr_assert_eq(n1, DMQP_HEADER_SIZE);
+    cr_assert_eq(n2, DMQP_HEADER_SIZE);
     cr_assert_eq(errno1, 0);
     cr_assert_eq(errno2, 0);
 
@@ -386,7 +386,7 @@ Test(dmqp, test_send_dmqp_message_success) {
     uint32_t expected_length = htonl(13);
 
     // act
-    int res1 = send_dmqp_message(fds[1], &buf, 0);
+    ssize_t n1 = send_dmqp_message(fds[1], &buf, 0);
     int errno1 = errno;
     close(fds[1]);
 
@@ -394,20 +394,20 @@ Test(dmqp, test_send_dmqp_message_success) {
     errno = 0;
 
     // act
-    int res2 = read_stream(fds[0], header_wire_buf, DMQP_HEADER_SIZE);
+    ssize_t n2 = read_all(fds[0], header_wire_buf, DMQP_HEADER_SIZE);
     int errno2 = errno;
 
     // arrange
     errno = 0;
 
     // act
-    int res3 = read_stream(fds[0], buf.payload, 13);
+    ssize_t n3 = read_all(fds[0], buf.payload, 13);
     int errno3 = errno;
 
     // assert
-    cr_assert(res1 >= 0);
-    cr_assert(res2 >= 0);
-    cr_assert(res3 >= 0);
+    cr_assert_eq(n1, DMQP_HEADER_SIZE + 13);
+    cr_assert_eq(n2, DMQP_HEADER_SIZE);
+    cr_assert_eq(n3, 13);
     cr_assert_eq(errno1, 0);
     cr_assert_eq(errno2, 0);
     cr_assert_eq(errno3, 0);
