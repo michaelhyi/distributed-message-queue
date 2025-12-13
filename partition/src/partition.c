@@ -52,15 +52,18 @@ int handle_dmqp_response(int reply_socket) {
         return -1;
     }
 
-    struct dmqp_header res_header = {
-        .method = DMQP_RESPONSE, .status_code = EPROTO, .length = 0, .timestamp = 0};
+    struct dmqp_header res_header = {.method = DMQP_RESPONSE,
+                                     .status_code = EPROTO,
+                                     .length = 0,
+                                     .timestamp = 0};
 
     int res = send(reply_socket, &res_header, sizeof(struct dmqp_header), 0);
     if (res < 0) {
         return -1;
     }
 
-    return 0;
+    errno = EPROTO;
+    return -1;
 }
 
 int handle_dmqp_heartbeat(int reply_socket) {
@@ -253,13 +256,16 @@ int handle_dmqp_unknown_method(int reply_socket) {
         return -1;
     }
 
-    struct dmqp_header res_header = {
-        .method = DMQP_RESPONSE, .status_code = ENOSYS, .length = 0, .timestamp = 0};
+    struct dmqp_header res_header = {.method = DMQP_RESPONSE,
+                                     .status_code = ENOSYS,
+                                     .length = 0,
+                                     .timestamp = 0};
 
     int res = send(reply_socket, &res_header, sizeof(struct dmqp_header), 0);
     if (res < 0) {
         return -1;
     }
 
-    return 0;
+    errno = ENOSYS;
+    return -1;
 }
