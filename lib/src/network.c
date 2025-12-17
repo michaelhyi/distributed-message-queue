@@ -58,9 +58,7 @@ static void *connection_handler(void *arg) {
     while (running) {
         int res = args.message_handler(args.socket);
         if (res < 0) {
-            // TODO: should we always close connection if message handling
-            // fails?
-            break;
+            goto cleanup;
         }
     }
 

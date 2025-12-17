@@ -64,7 +64,7 @@ int handle_dmqp_response(const struct dmqp_message *message, int reply_socket) {
     }
 
     errno = EPROTO;
-    return -1;
+    return 0;
 }
 
 int handle_dmqp_push(const struct dmqp_message *message, int reply_socket) {
@@ -247,5 +247,5 @@ int handle_dmqp_unknown_method(const struct dmqp_message *message,
     }
 
     errno = ENOSYS;
-    return -1;
+    return 0;
 }
