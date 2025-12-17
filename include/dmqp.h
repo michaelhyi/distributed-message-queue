@@ -13,15 +13,15 @@ enum dmqp_method { DMQP_RESPONSE, DMQP_PUSH, DMQP_POP, DMQP_PEEK };
 
 // All header fields are expected to be in network byte order (big endian).
 struct dmqp_header {
-    uint64_t timestamp; // unix epoch, 1 second resolution. set by the top-level
-                        // server on a DMQP_PUSH request, indiciating the
-                        // timestamp at which data was received for in-order
+    uint64_t timestamp; // unix epoch, 1 second resolution. set by the
+                        // controller server on a DMQP_PUSH request, indiciating
+                        // the timestamp at which data was received for in-order
                         // delivery. set by the partition on a DMQP_PEEK request
                         // to handle in-order popping
     uint32_t length;    // payload length
     uint8_t method;     // maps to `enum dmqp_method`
-    uint8_t topic_id;   // id of topic to perform operation on. set by top-level
-                        // server.
+    uint8_t topic_id;   // id of topic to perform operation on. set by
+                        // controller server.
     int8_t status_code; // errno
 };
 

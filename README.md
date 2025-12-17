@@ -15,9 +15,9 @@ queue utilizes a custom application-layer protocol called DMQP.
 #### Architecture
 
 This distributed system follows a hierarchial, tree-like architecture. There's
-a top-level server that handles all user requests, routing them to topics.
-Topics, to the user, are different logical queues. Topics then route requests to 
-partitions, which are horizontal shards of queues.
+a top-level server called the controller that handles all user requests, routing
+them to topics. Topics, to the user, are different logical queues. Topics then
+route requests to  partitions, which are horizontal shards of queues.
 
 ![Architecture diagram of the distributed message queue](.github/architecture.png)
 
