@@ -6,15 +6,14 @@
 
 /**
  * TODO:
- * 1. separate dmqp_client_init and dmqp_server init?
- * 2. unit testing?
- * 3. TLS
+ * 1. unit testing?
+ * 2. TLS
  */
 
 /**
  * Initializes a client connection to a server.
  *
- * Throws an error if `server_host` is null or any socket operations fail.
+ * Throws an error if `server_host` is null or any network operations fail.
  *
  * @param server_host the server host address
  * @param server_port the server port
@@ -26,13 +25,14 @@ int client_init(const char *server_host, unsigned short server_port);
  * Initializes a server and creates a new thread for each connection. Signals
  * are handled to gracefully exit.
  *
- * Throws an error if `message_handler` is null or any socket operations fail.
+ * Throws an error if `message_handler` is null or any network operations fail.
  *
  * @param server_port the port to bind the server to
  * @param message_handler function from the application-layer protocol that
  * handles messages. passed down to connection handler thread to handle messages
  * received at server
- * @returns 0 on success, -1 on error with global `errno` set
+ * @returns 0 on success, -1 on error with global `errno` set. does not return
+ * until the server is interrupted or terminated
  */
 int server_init(unsigned short server_port, int (*message_handler)(int socket));
 
