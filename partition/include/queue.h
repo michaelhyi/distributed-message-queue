@@ -31,12 +31,14 @@ int queue_init(struct queue *queue);
 /**
  * Pushes data on a queue.
  *
+ * Throws an error if any args are null, if `entry->data` is null, or if
+ * `entry->size` is 0.
+ *
  * @param queue the queue to update
- * @param data data to push on the queue
- * @param data_size size of the data
+ * @param entry the entry to push
  * @returns 0 on success, -1 if error with global `errno` set
  */
-int queue_push(struct queue *queue, void *data, unsigned int data_size);
+int queue_push(struct queue *queue, const struct queue_entry *entry);
 
 /**
  * Pops data off a queue.

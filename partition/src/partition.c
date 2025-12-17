@@ -85,7 +85,11 @@ int handle_dmqp_push(const struct dmqp_message *message, int reply_socket) {
         goto reply;
     }
 
-    res = queue_push(&queue, message->payload, message->header.length);
+    struct queue_entry entry = {.data = message->payload,
+                                .size = message->header.length,
+                                .timestamp = message->header.timestamp};
+
+    res = queue_push(&queue, &entry);
     if (res < 0) {
         if (errno != ENODATA) {
             errno = EIO;

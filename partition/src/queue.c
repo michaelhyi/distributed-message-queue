@@ -6,14 +6,14 @@
 #include <time.h>
 
 /**
- * Creates a new queue node with the given data. Must be holding the queue's
- * lock.
+ * Creates a new queue node with the given entry. Deep copies the entry. Must be
+ * holding the queue's lock.
  *
- * @param data data to place in node
+ * @param entry entry to copy in node
  * @returns pointer to the queue node, `NULL` if error with global `errno` set
  */
-static struct queue_node *create_node(void *data, unsigned int data_size) {
-    if (!data || data_size == 0) {
+static struct queue_node *create_node(const struct queue_entry *entry) {
+    if (entry == NULL || entry->data == NULL || entry->size == 0) {
         errno = EINVAL;
         return NULL;
     }
@@ -24,18 +24,17 @@ static struct queue_node *create_node(void *data, unsigned int data_size) {
         return NULL;
     }
 
-    node->entry.data = malloc(data_size);
+    node->entry.data = malloc(entry->size);
     if (node->entry.data == NULL) {
         free(node);
         errno = ENOMEM;
         return NULL;
     }
-    memcpy(node->entry.data, data, data_size);
-    node->entry.size = data_size;
-    // TODO: should read timestamp from server request
-    time(&node->entry.timestamp);
-
+    memcpy(node->entry.data, entry->data, entry->size);
+    node->entry.size = entry->size;
+    node->entry.timestamp = entry->timestamp;
     node->next = NULL;
+
     return node;
 }
 
@@ -50,13 +49,14 @@ int queue_init(struct queue *queue) {
     return 0;
 }
 
-int queue_push(struct queue *queue, void *data, unsigned int data_size) {
-    if (queue == NULL || data == NULL || data_size == 0) {
+int queue_push(struct queue *queue, const struct queue_entry *entry) {
+    if (queue == NULL || entry == NULL || entry->data == NULL ||
+        entry->size == 0) {
         errno = EINVAL;
         return -1;
     }
 
-    struct queue_node *node = create_node(data, data_size);
+    struct queue_node *node = create_node(entry);
     if (node == NULL) {
         return -1;
     }

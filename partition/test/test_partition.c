@@ -19,17 +19,27 @@ Test(partition, test_partition_destroy_success) {
     queue_init(&queue);
     pthread_mutex_init(&queue_lock, NULL);
 
-    char *data = "Hello";
-    queue_push(&queue, data, strlen(data));
+    struct queue_entry entry;
 
-    data = ", ";
-    queue_push(&queue, data, strlen(data));
+    entry.data = "Hello";
+    entry.size = strlen(entry.data);
+    entry.timestamp = 0x1000;
+    queue_push(&queue, &entry);
 
-    data = "World";
-    queue_push(&queue, data, strlen(data));
+    entry.data = ", ";
+    entry.size = strlen(entry.data);
+    entry.timestamp = 0x2000;
+    queue_push(&queue, &entry);
 
-    data = "!";
-    queue_push(&queue, data, strlen(data));
+    entry.data = "World";
+    entry.size = strlen(entry.data);
+    entry.timestamp = 0x3000;
+    queue_push(&queue, &entry);
+
+    entry.data = "!";
+    entry.size = strlen(entry.data);
+    entry.timestamp = 0x4000;
+    queue_push(&queue, &entry);
 
     // act
     int res = partition_destroy();
