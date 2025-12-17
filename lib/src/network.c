@@ -17,15 +17,91 @@ struct connection_handler_args {
     int (*message_handler)(
         int socket); // handler that reads a message, parses it, and serves it.
                      // takes in the socket of connection as an argument to
-                     // handle responses
+                     // handle responses. returns 0 on success, -1 if error with
+                     // global `errno` set
 };
 
 static volatile sig_atomic_t running = 1;
 static struct sigaction sa;
+static struct sigaction sa_ignore;
 
+/**
+ * Simple signal handler that sets `running` to zero to terminate server
+ * threads.
+ *
+ * @param sig signal received by process
+ */
 static void signal_handler(int sig) {
     (void)sig; // unused
     running = 0;
+}
+
+/**
+ * Initializes signal handling. Gracefully terminates server when `SIGINT` or
+ * `SIGTERM` is received. Ignores when `SIGPIPE` is received.
+ *
+ * @returns 0 if success, -1 if error with global `errno` set
+ */
+static int signal_init() {
+    sa.sa_handler = signal_handler;
+    sigemptyset(&sa.sa_mask);
+    sa.sa_flags = 0;
+
+    int res = sigaction(SIGINT, &sa, NULL);
+    if (res < 0) {
+        return -1;
+    }
+
+    res = sigaction(SIGTERM, &sa, NULL);
+    if (res < 0) {
+        return -1;
+    }
+
+    sa_ignore.sa_handler = SIG_IGN;
+    sigemptyset(&sa_ignore.sa_mask);
+    sa_ignore.sa_flags = 0;
+    res = sigaction(SIGPIPE, &sa_ignore, NULL);
+    if (res < 0) {
+        return -1;
+    }
+
+    return 0;
+}
+
+/**
+ * Sets a timeout on a socket.
+ *
+ * @param socket socket to configure
+ * @param timeout the timeout in seconds
+ * @returns 0 if success, -1 if error with global `errno` set
+ */
+static int set_socket_timeout(int socket, int timeout) {
+    struct timeval tv = {.tv_sec = timeout, .tv_usec = 0};
+    int res = setsockopt(socket, SOL_SOCKET, SO_RCVTIMEO, (const void *)&tv,
+                         sizeof(tv));
+    if (res < 0) {
+        return -1;
+    }
+
+    return 0;
+}
+
+/**
+ * Enables TCP keepalive on a socket.
+ *
+ * @param socket socket to configure
+ * @returns 0 if success, -1 if error with global `errno` set
+ */
+static int set_socket_keepalive(int socket) {
+    int keepalive = 1;
+    int res = setsockopt(socket, SOL_SOCKET, SO_KEEPALIVE, &keepalive,
+                         sizeof(keepalive));
+
+    if (res < 0) {
+        return -1;
+    }
+
+    return 0;
 }
 
 /**
@@ -35,7 +111,7 @@ static void signal_handler(int sig) {
  * `arg->message_handler` is null.
  *
  * @param arg pointer to args of type `struct connection_handler_args`. must be
- * free once copied locally
+ * freed once copied locally
  */
 static void *connection_handler(void *arg) {
     struct connection_handler_args args = {
@@ -70,6 +146,66 @@ cleanup:
     return NULL;
 }
 
+/**
+ * Creates a detached thread to handle accepted TCP connections.
+ *
+ * Throws if `socket` is invalid or if `message_handler` is null.
+ *
+ * @param socket socket of accepted TCP connection
+ * @param message_handler function from the application-layer protocol that
+ * handles messages. takes in the socket of the connection that sent the message
+ * as a param. returns 0 on success, -1 if error with global `errno` set.
+ * @returns 0 if success, -1 if error with global `errno` set
+ */
+static int connection_thread_init(int socket,
+                                  int (*message_handler)(int socket)) {
+    if (socket < 0 || message_handler == NULL) {
+        errno = EINVAL;
+        return -1;
+    }
+
+    struct connection_handler_args *args =
+        malloc(sizeof(struct connection_handler_args));
+    if (args == NULL) {
+        errno = ENOMEM;
+        return -1;
+    }
+
+    args->socket = socket;
+    args->message_handler = message_handler;
+
+    pthread_t thread;
+    pthread_attr_t attr;
+    int res = pthread_attr_init(&attr);
+    if (res != 0) {
+        free(args);
+        errno = res;
+        return -1;
+    }
+
+    res = pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
+    if (res != 0) {
+        free(args);
+        errno = res;
+        return -1;
+    }
+
+    res = pthread_create(&thread, &attr, connection_handler, args);
+    if (res != 0) {
+        free(args);
+        errno = res;
+        return -1;
+    }
+
+    res = pthread_attr_destroy(&attr);
+    if (res != 0) {
+        errno = res;
+        return -1;
+    }
+
+    return 0;
+}
+
 int client_init(const char *server_host, unsigned short server_port) {
     if (server_host == NULL) {
         errno = EINVAL;
@@ -87,7 +223,7 @@ int client_init(const char *server_host, unsigned short server_port) {
     server_address.sin_port = htons(server_port);
 
     int res = inet_pton(AF_INET, server_host, &server_address.sin_addr);
-    if (res < 0) {
+    if (res <= 0) {
         close(client_socket);
         return -1;
     }
@@ -109,22 +245,21 @@ int server_init(unsigned short server_port,
         return -1;
     }
 
-    sa.sa_handler = signal_handler;
-    sigemptyset(&sa.sa_mask);
-    sa.sa_flags = 0;
-
-    int res = sigaction(SIGINT, &sa, NULL);
-    if (res < 0) {
-        return -1;
-    }
-
-    res = sigaction(SIGTERM, &sa, NULL);
+    int res = signal_init();
     if (res < 0) {
         return -1;
     }
 
     int server_socket = socket(AF_INET, SOCK_STREAM, 0);
     if (server_socket < 0) {
+        return -1;
+    }
+
+    int opt = 1;
+    res = setsockopt(server_socket, SOL_SOCKET, SO_REUSEADDR | SO_REUSEPORT,
+                     &opt, sizeof(opt));
+    if (res < 0) {
+        close(server_socket);
         return -1;
     }
 
@@ -142,7 +277,7 @@ int server_init(unsigned short server_port,
         return -1;
     }
 
-    res = listen(server_socket, 16);
+    res = listen(server_socket, LISTEN_BACKLOG);
     if (res < 0) {
         close(server_socket);
         return -1;
@@ -161,41 +296,25 @@ int server_init(unsigned short server_port,
             continue;
         }
 
-        struct timeval timeout = {.tv_sec = 30, .tv_usec = 0};
-        res = setsockopt(client_socket, SOL_SOCKET, SO_RCVTIMEO,
-                         (const void *)&timeout, sizeof(timeout));
+        res = set_socket_timeout(client_socket, 30);
         if (res < 0) {
             close(client_socket);
             continue;
         }
 
-        int keepalive = 1;
-        res = setsockopt(client_socket, SOL_SOCKET, SO_KEEPALIVE, &keepalive,
-                         sizeof(keepalive));
+        res = set_socket_keepalive(client_socket);
         if (res < 0) {
             close(client_socket);
             continue;
         }
 
-        struct connection_handler_args *args =
-            malloc(sizeof(struct connection_handler_args));
-        if (args == NULL) {
+        res = connection_thread_init(client_socket, message_handler);
+        if (res < 0) {
             close(client_socket);
             continue;
         }
-        args->socket = client_socket;
-        args->message_handler = message_handler;
-
-        pthread_t thread;
-        pthread_attr_t attr;
-        pthread_attr_init(&attr);
-        pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
-
-        pthread_create(&thread, &attr, connection_handler, args);
-        pthread_attr_destroy(&attr);
     }
 
-    errno = 0;
     close(server_socket);
     return 0;
 }
@@ -210,8 +329,17 @@ ssize_t read_all(int fd, void *buf, size_t count) {
 
     while (total < count) {
         int n = read(fd, (char *)buf + total, count - total);
-        if (n <= 0) {
+
+        if (n < 0) {
+            if (errno == EINTR) {
+                continue;
+            }
+
             return -1;
+        }
+
+        if (n == 0) {
+            return total;
         }
 
         total += n;
@@ -231,6 +359,10 @@ ssize_t send_all(int socket, const void *buffer, size_t length, int flags) {
     while (total < length) {
         ssize_t n = send(socket, (char *)buffer + total, length - total, flags);
         if (n <= 0) {
+            if (errno == EINTR) {
+                continue;
+            }
+
             return -1;
         }
 
