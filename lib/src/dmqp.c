@@ -110,6 +110,29 @@ static ssize_t send_dmqp_header(int socket, const struct dmqp_header *buffer,
     return n;
 }
 
+int dmqp_client_init(const char *server_host, unsigned short server_port) {
+    if (server_host == NULL) {
+        errno = EINVAL;
+        return -1;
+    }
+
+    int socket = client_init(server_host, server_port);
+    if (socket < 0) {
+        return -1;
+    }
+
+    return socket;
+}
+
+int dmqp_server_init(unsigned short server_port) {
+    int res = server_init(server_port, handle_dmqp_message);
+    if (res < 0) {
+        return -1;
+    }
+
+    return 0;
+}
+
 ssize_t read_dmqp_message(int fd, struct dmqp_message *buf) {
     if (fd < 0 || buf == NULL) {
         errno = EINVAL;

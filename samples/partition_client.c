@@ -6,7 +6,7 @@
 #include "network.h"
 
 int main() {
-    int fd = client_init("127.0.0.1", 8080);
+    int fd = dmqp_client_init("127.0.0.1", 8080);
     if (fd < 0) {
         fprintf(stderr, "failed to init partition client\n");
         return 1;

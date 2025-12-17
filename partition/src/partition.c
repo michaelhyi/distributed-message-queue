@@ -22,9 +22,9 @@ int partition_init(unsigned int server_port) {
         return -1;
     }
 
-    res = server_init(server_port, handle_dmqp_message);
+    res = dmqp_server_init(server_port);
     if (res < 0) {
-        return 1;
+        return -1;
     }
 
     return 0;

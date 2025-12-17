@@ -73,6 +73,18 @@ int handle_dmqp_unknown_method(const struct dmqp_message *message,
 
 TestSuite(dmqp, .timeout = 10);
 
+Test(dmqp, test_dmqp_client_init_throws_when_invalid_args) {
+    // arrange
+    errno = 0;
+
+    // act
+    int res = dmqp_client_init(NULL, 8080);
+
+    // assert
+    cr_assert(res < 0);
+    cr_assert_eq(errno, EINVAL);
+}
+
 Test(dmqp, test_read_dmqp_message_throws_when_invalid_args) {
     // arrange
     errno = 0;

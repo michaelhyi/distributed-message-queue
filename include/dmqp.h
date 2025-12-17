@@ -31,6 +31,27 @@ struct dmqp_message {
 };
 
 /**
+ * Initializes a DMQP client connection to a DMQP server.
+ *
+ * Throws an error if `server_host` is null or if network operations fail.
+ *
+ * @param server_host the DMQP server host address
+ * @param server_port the DMQP server port
+ * @returns the socket of the DMQP client, -1 if error with global `errno` set
+ */
+int dmqp_client_init(const char *server_host, unsigned short server_port);
+
+/**
+ * Initializes a DMQP server.
+ *
+ * Throws an error if any network operations fail.
+ *
+ * @param server_port the port to bind the server to
+ * @returns 0 on success, -1 on error with global `errno` set
+ */
+int dmqp_server_init(unsigned short server_port);
+
+/**
  * Reads a DMQP message from a file descriptor. Converts header fields to host
  * byte order.
  *
@@ -68,7 +89,8 @@ ssize_t send_dmqp_message(int socket, const struct dmqp_message *buffer,
  * Throws an error if `socket` is invalid.
  *
  * @param socket socket that sent message
- * @returns 0 if success, -1 if error with global `errno` set
+ * @returns 0 if success, -1 if error with global `errno` set. does not return
+ * until the server is interrupted or terminated
  */
 int handle_dmqp_message(int socket);
 
