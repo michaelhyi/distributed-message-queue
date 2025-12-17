@@ -4,6 +4,7 @@
 #include <errno.h>
 #include <netinet/in.h>
 #include <pthread.h>
+#include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -18,6 +19,14 @@ struct connection_handler_args {
                      // takes in the socket of connection as an argument to
                      // handle responses
 };
+
+static volatile sig_atomic_t running = 1;
+static struct sigaction sa;
+
+static void signal_handler(int sig) {
+    (void)sig; // unused
+    running = 0;
+}
 
 /**
  * Listens on a connection.
@@ -46,9 +55,11 @@ static void *connection_handler(void *arg) {
         goto cleanup;
     }
 
-    while (1) {
+    while (running) {
         int res = args.message_handler(args.socket);
         if (res < 0) {
+            // TODO: should we always close connection if message handling
+            // fails?
             break;
         }
     }
@@ -100,6 +111,20 @@ int server_init(unsigned short server_port,
         return -1;
     }
 
+    sa.sa_handler = signal_handler;
+    sigemptyset(&sa.sa_mask);
+    sa.sa_flags = 0;
+
+    int res = sigaction(SIGINT, &sa, NULL);
+    if (res < 0) {
+        return -1;
+    }
+
+    res = sigaction(SIGTERM, &sa, NULL);
+    if (res < 0) {
+        return -1;
+    }
+
     int server_socket = socket(AF_INET, SOCK_STREAM, 0);
     if (server_socket < 0) {
         return -1;
@@ -112,8 +137,8 @@ int server_init(unsigned short server_port,
     server_address.sin_port = htons(server_port);
     socklen_t address_len = sizeof(server_address);
 
-    int res = bind(server_socket, (const struct sockaddr *)&server_address,
-                   address_len);
+    res = bind(server_socket, (const struct sockaddr *)&server_address,
+               address_len);
     if (res < 0) {
         close(server_socket);
         return -1;
@@ -127,7 +152,7 @@ int server_init(unsigned short server_port,
 
     printf("server listening on port %d\n", ntohs(server_address.sin_port));
 
-    while (1) {
+    while (running) {
         struct sockaddr_in client_address;
         socklen_t client_address_len = sizeof(client_address);
 
@@ -163,11 +188,15 @@ int server_init(unsigned short server_port,
         args->socket = client_socket;
         args->message_handler = message_handler;
 
-        pthread_t tid;
-        pthread_create(&tid, NULL, connection_handler, args);
+        pthread_t thread;
+        pthread_attr_t attr;
+        pthread_attr_init(&attr);
+        pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
+
+        pthread_create(&thread, &attr, connection_handler, args);
+        pthread_attr_destroy(&attr);
     }
 
-    // TODO: cleanup all threads
     errno = 0;
     close(server_socket);
     return 0;

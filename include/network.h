@@ -6,10 +6,9 @@
 
 /**
  * TODO:
- * 1. TLS
+ * 1. separate dmqp_client_init and dmqp_server init?
  * 2. unit testing?
- * 3. separate dmqp_client_init and dmqp_server init?
- * 4. signal handling
+ * 3. TLS
  */
 
 /**
@@ -24,7 +23,8 @@
 int client_init(const char *server_host, unsigned short server_port);
 
 /**
- * Initializes a server.
+ * Initializes a server and creates a new thread for each connection. Signals
+ * are handled to gracefully exit.
  *
  * Throws an error if `message_handler` is null or any socket operations fail.
  *
