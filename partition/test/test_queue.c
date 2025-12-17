@@ -462,6 +462,99 @@ Test(queue, test_queue_peek_success) {
     queue_destroy(&queue);
 }
 
+Test(queue, test_queue_peek_timestamp_throws_error_when_invalid_args) {
+    // arrange
+    errno = 0;
+    struct queue queue;
+    long timestamp;
+
+    // act
+    int res1 = queue_peek_timestamp(NULL, NULL);
+    int errno1 = errno;
+
+    // arrange
+    errno = 0;
+
+    // act
+    int res2 = queue_peek_timestamp(NULL, &timestamp);
+    int errno2 = errno;
+
+    // arrange
+    errno = 0;
+
+    // act
+    int res3 = queue_peek_timestamp(&queue, NULL);
+    int errno3 = errno;
+
+    // assert
+    cr_assert(res1 < 0);
+    cr_assert(res2 < 0);
+    cr_assert(res3 < 0);
+    cr_assert_eq(errno1, EINVAL);
+    cr_assert_eq(errno2, EINVAL);
+    cr_assert_eq(errno3, EINVAL);
+}
+
+Test(queue, test_queue_peek_timestamp_throws_error_when_empty) {
+    // arrange
+    errno = 0;
+    struct queue queue;
+    long timestamp;
+    queue_init(&queue);
+
+    // act
+    int res = queue_peek_timestamp(&queue, &timestamp);
+
+    // assert
+    cr_assert(res < 0);
+    cr_assert_eq(errno, ENODATA);
+
+    // cleanup
+    queue_destroy(&queue);
+}
+
+Test(queue, test_queue_peek_timestamp_success) {
+    // arrange
+    errno = 0;
+    struct queue queue;
+    long timestamp;
+    queue_init(&queue);
+
+    struct queue_entry entry;
+
+    entry.data = "Hello";
+    entry.size = strlen(entry.data);
+    entry.timestamp = 0x1000;
+    queue_push(&queue, &entry);
+
+    entry.data = ", ";
+    entry.size = strlen(entry.data);
+    entry.timestamp = 0x2000;
+    queue_push(&queue, &entry);
+
+    entry.data = "World";
+    entry.size = strlen(entry.data);
+    entry.timestamp = 0x3000;
+    queue_push(&queue, &entry);
+
+    entry.data = "!";
+    entry.size = strlen(entry.data);
+    entry.timestamp = 0x4000;
+    queue_push(&queue, &entry);
+
+    // act
+    int res = queue_peek_timestamp(&queue, &timestamp);
+
+    // assert
+    cr_assert(res >= 0);
+    cr_assert_eq(errno, 0);
+    cr_assert_eq(timestamp, 0x1000);
+    cr_assert_eq(queue.head->entry.timestamp, 0x1000);
+
+    // cleanup
+    queue_destroy(&queue);
+}
+
 Test(queue, test_queue_destroy_throws_error_when_invalid_args) {
     // act
     errno = 0;

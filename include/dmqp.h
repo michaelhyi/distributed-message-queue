@@ -9,7 +9,13 @@
 #define MAX_PAYLOAD_LENGTH 1 * MB
 #define DMQP_HEADER_SIZE 16
 
-enum dmqp_method { DMQP_RESPONSE, DMQP_PUSH, DMQP_POP, DMQP_PEEK };
+enum dmqp_method {
+    DMQP_RESPONSE,
+    DMQP_PUSH,
+    DMQP_POP,
+    DMQP_PEEK,
+    DMQP_PEEK_TIMESTAMP
+};
 
 // All header fields are expected to be in network byte order (big endian).
 struct dmqp_header {
@@ -144,6 +150,19 @@ int handle_dmqp_pop(const struct dmqp_message *message, int reply_socket);
  * @returns 0 if success, -1 if error with global `errno` set
  */
 int handle_dmqp_peek(const struct dmqp_message *message, int reply_socket);
+
+/**
+ * Handles a DMQP message with method `DMQP_PEEK_TIMESTAMP`.
+ *
+ * Throws an error if `message` is null, the method is not
+ * `DMQP_PEEK_TIMESTAMP`, or `reply_socket` is invalid.
+ *
+ * @param message message received by server
+ * @param reply_socket socket to reply on
+ * @returns 0 if success, -1 if error with global `errno` set
+ */
+int handle_dmqp_peek_timestamp(const struct dmqp_message *message,
+                               int reply_socket);
 
 /**
  * Handles a DMQP message with unknown method.

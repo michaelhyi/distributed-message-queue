@@ -115,6 +115,21 @@ int queue_peek(struct queue *queue, struct queue_entry *entry) {
     return 0;
 }
 
+int queue_peek_timestamp(struct queue *queue, long *timestamp) {
+    if (queue == NULL || timestamp == NULL) {
+        errno = EINVAL;
+        return -1;
+    }
+
+    if (queue->head == NULL) {
+        errno = ENODATA;
+        return -1;
+    }
+
+    *timestamp = queue->head->entry.timestamp;
+    return 0;
+}
+
 int queue_destroy(struct queue *queue) {
     if (queue == NULL) {
         errno = EINVAL;

@@ -232,6 +232,59 @@ cleanup:
     return ret;
 }
 
+int handle_dmqp_peek_timestamp(const struct dmqp_message *message,
+                               int reply_socket) {
+    if (message == NULL || reply_socket < 0) {
+        errno = EINVAL;
+        return -1;
+    }
+
+    int ret = 0;
+    struct dmqp_header res_header;
+
+    int res = pthread_mutex_lock(&queue_lock);
+    if (res != 0) {
+        errno = EIO;
+        ret = -1;
+        goto reply;
+    }
+
+    long timestamp;
+    res = queue_peek_timestamp(&queue, &timestamp);
+    if (res < 0) {
+        if (errno != ENODATA) {
+            errno = EIO;
+        }
+
+        ret = -1;
+        goto release_lock;
+    }
+
+release_lock:
+    res = pthread_mutex_unlock(&queue_lock);
+    if (res != 0) {
+        errno = EIO;
+        ret = -1;
+        goto reply;
+    }
+
+reply:
+    res_header.method = DMQP_RESPONSE;
+    res_header.status_code = errno;
+    res_header.length = 0;
+    res_header.timestamp = timestamp;
+    struct dmqp_message res_message = {.header = res_header, .payload = NULL};
+
+    ssize_t n = send_dmqp_message(reply_socket, &res_message, 0);
+    if (n < DMQP_HEADER_SIZE) {
+        ret = -1;
+        goto cleanup;
+    }
+
+cleanup:
+    return ret;
+}
+
 int handle_dmqp_unknown_method(const struct dmqp_message *message,
                                int reply_socket) {
     if (message == NULL || reply_socket < 0) {
