@@ -6,11 +6,7 @@
 
 #define LISTEN_BACKLOG 128
 
-/**
- * TODO:
- * 1. unit testing?
- * 2. TLS
- */
+// TODO: TLS
 
 /**
  * Initializes a client connection to a server.
@@ -42,7 +38,7 @@ int server_init(unsigned short server_port, int (*message_handler)(int socket));
 /**
  * Reads all bytes into a buffer from a file descriptor.
  *
- * Throws an error if `buf` is null or network operations fail.
+ * Throws an error if fd is invalid, `buf` is null, or network operations fail.
  *
  * @param fd file descriptor to read from
  * @param buf buffer to write to

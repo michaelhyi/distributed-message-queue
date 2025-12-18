@@ -320,7 +320,7 @@ int server_init(unsigned short server_port,
 }
 
 ssize_t read_all(int fd, void *buf, size_t count) {
-    if (buf == NULL) {
+    if (fd < 0 || buf == NULL) {
         errno = EINVAL;
         return -1;
     }
