@@ -224,6 +224,9 @@ int handle_dmqp_message(int socket) {
     case DMQP_PEEK:
         res = handle_dmqp_peek(&buf, socket);
         break;
+    case DMQP_PEEK_TIMESTAMP:
+        res = handle_dmqp_peek_timestamp(&buf, socket);
+        break;
     default:
         res = handle_dmqp_unknown_method(&buf, socket);
         break;
