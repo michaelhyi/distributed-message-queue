@@ -81,7 +81,7 @@ gdb-server-test: $(TEST_TARGET)
 	@./$(TEST_TARGET) $(TEST_DEBUG_FLAGS)
 
 gdb-test: $(TEST_TARGET)
-	@$(GDB) ./$(TEST_TARGET) $(GDB_TEST_FLAGS)
+	@$(GDB) $(TEST_TARGET) $(GDB_TEST_FLAGS)
 
 valgrind: $(DEBUG_TARGET)
 	@$(VALGRIND) $(VALGRIND_FLAGS) ./$(DEBUG_TARGET)
