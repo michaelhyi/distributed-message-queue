@@ -33,6 +33,7 @@ static unsigned int dmqp_response_count = 0;
 static unsigned int dmqp_push_count = 0;
 static unsigned int dmqp_pop_count = 0;
 static unsigned int dmqp_peek_count = 0;
+static unsigned int dmqp_peek_timestamp_count = 0;
 static unsigned int dmqp_unknown_method_count = 0;
 
 int handle_dmqp_response(const struct dmqp_message *message, int reply_socket) {
@@ -60,6 +61,14 @@ int handle_dmqp_peek(const struct dmqp_message *message, int reply_socket) {
     (void)message;
     (void)reply_socket;
     dmqp_peek_count++;
+    return 0;
+}
+
+// TODO: write peek timestamp tests
+int handle_dmqp_peek_timestamp(const struct dmqp_message *message, int reply_socket) {
+    (void)message;
+    (void)reply_socket;
+    dmqp_peek_timestamp_count++;
     return 0;
 }
 
