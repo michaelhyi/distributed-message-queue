@@ -85,7 +85,7 @@ valgrind-test: $(TEST_TARGET)
 
 clean:
 	@rm -f $(OBJ) $(DEBUG_OBJ) $(TEST_OBJ)
-	@rm -f $(TARGET) $(TEST_TARGET)
+	@rm -f $(TARGET) $(DEBUG_TARGET) $(TEST_TARGET)
 	@rm -f $(DEPS)
 
 help:
