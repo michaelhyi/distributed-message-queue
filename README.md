@@ -59,7 +59,6 @@ Enter the Docker container:
 
 Compile and start a partition:
 ```bash
-cd partition
 make
-./partition
+./partition/partition
 ```
