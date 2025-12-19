@@ -65,7 +65,8 @@ int handle_dmqp_peek(const struct dmqp_message *message, int reply_socket) {
 }
 
 // TODO: write peek timestamp tests
-int handle_dmqp_peek_timestamp(const struct dmqp_message *message, int reply_socket) {
+int handle_dmqp_peek_timestamp(const struct dmqp_message *message,
+                               int reply_socket) {
     (void)message;
     (void)reply_socket;
     dmqp_peek_timestamp_count++;
