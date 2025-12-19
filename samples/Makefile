@@ -1,31 +1,18 @@
-CC 	   := gcc
-CFLAGS := -I../include
-CFLAGS += -Wall -Wextra -Werror
-CFLAGS += -pedantic
-CFLAGS += -std=c11
-CFLAGS += -MMD -MP
+TARGET 		  := partition_client
+OBJ    		  := partition_client.o
+PARTITION_OBJ := ../partition/partition.o ../partition/queue.o
+DEPS 		  := partition_client.d
 
-RELEASE_CFLAGS := -O3 -DNDEBUG
-LDFLAGS 	 := -L../lib -l:lib.a
+OVERRIDE_TARGET := 1
+OVERRIDE_HELP   := 1
 
-TARGET 			 := partition_client
-OBJ    			 := partition_client.o
-PARTITION_OBJ    := ../partition/partition.o ../partition/queue.o
-DEPS   			 := $(OBJ:.o=.d)
--include $(DEPS)
+include ../tools/common.mk
 
-.PHONY: all clean help
+.PHONY: all help
 
 all: $(TARGET)
 $(TARGET): %: %.o
 	@$(CC) $< $(PARTITION_OBJ) -o $@ $(LDFLAGS)
-
-$(OBJ): CFLAGS += $(RELEASE_CFLAGS)
-$(OBJ): %.o: %.c
-	@$(CC) $(CFLAGS) -c $< -o $@
-
-clean:
-	@rm -f $(TARGET) $(OBJ) $(DEPS)
 
 help:
 	@echo "Available targets:"
