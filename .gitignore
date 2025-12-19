@@ -1,4 +1,6 @@
 .vscode
-build
 
 .bash_history
+*.a
+*.d
+*.o
