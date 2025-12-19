@@ -61,5 +61,5 @@ Compile and start a partition:
 ```bash
 cd partition
 make
-./build/bin/partition
+./partition
 ```
