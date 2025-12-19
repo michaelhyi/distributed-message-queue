@@ -12,7 +12,7 @@ include ../tools/common.mk
 
 all: $(TARGET)
 $(TARGET): %: %.o
-	@$(CC) $< $(PARTITION_OBJ) -o $@ $(LDFLAGS)
+	@$(CC) $< $(PARTITION_OBJ) -o $@ $(LDFLAGS) 
 
 help:
 	@echo "Available targets:"

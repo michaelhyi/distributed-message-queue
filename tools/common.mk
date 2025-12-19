@@ -43,7 +43,7 @@ release: $(TARGET)
 
 ifndef OVERRIDE_TARGET
 $(TARGET): $(OBJ)
-	@$(CC) $(OBJ) -o $(TARGET) $(LDFLAGS)
+	@$(CC) $(OBJ) -o $(TARGET) $(LDFLAGS) 
 endif
 
 $(OBJ): CFLAGS += $(RELEASE_CFLAGS)
@@ -51,8 +51,12 @@ $(OBJ): %.o: %.c
 	@$(CC) $(CFLAGS) -c $< -o $@
 
 debug: $(DEBUG_TARGET)
-$(DEBUG_TARGET): $(DEBUG_OBJ)
-	@$(CC) $(DEBUG_OBJ) -o $(DEBUG_TARGET) $(LDFLAGS)
+$(DEBUG_TARGET): $(DEBUG_MAIN_OBJ) $(DEBUG_OBJ) 
+	@$(CC) $(DEBUG_MAIN_OBJ) $(DEBUG_OBJ) -o $(DEBUG_TARGET) $(LDFLAGS) 
+
+$(DEBUG_MAIN_OBJ): CFLAGS += $(DEBUG_CFLAGS)
+$(DEBUG_MAIN_OBJ): debug_%.o: %.c
+	@$(CC) $(CFLAGS) -c $< -o $@
 
 $(DEBUG_OBJ): CFLAGS += $(DEBUG_CFLAGS)
 $(DEBUG_OBJ): debug_%.o: %.c
