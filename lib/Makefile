@@ -22,7 +22,7 @@ VALGRIND_FLAGS += --show-leak-kinds=all
 VALGRIND_FLAGS += --track-origins=yes
 VALGRIND_FLAGS += --trace-children=yes
 
-TEST_DIR 		 := test
+TEST_DIR 		 := tests
 TARGET 			 := lib.a
 TEST_TARGET 	 := test_lib
 TEST_DEBUG_FLAGS := --debug=gdb
