@@ -15,7 +15,7 @@ TEST_LDFLAGS := -lcriterion
 AR 		  	   := ar
 AR_FLAGS  	   := rcs
 GDB 		   := gdb
-GDB_FLAGS 	   := -x ../tools/criterion.gdb
+GDB_TEST_FLAGS := -x ../tools/test.gdb
 VALGRIND  	   := valgrind
 VALGRIND_FLAGS := --leak-check=full
 VALGRIND_FLAGS += --show-leak-kinds=all
@@ -64,7 +64,7 @@ gdb-server-test: $(TEST_TARGET)
 	@./$(TEST_TARGET) $(TEST_DEBUG_FLAGS)
 
 gdb-test: $(TEST_TARGET)
-	@$(GDB) ./$(TEST_TARGET) $(GDB_FLAGS)
+	@$(GDB) ./$(TEST_TARGET) $(GDB_TEST_FLAGS)
 
 valgrind-test: $(TEST_TARGET)
 	@$(VALGRIND) $(VALGRIND_FLAGS) ./$(TEST_TARGET)

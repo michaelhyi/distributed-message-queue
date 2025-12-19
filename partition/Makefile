@@ -15,7 +15,7 @@ GDB_SERVER 		 := gdbserver
 GDB_SERVER_FLAGS := localhost:1234
 GDB 		   	 := gdb
 GDB_FLAGS 	     := -ex "target remote localhost:1234"
-GDB_TEST_FLAGS 	 := -x ../tools/criterion.gdb
+GDB_TEST_FLAGS 	 := -x ../tools/test.gdb
 
 VALGRIND  	   := valgrind
 VALGRIND_FLAGS := --leak-check=full
