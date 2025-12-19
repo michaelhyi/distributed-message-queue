@@ -2,14 +2,31 @@ LDFLAGS 	:=
 TARGET 		:= lib.a
 TEST_TARGET := test_lib
 
-OBJ 	  := dmqp.o doubly_linked_list.o network.o
-DEBUG_OBJ := debug_dmqp.o debug_doubly_linked_list.o debug_network.o
-TEST_OBJ  := test_dmqp.o test_doubly_linked_list.o test_integration_dmqp.o \
-			 test_integration_network.o test_network.o
-DEPS      := dmqp.d doubly_linked_list.d network.d \
-			 debug_dmqp.d debug_doubly_linked_list.d debug_network.d \
-			 test_dmqp.d test_doubly_linked_list.d test_integration_dmqp.d \
-			 test_integration_network.d test_network.d
+OBJ := dmqp.o
+OBJ += doubly_linked_list.o
+OBJ += network.o
+
+DEBUG_OBJ := debug_dmqp.o 
+DEBUG_OBJ += debug_doubly_linked_list.o 
+DEBUG_OBJ += debug_network.o
+
+TEST_OBJ := test_dmqp.o
+TEST_OBJ += test_doubly_linked_list.o
+TEST_OBJ += test_integration_dmqp.o
+TEST_OBJ += test_integration_network.o
+TEST_OBJ += test_network.o
+
+DEPS := dmqp.d
+DEPS += doubly_linked_list.d
+DEPS += network.d
+DEPS += debug_dmqp.d
+DEPS += debug_doubly_linked_list.d
+DEPS += debug_network.d
+DEPS += test_dmqp.d
+DEPS += test_doubly_linked_list.d
+DEPS += test_integration_dmqp.d
+DEPS += test_integration_network.d
+DEPS += test_network.d
 
 OVERRIDE_LDFLAGS := 1
 OVERRIDE_TARGET  := 1

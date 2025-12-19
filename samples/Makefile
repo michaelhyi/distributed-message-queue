@@ -1,6 +1,7 @@
 TARGET 		  := partition_client
 OBJ    		  := partition_client.o
-PARTITION_OBJ := ../partition/partition.o ../partition/queue.o
+PARTITION_OBJ := ../partition/partition.o
+PARTITION_OBJ += ../partition/queue.o
 DEPS 		  := partition_client.d
 
 OVERRIDE_TARGET := 1
