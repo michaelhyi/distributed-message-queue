@@ -1,33 +1,34 @@
-ROOT_DIR := $(realpath $(dir $(lastword $(MAKEFILE_LIST)))/..)
-GLOBAL_INCLUDE_DIR := $(ROOT_DIR)/include
+CC 	   := gcc
+CFLAGS := -I../include
+CFLAGS += -Wall -Wextra -Werror
+CFLAGS += -pedantic
+CFLAGS += -std=c11
+CFLAGS += -MMD -MP
 
-CC = gcc
-CFLAGS = -I$(GLOBAL_INCLUDE_DIR) -Wall -Wextra -Werror -pedantic -std=c11
-C_OPT_FLAGS = -O3
+RELEASE_CFLAGS := -O3 -DNDEBUG
+LDFLAGS 	 := -L../lib -l:lib.a
 
-GDB = gdb
+TARGET 			 := partition_client
+OBJ    			 := partition_client.o
+PARTITION_OBJ    := ../partition/partition.o ../partition/queue.o
+DEPS   			 := $(OBJ:.o=.d)
+-include $(DEPS)
 
-BUILD_DIR = build
+.PHONY: all clean help
 
-SRC = $(shell find . -name "*.c") 
+all: $(TARGET)
+$(TARGET): %: %.o
+	@$(CC) $< $(PARTITION_OBJ) -o $@ $(LDFLAGS)
 
-OBJ := $(patsubst %.c,$(BUILD_DIR)/%.o,$(SRC))
-LIB_OBJ := $(shell find $(ROOT_DIR)/lib/build/src -name "*.o")
-PARTITION_OBJ := $(filter-out $(ROOT_DIR)/partition/$(BUILD_DIR)/src/main.o,$(shell find $(ROOT_DIR)/partition/build/src -name "*.o"))
-
-BIN := $(patsubst %.c,$(BUILD_DIR)/bin/%,$(SRC))
-
-.PHONY: clean
-
-# link src obj files
-$(BIN): $(OBJ)
-	@mkdir -p $(dir $@)
-	$(CC) $(CFLAGS) $(OBJ) $(LIB_OBJ) $(PARTITION_OBJ) -o $(BIN)
-
-# compile src files
-$(BUILD_DIR)/%.o: %.c
-	@mkdir -p $(dir $@)
-	$(CC) $(CFLAGS) $(C_OPT_FLAGS) -c $< -o $@
+$(OBJ): CFLAGS += $(RELEASE_CFLAGS)
+$(OBJ): %.o: %.c
+	@$(CC) $(CFLAGS) -c $< -o $@
 
 clean:
-	rm -rf build
+	@rm -f $(TARGET) $(OBJ) $(DEPS)
+
+help:
+	@echo "Available targets:"
+	@echo "	all    - Build all sample executables"
+	@echo "	clean  - Remove all build artifacts"
+	@echo "	help   - Display this message"
