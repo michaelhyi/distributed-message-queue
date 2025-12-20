@@ -153,6 +153,7 @@ make
 
 ## Backlog
 - [ ] Leader Election (e.g. Split Brain)
+- [ ] Security: Authentication
 - [ ] Write-Through -> High Latency
 - [ ] Synchronous Replication -> High Latency
 - [ ] Compaction / Retention Policy (Queues May Grow Indefinitely)
