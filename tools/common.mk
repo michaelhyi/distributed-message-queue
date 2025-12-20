@@ -5,7 +5,7 @@ CFLAGS += -pedantic
 CFLAGS += -std=c11
 CFLAGS += -MMD -MP
 
-RELEASE_CFLAGS := -O3 -DNDEBUG
+RELEASE_CFLAGS := -O2 -DNDEBUG
 DEBUG_CFLAGS   := -g -O0 -fno-inline -DDEBUG
 TEST_CFLAGS    := -I.
 
