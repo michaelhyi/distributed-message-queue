@@ -79,7 +79,9 @@ A DMQP message uses the following format:
 ```
 The `Sequence ID` header contains the unique sequence number of a queue entry.
 This is used for message ordering.
+
 The `Length` header states the size of the payload in bytes.
+
 The `Method` header can be one of the following:
 ```
 DMQP_PUSH
@@ -87,12 +89,13 @@ DMQP_POP
 DMQP_PEEK_SEQUENCE_ID
 DMQP_RESPONSE
 ```
-The `Status Code` header is a Unix `errno`.
-The `Payload` contains data to be pushed onto the queue.
-
 `DMQP_PUSH` and `DMQP_POP` are self-explanatory. `DMQP_PEEK_SEQUENCE_ID` returns
 the sequence ID of the queue's head entry. `DMQP_RESPONSE` is specified if the
 message is a response to a request.
+
+The `Status Code` header is a Unix `errno`.
+
+The `Payload` contains data to be pushed onto the queue.
 
 ### Reliability
 
