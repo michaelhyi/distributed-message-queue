@@ -1,54 +1,139 @@
 # Distributed Message Queue
 
-An implementation of a Kafka-like distributed message queue in C. This message
-queue utilizes a custom application-layer protocol called DMQP.
+An implementation of a Kafka-like distributed message queue in C. This
+distributed system uses a custom application-layer network protocol called
+DMQP and Apache ZooKeeper for distributed consensus and metadata.
 
-### Features
-- Topics
-- Horizontal Partitions: Sharding & Replication
-- DMQP: Custom Application-Layer Protocol
-- Security
-- Fault Tolerance
+## Features
+- Partitions: Topics, Sharding, Replication
+- Networking: DMQP (Custom Application-Layer Protocol)
+- Reliability: Ordering, Atomicity, Security, Fault Tolerance
 
-### Design
+## Design
 
-#### Architecture
+### Architecture
 
-This distributed system follows a hierarchial architecture. There's a top-level
-server called the controller that handles all user requests, routing them to
-topics. Topics, to the user, are different logical queues. Topics then route
-requests to horizontal shards of queues. Shards are replicated, following a
-leader-follower architecture. Therefore, topics route requests to the replica
-set leader. The replica set leader then replicates data to followers. The Raft
-algorithm is used for leader election within a replica set.
+![Architecture diagram of the distributed system](.github/architecture.png)
 
-![Architecture diagram of the distributed message queue](.github/architecture.png)
+Partitions are nodes that store queues and host DMQP servers. Once partitions
+boot, they are registered into the distributed system's metadata via ZooKeeper.
+They are initially marked as free (unused) partitions.
 
-#### Networking
+When a client creates a new topic, free partitions are allocated for the topic.
+For instance, if a client creates a new topic with 2 shards and a replication
+factor of 3, 6 partitions are allocated in total. Each shard is allocated 3
+partitions. Different shards store different data, but replicas of the same
+shard store the same data. Sharding and partitioning provide horizontal scaling
+and fault tolerance.
+
+Each shard has a partition that is elected as a leader. A write must be
+replicated by the entire shard's replica set before the request is fully
+serviced. A read can be serviced by any partition in the shard's replica set.
+
+Data is distributed between shards using Round-Robin.
+
+Here's a walkthrough of a write to a topic:
+1. User sends a write request to the client with a Topic ID
+2. Client queries ZooKeeper for the IP addresses and ports of the topic's
+shards. The client is only interested in partitions that are elected leaders for
+that shard
+3. Client applies Round-Robin to distribute data evenly and prevent hotspots
+4. Data is persisted by the partition both in-memory and on disk
+
+Users can interface with this distributed system using a client defined in
+`include/api.h`.
+
+### Distributed Consensus
+
+As mentioned above, this distributed system uses ZooKeeper for distributed
+consensus and metadata. The following are formats of ephemeral nodes in
+ZooKeeper:
+
+```
+/free/{partition_ip_addr}:{partition_port}
+/topics/{topic_id}/sequence_id
+/topics/{topic_id}/consumers/{consumer_id}
+/topics/{topic_id}/shards/{shard_id}/leader/{partition_ip_addr}:{partition_port}
+/topics/{topic_id}/shards/{shard_id}/replicas/{partition_ip_addr}:{partition_port}
+```
+
+### Networking
 
 This distributed system uses a custom application-layer protocol called DMQP.
-DMQP stands for Distributed Message Queue Protocol. A DMQP message uses the
-following format:
+DMQP stands for Distributed Message Queue Protocol. DMQP uses TCP with
+persistent connections, leveraging keepalive to preserve resources only for
+active queue producers and consumers while maximizing throughput. Socket
+operations in DMQP have a timeout of 30 seconds each.
 
+A DMQP message uses the following format:
 ```
-+-------------------------------------------------------------------------------+
-|                            Timestamp (8 bytes)                                |
-+-------------------------------------------------------------------------------+
-|                              Length (4 bytes)                                 |
-+-------------------------------------------------------------------------------+
-| Method (1 byte) | Topic ID (1 byte) | Status Code (1 byte) | Unused (1 byte)  |
-+-------------------------------------------------------------------------------+
-|                             Payload (Max 1MB)                                 |
-+-------------------------------------------------------------------------------+
++------------------------------------------+
+|           Sequence ID (4 bytes)          |
++------------------------------------------+
+|             Length (4 bytes)             |
++------------------------------------------+
+| Method (2 bytes) | Status Code (2 bytes) |
++------------------------------------------+
+|             Payload (Max 1MB)            |
++------------------------------------------+
+```
+The `Sequence ID` header contains the unique sequence number of a queue entry.
+This is used for message ordering.
+The `Length` header states the size of the payload in bytes.
+The `Method` header can be one of the following:
+```
+DMQP_PUSH
+DMQP_POP
+DMQP_PEEK_SEQUENCE_ID
+DMQP_RESPONSE
+```
+The `Status Code` header is a Unix `errno`.
+The `Payload` contains data to be pushed onto the queue.
+
+`DMQP_PUSH` and `DMQP_POP` are self-explanatory. `DMQP_PEEK_SEQUENCE_ID` returns
+the sequence ID of the queue's head entry. `DMQP_RESPONSE` is specified if the
+message is a response to a request.
+
+### Reliability
+
+#### Ordering & Atomicity
+
+All queue operations at the partition level are protected by mutex locks. This
+guarantees ordering and atomicity at the partition level. All ZooKeeper
+operations used by the client are atomic.
+
+Consumers will be assigned specific shards to consume from. This reduces the
+overhead of peeking at every shard, only the specific shards that are assigned
+to that consumer. Ideally, there is one consumer per shard. There cannot be more
+consumers than shards. If there are less consumers than shards, consumers have
+to peek the sequence ID of each assigned shard to determine the true head of
+their assigned shards. This ensures that consumers process messages in order.
+
+Consumers are registered at the following ephemeral ZooKeeper node:
+```
+/topics/{topic_id}/consumers/{consumer_id}
 ```
 
-DMQP uses TCP with persistent connections, leveraging keepalive to preserve
-resources only for active queue producers while maximizing throughput. DMQP
-also uses TLS encryption and a timeout of 30 seconds on each socket.
+The client determines how to balance shards between consumers.
 
-### Quick Start
+#### Security
 
-#### Requirements
+All network messages are encrypted using TLS. Data is encrypted prior to any
+persistence on disk.
+
+#### Fault Tolerance
+
+Shards are replicated, providing redundancy. Therefore, if one replica fails,
+there are others that can still service requests.
+
+Furthermore, all writes are simultaneously persisted to disk (write-through).
+When a partition boots, it looks for any available disk logs to recover. This
+provides crash recovery, since if an entire replica set fails, restarted nodes
+can recover all data persisted to disk.
+
+## Quick Start
+
+### Requirements
 - Docker
 
 Enter the Docker container:
@@ -62,3 +147,10 @@ Compile and start a partition:
 make
 ./partition/partition
 ```
+
+## Backlog
+- [ ] Leader Election (e.g. Split Brain)
+- [ ] Write-Through -> High Latency
+- [ ] Synchronous Replication -> High Latency
+- [ ] Compaction / Retention Policy (Queues May Grow Indefinitely)
+- [ ] Caching Metadata from ZooKeeper
