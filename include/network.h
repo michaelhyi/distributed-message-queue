@@ -63,4 +63,13 @@ ssize_t read_all(int fd, void *buf, size_t count);
  */
 ssize_t send_all(int socket, const void *buffer, size_t length, int flags);
 
+// TODO: test
+/**
+ * Checks if a given file descriptor is a valid socket.
+ *
+ * @param fd file descriptor to validate
+ * @returns 1 if `fd` is a socket, 0 otherwise
+ */
+int is_socket(int fd);
+
 #endif

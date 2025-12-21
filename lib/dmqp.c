@@ -32,8 +32,8 @@ static int read_dmqp_header(int fd, struct dmqp_header *buf) {
 
     memcpy(&buf->sequence_id, header_wire_buf, 4);
     memcpy(&buf->length, header_wire_buf + 4, 4);
-    buf->method = header_wire_buf[8];
-    buf->status_code = header_wire_buf[10];
+    memcpy(&buf->method, header_wire_buf + 8, 2);
+    memcpy(&buf->status_code, header_wire_buf + 10, 2);
 
     buf->sequence_id = ntohl(buf->sequence_id);
     buf->length = ntohl(buf->length);
@@ -55,8 +55,8 @@ static int read_dmqp_header(int fd, struct dmqp_header *buf) {
  * @param flags same flags param as `send` syscall
  * @returns 0 on success, -1 if error with global `errno` set
  */
-static ssize_t send_dmqp_header(int socket, const struct dmqp_header *buffer,
-                                int flags) {
+static int send_dmqp_header(int socket, const struct dmqp_header *buffer,
+                            int flags) {
     if (socket < 0 || buffer == NULL) {
         errno = EINVAL;
         return -1;
@@ -75,8 +75,8 @@ static ssize_t send_dmqp_header(int socket, const struct dmqp_header *buffer,
     char header_wire_buf[DMQP_HEADER_SIZE];
     memcpy(header_wire_buf, &network_byte_ordered_sequence_id, 4);
     memcpy(header_wire_buf + 4, &network_byte_ordered_length, 4);
-    header_wire_buf[8] = network_byte_ordered_method;
-    header_wire_buf[10] = network_byte_ordered_status_code;
+    memcpy(header_wire_buf + 8, &network_byte_ordered_method, 2);
+    memcpy(header_wire_buf + 10, &network_byte_ordered_status_code, 2);
 
     ssize_t n = send_all(socket, header_wire_buf, DMQP_HEADER_SIZE, flags);
     if (n < 0) {
@@ -115,8 +115,8 @@ int read_dmqp_message(int fd, struct dmqp_message *buf) {
         return -1;
     }
 
-    ssize_t n = read_dmqp_header(fd, &buf->header);
-    if (n < DMQP_HEADER_SIZE) {
+    int res = read_dmqp_header(fd, &buf->header);
+    if (res < 0) {
         return -1;
     }
 
@@ -136,7 +136,7 @@ int read_dmqp_message(int fd, struct dmqp_message *buf) {
         return -1;
     }
 
-    n = read_all(fd, buf->payload, buf->header.length);
+    ssize_t n = read_all(fd, buf->payload, buf->header.length);
     if (n < buf->header.length) {
         free(buf->payload);
         return -1;
@@ -158,8 +158,8 @@ int send_dmqp_message(int socket, const struct dmqp_message *buffer,
         return -1;
     }
 
-    ssize_t n = send_dmqp_header(socket, &buffer->header, flags);
-    if (n < DMQP_HEADER_SIZE) {
+    int res = send_dmqp_header(socket, &buffer->header, flags);
+    if (res < 0) {
         return -1;
     }
 
@@ -167,7 +167,7 @@ int send_dmqp_message(int socket, const struct dmqp_message *buffer,
         return 0;
     }
 
-    n = send_all(socket, buffer->payload, buffer->header.length, flags);
+    ssize_t n = send_all(socket, buffer->payload, buffer->header.length, flags);
     if (n < buffer->header.length) {
         return -1;
     }
@@ -212,27 +212,39 @@ int handle_dmqp_message(int socket) {
     return res;
 }
 
+/**
+ * Determines if a given method is defined by DMQP.
+ *
+ * @param method method to check if defined
+ * @returns 1 if method is defined, 0 otherwise
+ */
+static inline int is_defined_method(enum dmqp_method method) {
+    return method == DMQP_PUSH || method == DMQP_POP ||
+           method == DMQP_PEEK_SEQUENCE_ID || method == DMQP_RESPONSE;
+}
+
 int handle_dmqp_unknown_method(const struct dmqp_message *message,
                                int reply_socket) {
-    if (message == NULL || reply_socket < 0) {
+    if (message == NULL || is_defined_method(message->header.method)) {
         errno = EINVAL;
         return -1;
     }
 
-    struct dmqp_header res_header = {
-        .sequence_id = 0,
-        .length = 0,
-        .method = DMQP_RESPONSE,
-
-        .status_code = ENOSYS,
-    };
-    struct dmqp_message res_message = {.header = res_header};
-
-    ssize_t n = send_dmqp_message(reply_socket, &res_message, 0);
-    if (n < DMQP_HEADER_SIZE) {
+    if (!is_socket(reply_socket)) {
+        errno = ENOTSOCK;
         return -1;
     }
 
-    errno = ENOSYS;
+    struct dmqp_header res_header = {.sequence_id = 0,
+                                     .length = 0,
+                                     .method = DMQP_RESPONSE,
+                                     .status_code = ENOSYS};
+    struct dmqp_message res_message = {.header = res_header};
+
+    int res = send_dmqp_message(reply_socket, &res_message, 0);
+    if (res < 0) {
+        return -1;
+    }
+
     return 0;
 }

@@ -9,6 +9,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/socket.h>
+#include <sys/stat.h>
 #include <sys/time.h>
 #include <unistd.h>
 
@@ -370,4 +371,19 @@ ssize_t send_all(int socket, const void *buffer, size_t length, int flags) {
     }
 
     return total;
+}
+
+int is_socket(int fd) {
+    struct stat buf;
+
+    int res = fstat(fd, &buf);
+    if (res < 0) {
+        return 0;
+    }
+
+    if (S_ISSOCK(buf.st_mode)) {
+        return 1;
+    }
+
+    return 0;
 }

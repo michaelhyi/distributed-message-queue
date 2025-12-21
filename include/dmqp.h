@@ -11,7 +11,6 @@
 
 enum dmqp_method { DMQP_PUSH, DMQP_POP, DMQP_PEEK_SEQUENCE_ID, DMQP_RESPONSE };
 
-// All header fields are expected to be in network byte order (big endian).
 struct dmqp_header {
     uint32_t sequence_id; // unique sequence number of queue entry
     uint32_t length;      // payload length
@@ -41,7 +40,8 @@ int dmqp_client_init(const char *server_host, unsigned short server_port);
  * Throws an error if any network operations fail.
  *
  * @param server_port the port to bind the server to
- * @returns 0 on success, -1 on error with global `errno` set
+ * @returns 0 on success, -1 on error with global `errno` set. does not return
+ * until the server is terminated/interrupted
  */
 int dmqp_server_init(unsigned short server_port);
 
@@ -49,8 +49,8 @@ int dmqp_server_init(unsigned short server_port);
  * Reads a DMQP message from a file descriptor. Converts header fields to host
  * byte order.
  *
- * Throws an error if `fd` is invalid, `buf` is null, if the
- * message's payload is too large, or if read fails.
+ * Throws an error if `fd` is invalid, `buf` is null, if the message's payload
+ * is too large, or if read fails.
  *
  * @param fd file descriptor to read from
  * @param buf DMQP message buffer to write to
@@ -82,13 +82,12 @@ int send_dmqp_message(int socket, const struct dmqp_message *buffer, int flags);
  * Throws an error if `socket` is invalid.
  *
  * @param socket socket that sent message
- * @returns 0 if success, -1 if error with global `errno` set. does not return
- * until the server is interrupted or terminated
+ * @returns 0 if success, -1 if error with global `errno` set
  */
 int handle_dmqp_message(int socket);
 
 /**
- * Handles a DMQP message with unknown method.
+ * Handles a DMQP message with an unknown method.
  *
  * Throws an error if `message` is null, the method is not unknown, or
  * `reply_socket` is invalid.

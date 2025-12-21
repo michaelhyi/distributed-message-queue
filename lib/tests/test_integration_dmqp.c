@@ -64,3 +64,6 @@ Test(integration_dmqp, test_dmqp_client_init_success) {
     cr_assert_eq(arg.res, 0);
     cr_assert_eq(arg._errno, 0);
 }
+
+// TODO:
+// Test(integration_dmqp, test_dmqp_server_init_success) {}
