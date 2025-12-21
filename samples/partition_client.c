@@ -3,7 +3,6 @@
 #include <sys/socket.h>
 
 #include "dmqp.h"
-#include "network.h"
 
 int main() {
     int fd = dmqp_client_init("127.0.0.1", 8080);
@@ -13,7 +12,7 @@ int main() {
     }
 
     int res;
-    struct dmqp_header header = {.status_code = 0, .timestamp = 0};
+    struct dmqp_header header = {.status_code = 0, .sequence_id = 0};
     struct dmqp_message message;
     char *data[] = {"Michael Yi", "Christian Beckering", "Philip Mitchell"};
 
@@ -40,36 +39,11 @@ int main() {
         printf("received message:\n");
         printf("method: %d\n", message.header.method);
         printf("status_code: %d\n", message.header.status_code);
-        printf("timestamp: %ld\n", message.header.timestamp);
+        printf("sequence_id: %d\n", message.header.sequence_id);
         printf("length: %d\n", message.header.length);
         printf("payload: %s\n\n", (char *)message.payload);
     }
 
-    header.method = DMQP_PEEK;
-    header.length = 0;
-    message.header = header;
-    message.payload = NULL;
-    res = send_dmqp_message(fd, &message, 0);
-    if (res < 0) {
-        fprintf(stderr, "failed to send message\n");
-        return 1;
-    }
-
-    printf("peeked\n\n");
-
-    res = read_dmqp_message(fd, &message);
-    if (res < 0) {
-        fprintf(stderr, "failed to receive message\n");
-        return 1;
-    }
-
-    printf("received message:\n");
-    printf("method: %d\n", message.header.method);
-    printf("status_code: %d\n", message.header.status_code);
-    printf("timestamp: %ld\n", message.header.timestamp);
-    printf("length: %d\n", message.header.length);
-    printf("payload: %s\n\n", (char *)message.payload);
-
     header.method = DMQP_POP;
     header.length = 0;
     message.header = header;
@@ -91,32 +65,7 @@ int main() {
     printf("received message:\n");
     printf("method: %d\n", message.header.method);
     printf("status_code: %d\n", message.header.status_code);
-    printf("timestamp: %ld\n", message.header.timestamp);
-    printf("length: %d\n", message.header.length);
-    printf("payload: %s\n\n", (char *)message.payload);
-
-    header.method = DMQP_PEEK;
-    header.length = 0;
-    message.header = header;
-    message.payload = NULL;
-    res = send_dmqp_message(fd, &message, 0);
-    if (res < 0) {
-        fprintf(stderr, "failed to send message\n");
-        return 1;
-    }
-
-    printf("peeked\n\n");
-
-    res = read_dmqp_message(fd, &message);
-    if (res < 0) {
-        fprintf(stderr, "failed to receive message\n");
-        return 1;
-    }
-
-    printf("received message:\n");
-    printf("method: %d\n", message.header.method);
-    printf("status_code: %d\n", message.header.status_code);
-    printf("timestamp: %ld\n", message.header.timestamp);
+    printf("sequence_id: %d\n", message.header.sequence_id);
     printf("length: %d\n", message.header.length);
     printf("payload: %s\n\n", (char *)message.payload);
 
@@ -141,32 +90,7 @@ int main() {
     printf("received message:\n");
     printf("method: %d\n", message.header.method);
     printf("status_code: %d\n", message.header.status_code);
-    printf("timestamp: %ld\n", message.header.timestamp);
-    printf("length: %d\n", message.header.length);
-    printf("payload: %s\n\n", (char *)message.payload);
-
-    header.method = DMQP_PEEK;
-    header.length = 0;
-    message.header = header;
-    message.payload = NULL;
-    res = send_dmqp_message(fd, &message, 0);
-    if (res < 0) {
-        fprintf(stderr, "failed to send message\n");
-        return 1;
-    }
-
-    printf("peeked\n\n");
-
-    res = read_dmqp_message(fd, &message);
-    if (res < 0) {
-        fprintf(stderr, "failed to receive message\n");
-        return 1;
-    }
-
-    printf("received message:\n");
-    printf("method: %d\n", message.header.method);
-    printf("status_code: %d\n", message.header.status_code);
-    printf("timestamp: %ld\n", message.header.timestamp);
+    printf("sequence_id: %d\n", message.header.sequence_id);
     printf("length: %d\n", message.header.length);
     printf("payload: %s\n\n", (char *)message.payload);
     return 0;
