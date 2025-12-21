@@ -1,8 +1,9 @@
 # Distributed Message Queue
 
-An implementation of a Kafka-like distributed message queue in C. This
-distributed system uses a custom application-layer network protocol called
-DMQP and Apache ZooKeeper for distributed consensus and metadata.
+A distributed message queue implemented in C, modeling a very simplified version
+of Kafka. This distributed system uses a custom application-layer network
+protocol called DMQP and Apache ZooKeeper for distributed consensus and
+metadata.
 
 ## Features
 - Partitions: Topics, Sharding, Replication
