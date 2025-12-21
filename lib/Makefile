@@ -34,7 +34,7 @@ OVERRIDE_HELP    := 1
 
 include ../tools/common.mk
 
-CFLAGS += -D_GNU_SOURCE # allows include <endian.h>
+CFLAGS += -D_GNU_SOURCE # allows usleep() and kill()
 
 all: $(TARGET)
 $(TARGET): $(OBJ)
