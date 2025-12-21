@@ -180,7 +180,7 @@ cleanup:
 }
 
 int handle_dmqp_peek_sequence_id(const struct dmqp_message *message,
-                               int reply_socket) {
+                                 int reply_socket) {
     if (message == NULL || reply_socket < 0) {
         errno = EINVAL;
         return -1;
