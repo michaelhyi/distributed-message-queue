@@ -62,7 +62,7 @@ int metadata_get(const char *key, void *value) {
     }
 
     struct Stat stat;
-    int rc = zoo_get(zh, key, 0, value, (int *) &MAX_METADATA_ENTRY_SIZE, &stat);
+    int rc = zoo_get(zh, key, 0, value, (int *)&MAX_METADATA_ENTRY_SIZE, &stat);
     if (rc == ZNONODE) {
         errno = ENODATA;
         return -1;
