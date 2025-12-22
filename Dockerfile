@@ -11,6 +11,15 @@ RUN apt-get update && apt-get install -y \
     # ps
     procps \
 
+    vim \
+
+    # wget used for installing zookeeper
+    wget \
+
+    # zookeeper
+    default-jdk \
+    libzookeeper-mt-dev \
+
     # gcc, make 
 	build-essential \
 
@@ -20,6 +29,18 @@ RUN apt-get update && apt-get install -y \
     clang-format \
 
     # tests 
-    libcriterion-dev
+    libcriterion-dev && \
 
-CMD ["/bin/bash"]
+    rm -rf /var/lib/apt/lists/*
+
+# install & configure zookeeper
+RUN cd /opt && \
+    wget https://dlcdn.apache.org/zookeeper/zookeeper-3.8.5/apache-zookeeper-3.8.5-bin.tar.gz && \
+    tar -xvzf apache-zookeeper-3.8.5-bin.tar.gz && \
+    mv apache-zookeeper-3.8.5-bin zookeeper && \
+    rm apache-zookeeper-3.8.5-bin.tar.gz && \
+    mkdir -p /data/zookeeper && \
+    echo "tickTime=2500\ndataDir=/data/zookeeper\nclientPort=2181\nmaxClientCnxns=80" > /opt/zookeeper/conf/zoo.cfg
+
+# start zookeeper server & shell
+CMD /opt/zookeeper/bin/zkServer.sh start && /bin/bash
