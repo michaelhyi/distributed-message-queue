@@ -8,34 +8,34 @@ OBJ := api.o \
 	   metadata.o \
 	   network.o \
 
-DEBUG_OBJ := debug_api.o
-DEBUG_OBJ += debug_dmqp.o
-DEBUG_OBJ += debug_doubly_linked_list.o 
-DEBUG_OBJ += debug_metadata.o
-DEBUG_OBJ += debug_network.o
+DEBUG_OBJ := debug_api.o \
+			 debug_dmqp.o \
+			 debug_doubly_linked_list.o \
+ 			 debug_metadata.o \
+ 			 debug_network.o \
 
-TEST_OBJ := test_api.o
-TEST_OBJ += test_dmqp.o
-TEST_OBJ += test_doubly_linked_list.o
-TEST_OBJ += test_integration_dmqp.o
-TEST_OBJ += test_integration_network.o
-TEST_OBJ += test_network.o
+TEST_OBJ := test_api.o \
+ 			test_dmqp.o \
+ 			test_doubly_linked_list.o \
+ 			test_integration_dmqp.o \
+ 			test_integration_network.o \
+ 			test_network.o \
 
-DEPS := api.d
-DEPS += dmqp.d
-DEPS += doubly_linked_list.d
-DEPS += metadata.d
-DEPS += network.d
-DEPS += debug_api.d
-DEPS += debug_dmqp.d
-DEPS += debug_doubly_linked_list.d
-DEPS += debug_metadata.d
-DEPS += debug_network.d
-DEPS += test_dmqp.d
-DEPS += test_doubly_linked_list.d
-DEPS += test_integration_dmqp.d
-DEPS += test_integration_network.d
-DEPS += test_network.d
+DEPS := api.d \
+		dmqp.d \
+		doubly_linked_list.d \
+		metadata.d \
+		network.d \
+		debug_api.d \
+		debug_dmqp.d \
+		debug_doubly_linked_list.d \
+		debug_metadata.d \
+		debug_network.d \
+		test_dmqp.d \
+		test_doubly_linked_list.d \
+		test_integration_dmqp.d \
+		test_integration_network.d \
+		test_network.d \
 
 OVERRIDE_LDFLAGS := 1
 OVERRIDE_TARGET  := 1

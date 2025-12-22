@@ -1,9 +1,9 @@
 CC 	   := gcc
-CFLAGS := -I../include
-CFLAGS += -Wall -Wextra -Werror
-CFLAGS += -pedantic
-CFLAGS += -std=c11
-CFLAGS += -MMD -MP
+CFLAGS := -I../include \
+		   -Wall -Wextra -Werror \
+		   -pedantic \
+		   -std=c11 \
+		   -MMD -MP \
 
 RELEASE_CFLAGS := -O2 -DNDEBUG
 DEBUG_CFLAGS   := -g -O0 -fno-inline -DDEBUG
@@ -25,10 +25,10 @@ GDB_FLAGS 	     := -ex "target remote localhost:1234"
 GDB_TEST_FLAGS 	 := -x ../tools/test.gdb
 
 VALGRIND  	   := valgrind
-VALGRIND_FLAGS := --leak-check=full
-VALGRIND_FLAGS += --show-leak-kinds=all
-VALGRIND_FLAGS += --track-origins=yes
-VALGRIND_FLAGS += --trace-children=yes
+VALGRIND_FLAGS := --leak-check=full \
+				  --show-leak-kinds=all \
+				  --track-origins=yes \
+				  --trace-children=yes \
 
 TEST_DIR 		 := tests
 TEST_DEBUG_FLAGS := --debug=gdb
