@@ -1,7 +1,7 @@
 #ifndef METADATA_H
 #define METADATA_H
 
-#include "api.h"
+#include "types.h"
 
 const int MAX_METADATA_ENTRY_SIZE = 512;
 

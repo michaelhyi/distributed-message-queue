@@ -1,21 +1,7 @@
 #ifndef API_H
 #define API_H
 
-struct server {
-    char *host;
-    unsigned short port;
-};
-
-struct topic {
-    char *name;
-    unsigned int shards;
-    unsigned int replication_factor;
-};
-
-struct message {
-    void *data;
-    unsigned int size;
-};
+#include "types.h"
 
 /**
  * Creates a topic in the distributed message queue, allocating partitions as
