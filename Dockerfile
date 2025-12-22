@@ -42,5 +42,8 @@ RUN cd /opt && \
     mkdir -p /data/zookeeper && \
     echo "tickTime=2500\ndataDir=/data/zookeeper\nclientPort=2181\nmaxClientCnxns=80" > /opt/zookeeper/conf/zoo.cfg
 
-# start zookeeper server & shell
-CMD /opt/zookeeper/bin/zkServer.sh start && /bin/bash
+# start & init zookeeper server, start shell
+CMD /opt/zookeeper/bin/zkServer.sh start && \
+    chmod +x ./scripts/init_zookeeper.sh && \
+    ./scripts/init_zookeeper.sh && \
+    /bin/bash
