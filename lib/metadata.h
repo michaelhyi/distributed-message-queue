@@ -6,7 +6,7 @@
 #define PERSISTENT 1
 #define EPHEMERAL 0
 
-static const int MAX_METADATA_ENTRY_SIZE = 512;
+#define MAX_METADATA_ENTRY_SIZE 512
 
 /**
  * Initializes the metadata service by establishing a connection to the metadata
@@ -65,7 +65,7 @@ int metadata_set(const char *key, const void *value, unsigned int size,
  * @param key key of metadata entry
  * @returns 0 if success, -1 if error with global `errno` set
  * @throws `EINVAL` invalid arguments or metadata service not initialized
- * @throws `EEXIST` if metadata entry does not exist
+ * @throws `ENODATA` if metadata entry does not exist
  * @throws `EIO` internal service error
  */
 int metadata_delete(const char *key);

@@ -5,7 +5,13 @@
 #include <string.h>
 #include <zookeeper/zookeeper.h>
 
-#define MAX_PORT_DIGITS 5
+#define OCTET_LENGTH 3 // 0-255 has max 3 digits
+// ipv4 format: octet.octet.octet.octet
+#define IPV4_LENGTH 4 * OCTET_LENGTH + 3
+
+#define PORT_LENGTH 5 // 0-65535 has max 5 digits
+// server addr format: ipv4:port
+#define SERVER_ADDRESS_LENGTH IPV4_LENGTH + 1 + PORT_LENGTH
 
 static zhandle_t *zh = NULL;
 
@@ -30,15 +36,17 @@ int metadata_init(const struct server *server) {
         return -1;
     }
 
-    char server_port[MAX_PORT_DIGITS + 2];
-    memset(server_port, 0, sizeof(server_port));
-    server_port[0] = ':';
-    sprintf(server_port + 1, "%d", server->port);
-    char *server_address = strcat(server->host, server_port);
+    char server_address[SERVER_ADDRESS_LENGTH + 1];
+    memset(server_address, 0, sizeof(server_address));
+
+    int host_len = strnlen(server->host, IPV4_LENGTH);
+    strncpy(server_address, server->host, host_len);
+    server_address[host_len] = ':';
+    sprintf(server_address + host_len + 1, "%d", server->port);
 
     zh = zookeeper_init(server_address, watcher, 10000, 0, 0, 0);
-
     if (!zh) {
+        errno = EIO;
         return -1;
     }
 
@@ -52,6 +60,7 @@ int metadata_destroy(void) {
     }
 
     zookeeper_close(zh);
+    zh = NULL;
     return 0;
 }
 
@@ -62,7 +71,8 @@ int metadata_get(const char *key, void *value) {
     }
 
     struct Stat stat;
-    int rc = zoo_get(zh, key, 0, value, (int *)&MAX_METADATA_ENTRY_SIZE, &stat);
+    int buffer_len = MAX_METADATA_ENTRY_SIZE;
+    int rc = zoo_get(zh, key, 0, value, &buffer_len, &stat);
     if (rc == ZNONODE) {
         errno = ENODATA;
         return -1;
@@ -81,12 +91,10 @@ int metadata_set(const char *key, const void *value, unsigned int size,
         return -1;
     }
 
-    char buffer[512];
-    struct ACL CREATE_ONLY_ACL[] = {{ZOO_PERM_CREATE, ZOO_AUTH_IDS}};
-    struct ACL_vector CREATE_ONLY = {1, CREATE_ONLY_ACL};
-    int rc = zoo_create(zh, key, value, size, &CREATE_ONLY,
-                        persistent ? ZOO_PERSISTENT : ZOO_EPHEMERAL, buffer,
-                        sizeof(buffer) - 1);
+    char buffer[MAX_METADATA_ENTRY_SIZE];
+    int zookeeper_flags = persistent ? ZOO_PERSISTENT : ZOO_EPHEMERAL;
+    int rc = zoo_create(zh, key, value, size, &ZOO_OPEN_ACL_UNSAFE,
+                        zookeeper_flags, buffer, sizeof(buffer) - 1);
 
     if (rc == ZNODEEXISTS) {
         errno = EEXIST;
@@ -107,7 +115,7 @@ int metadata_delete(const char *key) {
 
     int rc = zoo_delete(zh, key, -1);
     if (rc == ZNONODE) {
-        errno = EEXIST;
+        errno = ENODATA;
         return -1;
     } else if (rc) {
         errno = EIO;
