@@ -33,8 +33,7 @@ VALGRIND_FLAGS += --trace-children=yes
 TEST_DIR 		 := tests
 TEST_DEBUG_FLAGS := --debug=gdb
 
--include $(DEPS)
-
+.DELETE_ON_ERROR:
 .PHONY: all release debug test gdb-server gdb gdb-server-test gdb-test \
 		valgrind valgrind-test clean help
 
@@ -109,3 +108,5 @@ help:
 	@echo "	clean             - Remove all build artifacts"
 	@echo "	help              - Display this message"
 endif
+
+-include $(DEPS)
