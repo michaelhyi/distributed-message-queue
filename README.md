@@ -2,8 +2,8 @@
 
 A distributed message queue implemented in C, modeling a very simplified version
 of Kafka. This distributed system uses a custom application-layer network
-protocol called DMQP and Apache ZooKeeper for distributed consensus and
-metadata.
+protocol called DMQP and Apache ZooKeeper for distributed consensus, partition
+discovery, and metadata.
 
 ## Features
 - Partitions: Topics, Sharding, Replication
@@ -18,7 +18,8 @@ metadata.
 
 Partitions are nodes that store queues and host DMQP servers. Once partitions
 boot, they are registered into the distributed system's metadata via ZooKeeper.
-They are initially marked as free (unused) partitions.
+They are initially marked as free (unused) partitions. This facilitates
+partition discovery.
 
 When a client creates a new topic, free partitions are allocated for the topic.
 For instance, if a client creates a new topic with 2 shards and a replication
@@ -44,7 +45,7 @@ that shard
 Users can interface with this distributed system using a client defined in
 `include/api.h`.
 
-### Distributed Consensus
+### Metadata
 
 As mentioned above, this distributed system uses ZooKeeper for distributed
 consensus and metadata. The following are formats of ZNodes in ZooKeeper:
@@ -56,6 +57,20 @@ consensus and metadata. The following are formats of ZNodes in ZooKeeper:
 /topics/{topic_id}/shards/{shard_id}/leader/{partition_ip_addr}:{partition_port}
 /topics/{topic_id}/shards/{shard_id}/replicas/{partition_ip_addr}:{partition_port}
 ```
+
+The `/free` parent ZNode is essentially a freelist of partitions.
+
+The `/topics/{topic_id}/sequence_id` ZNode stores an atomic counter,
+representing the next expected sequence id of an incoming write. This
+facilitates ordering.
+
+The `/topics/{topic_id}/consumers/{consumer_id}` enables consumer grouping,
+allowing multiple consumers to share shards without overlap.
+
+The `/topics/{topic_id}/shards/{shard_id}/leader` parent ZNode stores metadata
+regarding the leader of the given shard. The
+`/topics/{topic_id}/shards/{shard_id}/replicas` parent ZNode stores metadata
+regarding replicas (followers) of the given shard.
 
 ### Networking
 
