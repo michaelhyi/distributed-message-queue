@@ -27,8 +27,8 @@ if $ATTACH; then
         exit 1
     fi
 else
-    docker stop "$IMAGE" >/dev/null 2>&1 || true 
-    docker rm "$IMAGE" >/dev/null 2>&1 || true 
+    docker stop "$IMAGE" > /dev/null 2>&1 || true 
+    docker rm "$IMAGE" > /dev/null 2>&1 || true 
     docker build -f "$ROOT_DIR/Dockerfile" -t "$IMAGE" "$ROOT_DIR"
     docker run -it \
         --name "$IMAGE" \
