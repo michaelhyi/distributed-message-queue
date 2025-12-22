@@ -3,6 +3,9 @@
 
 #include "types.h"
 
+#define PERSISTENT 1
+#define EPHEMERAL 0
+
 const int MAX_METADATA_ENTRY_SIZE = 512;
 
 /**
@@ -13,7 +16,6 @@ const int MAX_METADATA_ENTRY_SIZE = 512;
  * @returns 0 if success, -1 if error with global `errno` set
  * @throws `EINVAL` invalid arguments
  * @throws `EALREADY` metadata service already initialized
- * @throws `EINVAL` metadata service not initialized
  * @throws `EIO` internal service error, likely establishing connection to
  * metadata server failed
  */
@@ -46,14 +48,26 @@ int metadata_get(const char *key, void *value);
  * @param key key of metadata entry
  * @param value value to store in metadata entry
  * @param size number of bytes to store in metadata entry
- * @param persistent if non-zero, creates a persistent metadata entry.
- * otherwise, metadata entries will be deleted if the client that created them
- * dies
+ * @param persistent if PERSISTENT (non-zero), creates a persistent metadata
+ * entry. if EPHEMERAL (zero), metadata entries will be deleted if the client
+ * that created them dies
  * @returns 0 if success, -1 if error with global `errno` set
  * @throws `EINVAL` invalid arguments or metadata service not initialized
  * @throws `EEXIST` if metadata entry with same key already exists
+ * @throws `EIO` internal service error
  */
 int metadata_set(const char *key, const void *value, unsigned int size,
                  int persistent);
+
+/**
+ * Deletes a metadata entry.
+ *
+ * @param key key of metadata entry
+ * @returns 0 if success, -1 if error with global `errno` set
+ * @throws `EINVAL` invalid arguments or metadata service not initialized
+ * @throws `EEXIST` if metadata entry does not exist
+ * @throws `EIO` internal service error
+ */
+int metadata_delete(const char *key);
 
 #endif

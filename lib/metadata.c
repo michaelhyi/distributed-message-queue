@@ -98,3 +98,21 @@ int metadata_set(const char *key, const void *value, unsigned int size,
 
     return 0;
 }
+
+int metadata_delete(const char *key) {
+    if (key == NULL || zh == NULL) {
+        errno = EINVAL;
+        return -1;
+    }
+
+    int rc = zoo_delete(zh, key, -1);
+    if (rc == ZNONODE) {
+        errno = EEXIST;
+        return -1;
+    } else if (rc) {
+        errno = EIO;
+        return -1;
+    }
+
+    return 0;
+}
