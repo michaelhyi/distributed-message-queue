@@ -47,8 +47,7 @@ Users can interface with this distributed system using a client defined in
 ### Distributed Consensus
 
 As mentioned above, this distributed system uses ZooKeeper for distributed
-consensus and metadata. The following are formats of ephemeral nodes in
-ZooKeeper:
+consensus and metadata. The following are formats of ZNodes in ZooKeeper:
 
 ```
 /free/{partition_ip_addr}:{partition_port}
@@ -159,3 +158,4 @@ make
 - [ ] Synchronous Replication -> High Latency
 - [ ] Compaction / Retention Policy (Queues May Grow Indefinitely)
 - [ ] Caching Metadata from ZooKeeper
+- [ ] Use Criterion Specific Memory Allocator
