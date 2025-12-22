@@ -6,7 +6,7 @@
 #define PERSISTENT 1
 #define EPHEMERAL 0
 
-const int MAX_METADATA_ENTRY_SIZE = 512;
+static const int MAX_METADATA_ENTRY_SIZE = 512;
 
 /**
  * Initializes the metadata service by establishing a connection to the metadata
