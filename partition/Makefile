@@ -14,13 +14,9 @@ DEBUG_OBJ := debug_partition.o \
 TEST_OBJ := test_partition.o \
 			test_queue.o
 
-DEPS := main.d \
-		partition.d \
-		queue.d \
-		debug_main.d \
-		debug_partition.d \
-		debug_queue.d \
-		test_partition.d \
-		test_queue.d \
+DEPS := $(OBJ:.o=.d) \
+		$(DEBUG_MAIN_OBJ:.o=.d) \
+		$(DEBUG_OBJ:.o=.d) \
+		$(TEST_OBJ:.o=.d)
 
 include ../tools/common.mk

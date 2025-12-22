@@ -8,11 +8,7 @@ OBJ := api.o \
 	   metadata.o \
 	   network.o \
 
-DEBUG_OBJ := debug_api.o \
-			 debug_dmqp.o \
-			 debug_doubly_linked_list.o \
- 			 debug_metadata.o \
- 			 debug_network.o \
+DEBUG_OBJ := $(OBJ:%.o=debug_%.o)
 
 TEST_OBJ := test_api.o \
  			test_dmqp.o \
@@ -21,21 +17,7 @@ TEST_OBJ := test_api.o \
  			test_integration_network.o \
  			test_network.o \
 
-DEPS := api.d \
-		dmqp.d \
-		doubly_linked_list.d \
-		metadata.d \
-		network.d \
-		debug_api.d \
-		debug_dmqp.d \
-		debug_doubly_linked_list.d \
-		debug_metadata.d \
-		debug_network.d \
-		test_dmqp.d \
-		test_doubly_linked_list.d \
-		test_integration_dmqp.d \
-		test_integration_network.d \
-		test_network.d \
+DEPS := $(OBJ:.o=.d) $(DEBUG_OBJ:.o=.d) $(TEST_OBJ:.o=.d)
 
 OVERRIDE_LDFLAGS := 1
 OVERRIDE_TARGET  := 1
