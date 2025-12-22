@@ -1,4 +1,4 @@
-LDFLAGS 	:=
+LDFLAGS 	:= -lzookeeper_mt
 TARGET 		:= lib.a
 TEST_TARGET := test_lib
 
@@ -15,6 +15,7 @@ TEST_OBJ := test_api.o \
  			test_doubly_linked_list.o \
  			test_integration_dmqp.o \
  			test_integration_network.o \
+ 			test_metadata.o \
  			test_network.o \
 
 DEPS := $(OBJ:.o=.d) $(DEBUG_OBJ:.o=.d) $(TEST_OBJ:.o=.d)
