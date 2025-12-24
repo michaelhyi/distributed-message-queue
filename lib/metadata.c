@@ -86,7 +86,7 @@ int metadata_get(const char *key, void *value) {
 
 int metadata_set(const char *key, const void *value, unsigned int size,
                  int persistent) {
-    if (key == NULL || value == NULL || zh == NULL) {
+    if (key == NULL || (value == NULL && size != 0) || zh == NULL) {
         errno = EINVAL;
         return -1;
     }

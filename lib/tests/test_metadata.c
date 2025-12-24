@@ -8,6 +8,8 @@
 #include <string.h>
 #include <unistd.h>
 
+// TODO: test for key name format
+
 #ifndef DEBUG
 TestSuite(metadata, .timeout = 30);
 #endif
@@ -213,13 +215,28 @@ Test(metadata, test_metadata_set_throws_when_invalid_args, .init = setup,
     int res3 = metadata_set(key, NULL, strlen(value), PERSISTENT);
     int errno3 = errno;
 
+    // arrange
+    errno = 0;
+
+    // act
+    int res4 = metadata_set(key, NULL, 0, PERSISTENT);
+    int errno4 = errno;
+
     // assert
     cr_assert(res1 < 0);
-    cr_assert(res2 < 0);
-    cr_assert(res3 < 0);
     cr_assert_eq(errno1, EINVAL);
+
+    cr_assert(res2 < 0);
     cr_assert_eq(errno2, EINVAL);
+
+    cr_assert(res3 < 0);
     cr_assert_eq(errno3, EINVAL);
+
+    cr_assert(res4 >= 0);
+    cr_assert_eq(errno4, 0);
+
+    // cleanup
+    metadata_delete(key);
 }
 
 Test(metadata, test_metadata_set_throws_when_not_initialized) {
