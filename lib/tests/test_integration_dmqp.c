@@ -20,7 +20,11 @@ static void *start_test_dmqp_server(void *arg) {
     return NULL;
 }
 
+#ifdef DEBUG
+TestSuite(integration_dmqp);
+#else
 TestSuite(integration_dmqp, .timeout = 10);
+#endif
 
 Test(integration_dmqp, test_dmqp_client_init_throws_when_no_server_found) {
     // arrange

@@ -20,7 +20,11 @@ static void *slow_writer(void *arg) {
     return NULL;
 }
 
+#ifdef DEBUG
+TestSuite(network);
+#else
 TestSuite(network, .timeout = 10);
+#endif
 
 Test(network, test_client_init_throws_when_invalid_args) {
     // arrange

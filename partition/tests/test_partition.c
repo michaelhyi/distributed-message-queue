@@ -11,7 +11,11 @@
 
 // TODO: fix tests post refactorign
 
+#ifdef DEBUG
+TestSuite(partition);
+#else
 TestSuite(partition, .timeout = 10);
+#endif
 
 Test(partition, test_partition_destroy_success) {
     // arrange

@@ -27,7 +27,11 @@ static void *start_test_server(void *arg) {
     return NULL;
 }
 
+#ifdef DEBUG
+TestSuite(integration_network);
+#else
 TestSuite(integration_network, .timeout = 10);
+#endif
 
 Test(integration_network, test_client_init_success) {
     // arrange

@@ -2,7 +2,9 @@
 
 #include <criterion/criterion.h>
 
-#ifndef DEBUG
+#ifdef DEBUG
+TestSuite(api);
+#else
 TestSuite(api, .timeout = 10);
 #endif
 

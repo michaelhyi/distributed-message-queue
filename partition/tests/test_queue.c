@@ -6,7 +6,11 @@
 #include <stdlib.h>
 #include <string.h>
 
+#ifdef DEBUG
+TestSuite(queue);
+#else
 TestSuite(queue, .timeout = 10);
+#endif
 
 Test(queue, test_queue_init_throws_error_when_invalid_args) {
     // act

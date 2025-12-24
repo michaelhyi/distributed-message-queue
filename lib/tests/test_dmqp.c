@@ -43,9 +43,10 @@ int handle_dmqp_response(const struct dmqp_message *message, int reply_socket) {
     return 0;
 }
 
-// TODO: apply on all suites
 // TODO: endinaness on DMQP_PUSH is weak, since DMQP_PUSH is 0
-#ifndef DEBUG
+#ifdef DEBUG
+TestSuite(dmqp);
+#else
 TestSuite(dmqp, .timeout = 10);
 #endif
 

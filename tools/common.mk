@@ -5,7 +5,7 @@ CFLAGS := -I../include \
 		   -std=c11 \
 		   -MMD -MP \
 
-RELEASE_CFLAGS := -O2 -DNDEBUG
+RELEASE_CFLAGS := -O2
 DEBUG_CFLAGS   := -g -O0 -fno-inline -DDEBUG
 TEST_CFLAGS    := -I.
 

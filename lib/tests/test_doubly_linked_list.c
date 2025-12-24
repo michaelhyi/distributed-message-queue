@@ -5,7 +5,11 @@
 #include <stdlib.h>
 #include <string.h>
 
+#ifdef DEBUG
+TestSuite(doubly_linked_list);
+#else
 TestSuite(doubly_linked_list, .timeout = 10);
+#endif
 
 Test(doubly_linked_list,
      test_doubly_linked_list_init_throws_error_on_invalid_args) {
