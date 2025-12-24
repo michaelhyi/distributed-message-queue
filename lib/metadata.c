@@ -84,6 +84,29 @@ int metadata_get(const char *key, void *value) {
     return 0;
 }
 
+int metadata_get_children(const char *key, char ***child_entries,
+                          unsigned int *num_child_entries) {
+    if (key == NULL || child_entries == NULL || num_child_entries == NULL ||
+        zh == NULL) {
+        errno = EINVAL;
+        return -1;
+    }
+
+    struct String_vector children;
+    int rc = zoo_get_children(zh, key, 0, &children);
+    if (rc == ZNONODE) {
+        errno = ENODATA;
+        return -1;
+    } else if (rc) {
+        errno = EIO;
+        return -1;
+    }
+
+    *child_entries = children.data;
+    *num_child_entries = (unsigned int)children.count;
+    return 0;
+}
+
 int metadata_set(const char *key, const void *value, unsigned int size,
                  int persistent) {
     if (key == NULL || (value == NULL && size != 0) || zh == NULL) {
@@ -119,6 +142,49 @@ int metadata_delete(const char *key) {
         return -1;
     } else if (rc) {
         errno = EIO;
+        return -1;
+    }
+
+    return 0;
+}
+
+int metadata_delete_recursive(const char *key) {
+    if (key == NULL || zh == NULL) {
+        errno = EINVAL;
+        return -1;
+    }
+
+    char **child_entries;
+    unsigned int num_child_entries;
+    int res = metadata_get_children(key, &child_entries, &num_child_entries);
+    if (res < 0) {
+        return -1;
+    }
+
+    if (num_child_entries == 0) {
+        res = metadata_delete(key);
+        if (res < 0) {
+            return -1;
+        }
+
+        return 0;
+    }
+
+    for (unsigned int i = 0; i < num_child_entries; i++) {
+        char child_key[512];
+        memset(child_key, 0, sizeof(child_key));
+        strcat(child_key, key);
+        strcat(child_key, "/");
+        strcat(child_key, child_entries[i]);
+
+        res = metadata_delete_recursive(child_key);
+        if (res < 0) {
+            return -1;
+        }
+    }
+
+    res = metadata_delete(key);
+    if (res < 0) {
         return -1;
     }
 

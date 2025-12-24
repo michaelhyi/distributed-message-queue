@@ -1,3 +1,6 @@
+// Defines a metadata service backed by a key-value store, representing data in
+// the format of a tree.
+
 #ifndef METADATA_H
 #define METADATA_H
 
@@ -43,6 +46,19 @@ int metadata_destroy(void);
 int metadata_get(const char *key, void *value);
 
 /**
+ * Gets the keys of all child entries given a parent entry's key.
+ *
+ * @param key parent entry's key
+ * @param child_entries output param to return the keys of child entries
+ * @param num_child_entries output param to return the number of child entries
+ * @throws `EINVAL` invalid arguments or metadata service not initialized
+ * @throws `ENODATA` metadata entry does not exist
+ * @throws `EIO` internal service error
+ */
+int metadata_get_children(const char *key, char ***child_entries,
+                          unsigned int *num_child_entries);
+
+/**
  * Creates a metadata entry.
  *
  * @param key key of metadata entry
@@ -69,5 +85,16 @@ int metadata_set(const char *key, const void *value, unsigned int size,
  * @throws `EIO` internal service error
  */
 int metadata_delete(const char *key);
+
+/**
+ * Deletes a metadata entry and its children recursively.
+ *
+ * @param key key of metadata entry
+ * @returns 0 if success, -1 if error with global `errno` set
+ * @throws `EINVAL` invalid arguments or metadata service not initialized
+ * @throws `ENODATA` if metadata entry does not exist
+ * @throws `EIO` internal service error
+ */
+int metadata_delete_recursive(const char *key);
 
 #endif
