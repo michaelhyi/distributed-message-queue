@@ -1,12 +1,13 @@
 # Distributed Message Queue
 
-A distributed message queue implemented in C, modeling a very simplified version
+A distributed message queue implemented in C, modelling a very simplified version
 of Kafka. This distributed system uses a custom application-layer network
 protocol called DMQP and Apache ZooKeeper for distributed consensus, partition
 discovery, and metadata.
 
 ## Features
 - Partitions: Topics, Sharding, Replication
+- Distributed: Consensus, Metadata, Locking, Leader Election
 - Networking: DMQP (Custom Application-Layer Protocol)
 - Reliability: Ordering, Atomicity, Security, Fault Tolerance
 
@@ -45,32 +46,62 @@ that shard
 Users can interface with this distributed system using a client defined in
 `include/api.h`.
 
-### Metadata
+### Distributed Metadata
 
-As mentioned above, this distributed system uses ZooKeeper for distributed
-consensus and metadata. The following are formats of ZNodes in ZooKeeper:
+This system uses the following ZNodes in ZooKeeper:
 
 ```
-/free/{partition_ip_addr}:{partition_port}
-/topics/{topic_id}/sequence_id
-/topics/{topic_id}/consumers/{consumer_id}
-/topics/{topic_id}/shards/{shard_id}/leader/{partition_ip_addr}:{partition_port}
-/topics/{topic_id}/shards/{shard_id}/replicas/{partition_ip_addr}:{partition_port}
+PERSISTENT: /free
+EPHEMERAL & SEQUENTIAL: /free/partition-{sequence_id} -> {partition_ip_addr}:{partition_port}
+
+PERSISTENT: /topics
+PERSISTENT: /topics/{topic_name}
+
+PERSISTENT: /topics/{topic_name}/sequence_id -> {atomic integer counter}
+PERSISTENT: /topics/{topic_name}/sequence_id/lock
+EPHEMERAL & SEQUENTIAL: /topics/{topic_name}/sequence_id/lock/lock-{sequence_id}
+
+PERSISTENT: /topics/{topic_name}/shards/shard-{sequence_id}
+EPHEMERAL & SEQUENTIAL: /topics/{topic_name}/shards/shard-{sequence_id}/partitions/partition-{sequence_id} -> {partition_ip_addr}:{partition_port}
+
+PERSISTENT: /topics/{topic_name}/consumers
+EPHEMERAL & SEQUENTIAL: /topics/{topic_name}/consumers/consumer-{sequence_id}
 ```
 
-The `/free` parent ZNode is essentially a freelist of partitions.
+The `/free` parent ZNode is a freelist of partitions.
 
-The `/topics/{topic_id}/sequence_id` ZNode stores an atomic counter,
-representing the next expected sequence id of an incoming write. This
-facilitates ordering.
+The `/topics/{topic_name}/sequence_id` ZNode stores an atomic counter,
+representing the next expected sequence ID of an incoming write to that topic.
+This facilitates ordering, which you can read about in the section below.
+The `/topics/{topic_name}/sequence_id/lock` ZNode and its children facilitate
+distributed locking.
 
-The `/topics/{topic_id}/consumers/{consumer_id}` enables consumer grouping,
-allowing multiple consumers to share shards without overlap.
+The `/topics/{topic_name}/shards/shard-{sequence_id}/partitions/partition-{sequence_id}`
+ZNode stores metadata regarding each partition of the given shard. The
+partition with the lowest sequence ID is the leader of the replica set.
 
-The `/topics/{topic_id}/shards/{shard_id}/leader` parent ZNode stores metadata
-regarding the leader of the given shard. The
-`/topics/{topic_id}/shards/{shard_id}/replicas` parent ZNode stores metadata
-regarding replicas (followers) of the given shard.
+The `/topics/{topic_name}/consumers/consumer-{sequence_id}` ZNode enables
+consumer grouping, allowing multiple consumers to share shards without overlap.
+
+### Leader Election
+
+When a leader node crashes, the node with the following sequence ID is notified
+via a `watch` they set on the leader ZNode. This is achieved by ensuring that
+allocated partitions set a watch on the ZNode with the preceding sequence ID,
+thus creating a queue of potential leaders. When a node becomes notified, they
+become elected the leader.
+
+### Distributed Locking
+
+For instance, let's say the goal is to atomically get and increment the topic's
+sequence ID. To do so, a client must create the following sequential, ephemeral
+ZNode: `/topics/{topic_name}/sequence_id/lock/lock-{sequence_id}`.
+
+If the client has the lowest sequence ID of all clients trying to obtain a lock,
+it has successfully obtained the lock. Otherwise, it sets a `watch` on the ZNode
+with the preceding sequence ID. When a client finishes its critical section, it
+deletes its ZNode, triggering the watch on the next ZNode in the queue to attain
+the lock.
 
 ### Networking
 
@@ -129,7 +160,7 @@ their assigned shards. This ensures that consumers process messages in order.
 
 Consumers are registered at the following ephemeral ZooKeeper node:
 ```
-/topics/{topic_id}/consumers/{consumer_id}
+/topics/{topic_name}/consumers/consumer-{sequence_id}
 ```
 
 The client determines how to balance shards between consumers.
@@ -167,10 +198,11 @@ make
 ```
 
 ## Backlog
-- [ ] Leader Election (e.g. Split Brain)
-- [ ] Security: Authentication
+- [ ] Question: What happens when a leader crashes, but comes back?
+- [ ] Split-Brain Problem
 - [ ] Write-Through -> High Latency
 - [ ] Synchronous Replication -> High Latency
 - [ ] Compaction / Retention Policy (Queues May Grow Indefinitely)
+- [ ] Security: Authentication
 - [ ] Caching Metadata from ZooKeeper
 - [ ] Use Criterion Specific Memory Allocator
