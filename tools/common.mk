@@ -35,7 +35,7 @@ TEST_DEBUG_FLAGS := --debug=gdb
 
 .DELETE_ON_ERROR:
 .PHONY: all release debug test gdb-server gdb gdb-server-test gdb-test \
-		valgrind valgrind-test clean help
+		valgrind valgrind-test format clean help
 
 all: release
 release: $(TARGET)
@@ -87,6 +87,9 @@ valgrind: $(DEBUG_TARGET)
 
 valgrind-test: $(TEST_TARGET)
 	@$(VALGRIND) $(VALGRIND_FLAGS) ./$(TEST_TARGET)
+
+format:
+	@find . \( -name "*.c" -o -name "*.h" \) -exec clang-format -style='{BasedOnStyle: llvm, IndentWidth: 4}' -i {} +
 
 clean:
 	@rm -f $(OBJ) $(DEBUG_OBJ) $(TEST_OBJ)

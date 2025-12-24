@@ -7,7 +7,9 @@ $(MODULES):
 	@$(MAKE) --no-print-directory -C $@
 
 format:
-	@find . \( -name "*.c" -o -name "*.h" \) -exec clang-format -style='{BasedOnStyle: llvm, IndentWidth: 4}' -i {} +
+	@for module in $(MODULES); do \
+		$(MAKE) --no-print-directory -C $$module format; \
+	done
 
 clean:
 	@for module in $(MODULES); do \
