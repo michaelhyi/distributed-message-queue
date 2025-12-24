@@ -61,7 +61,8 @@ PERSISTENT: /topics/{topic_name}/sequence_id -> {atomic integer counter}
 PERSISTENT: /topics/{topic_name}/sequence_id/lock
 EPHEMERAL & SEQUENTIAL: /topics/{topic_name}/sequence_id/lock/lock-{sequence_id}
 
-PERSISTENT: /topics/{topic_name}/shards/shard-{sequence_id}
+PERSISTENT: /topics/{topic_name}/shards
+PERSISTENT & SEQUENTIAL: /topics/{topic_name}/shards/shard-{sequence_id}
 EPHEMERAL & SEQUENTIAL: /topics/{topic_name}/shards/shard-{sequence_id}/partitions/partition-{sequence_id} -> {partition_ip_addr}:{partition_port}
 
 PERSISTENT: /topics/{topic_name}/consumers
