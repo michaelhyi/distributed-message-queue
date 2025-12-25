@@ -4,18 +4,14 @@ TEST_TARGET := test_lib
 
 OBJ := api.o \
 	   dmqp.o \
-	   doubly_linked_list.o \
-	   metadata.o \
 	   network.o \
 
 DEBUG_OBJ := $(OBJ:%.o=debug_%.o)
 
 TEST_OBJ := test_api.o \
  			test_dmqp.o \
- 			test_doubly_linked_list.o \
  			test_integration_dmqp.o \
  			test_integration_network.o \
- 			test_metadata.o \
  			test_network.o \
 
 DEPS := $(OBJ:.o=.d) $(DEBUG_OBJ:.o=.d) $(TEST_OBJ:.o=.d)
