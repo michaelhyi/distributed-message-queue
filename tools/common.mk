@@ -92,7 +92,7 @@ format:
 	@find . \( -name "*.c" -o -name "*.h" \) -exec clang-format -style='{BasedOnStyle: llvm, IndentWidth: 4}' -i {} +
 
 clean:
-	@rm -f $(OBJ) $(DEBUG_OBJ) $(TEST_OBJ)
+	@rm -f $(OBJ) $(DEBUG_MAIN_OBJ) $(DEBUG_OBJ) $(TEST_OBJ)
 	@rm -f $(TARGET) $(DEBUG_TARGET) $(TEST_TARGET)
 	@rm -f $(DEPS)
 
