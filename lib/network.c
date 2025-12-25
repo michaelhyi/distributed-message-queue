@@ -207,7 +207,7 @@ static int connection_thread_init(int socket,
     return 0;
 }
 
-int client_init(const char *server_host, unsigned short server_port) {
+int tcp_client_init(const char *server_host, unsigned short server_port) {
     if (server_host == NULL) {
         errno = EINVAL;
         return -1;
@@ -239,8 +239,8 @@ int client_init(const char *server_host, unsigned short server_port) {
     return client_socket;
 }
 
-int server_init(unsigned short server_port,
-                int (*message_handler)(int socket)) {
+int tcp_server_init(unsigned short server_port,
+                    int (*message_handler)(int socket)) {
     if (message_handler == NULL) {
         errno = EINVAL;
         return -1;

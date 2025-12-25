@@ -13,7 +13,7 @@ struct thread_arg {
     int _errno;
 };
 
-// Imeplemented just to call server_init
+// Imeplemented just to call tcp_server_init
 int message_handler(int socket) {
     (void)socket; // unused
     return 0;
@@ -22,7 +22,7 @@ int message_handler(int socket) {
 // Starts a server on a separate thread.
 static void *start_test_server(void *arg) {
     struct thread_arg *args = (struct thread_arg *)arg;
-    args->res = server_init(args->port, message_handler);
+    args->res = tcp_server_init(args->port, message_handler);
     args->_errno = errno;
     return NULL;
 }
@@ -43,7 +43,7 @@ Test(integration_network, test_client_init_success) {
 
     // act
     for (int i = 0; i < 100; i++) {
-        socket = client_init("127.0.0.1", 8080);
+        socket = tcp_client_init("127.0.0.1", 8080);
         if (socket >= 0) {
             errno = 0;
             break;

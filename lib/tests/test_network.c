@@ -26,24 +26,24 @@ TestSuite(network);
 TestSuite(network, .timeout = 10);
 #endif
 
-Test(network, test_client_init_throws_when_invalid_args) {
+Test(network, test_tcp_client_init_throws_when_invalid_args) {
     // arrange
     errno = 0;
 
     // act
-    int res = client_init(NULL, 8080);
+    int res = tcp_client_init(NULL, 8080);
 
     // assert
     cr_assert(res < 0);
     cr_assert_eq(errno, EINVAL);
 }
 
-Test(network, test_server_init_throws_when_invalid_args) {
+Test(network, test_tcp_server_init_throws_when_invalid_args) {
     // arrange
     errno = 0;
 
     // act
-    int res = server_init(8080, NULL);
+    int res = tcp_server_init(8080, NULL);
 
     // assert
     cr_assert(res < 0);

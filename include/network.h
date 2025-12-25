@@ -17,7 +17,7 @@
  * @param server_port the server port
  * @returns the socket of the client, -1 if error with global `errno` set
  */
-int client_init(const char *server_host, unsigned short server_port);
+int tcp_client_init(const char *server_host, unsigned short server_port);
 
 /**
  * Initializes a server and creates a new thread for each connection. Signals
@@ -33,7 +33,7 @@ int client_init(const char *server_host, unsigned short server_port);
  * @returns 0 on success, -1 on error with global `errno` set. does not return
  * until the server is interrupted or terminated
  */
-int server_init(unsigned short server_port, int (*message_handler)(int socket));
+int tcp_server_init(unsigned short server_port, int (*message_handler)(int socket));
 
 /**
  * Reads all bytes into a buffer from a file descriptor.

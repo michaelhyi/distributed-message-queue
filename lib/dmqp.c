@@ -92,7 +92,7 @@ int dmqp_client_init(const char *server_host, unsigned short server_port) {
         return -1;
     }
 
-    int socket = client_init(server_host, server_port);
+    int socket = tcp_client_init(server_host, server_port);
     if (socket < 0) {
         return -1;
     }
@@ -101,7 +101,7 @@ int dmqp_client_init(const char *server_host, unsigned short server_port) {
 }
 
 int dmqp_server_init(unsigned short server_port) {
-    int res = server_init(server_port, handle_dmqp_message);
+    int res = tcp_server_init(server_port, handle_dmqp_message);
     if (res < 0) {
         return -1;
     }
