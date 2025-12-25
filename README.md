@@ -51,15 +51,17 @@ Users can interface with this distributed system using a client defined in
 This system uses the following ZNodes in ZooKeeper:
 
 ```
-PERSISTENT: /free
-EPHEMERAL & SEQUENTIAL: /free/partition-{sequence_id} -> {partition_ip_addr}:{partition_port}
+PERSISTENT: /free-partitions
+EPHEMERAL & SEQUENTIAL: /free-partitions/partition-{sequence_id} -> {partition_ip_addr}:{partition_port}
+PERSISTENT: /free-partitions/lock
+EPHEMERAL & SEQUENTIAL: /free-partitions/lock/lock-{sequence_id}
 
 PERSISTENT: /topics
 PERSISTENT: /topics/{topic_name}
 
-PERSISTENT: /topics/{topic_name}/sequence_id -> {atomic integer counter}
-PERSISTENT: /topics/{topic_name}/sequence_id/lock
-EPHEMERAL & SEQUENTIAL: /topics/{topic_name}/sequence_id/lock/lock-{sequence_id}
+PERSISTENT: /topics/{topic_name}/sequence-id -> {atomic integer counter}
+PERSISTENT: /topics/{topic_name}/sequence-id/lock
+EPHEMERAL & SEQUENTIAL: /topics/{topic_name}/sequence-id/lock/lock-{sequence_id}
 
 PERSISTENT: /topics/{topic_name}/shards
 PERSISTENT & SEQUENTIAL: /topics/{topic_name}/shards/shard-{sequence_id}
@@ -69,12 +71,12 @@ PERSISTENT: /topics/{topic_name}/consumers
 EPHEMERAL & SEQUENTIAL: /topics/{topic_name}/consumers/consumer-{sequence_id}
 ```
 
-The `/free` parent ZNode is a freelist of partitions.
+The `/free-partitions` parent ZNode is a freelist of partitions.
 
-The `/topics/{topic_name}/sequence_id` ZNode stores an atomic counter,
+The `/topics/{topic_name}/sequence-id` ZNode stores an atomic counter,
 representing the next expected sequence ID of an incoming write to that topic.
 This facilitates ordering, which you can read about in the section below.
-The `/topics/{topic_name}/sequence_id/lock` ZNode and its children facilitate
+The `/topics/{topic_name}/sequence-id/lock` ZNode and its children facilitate
 distributed locking.
 
 The `/topics/{topic_name}/shards/shard-{sequence_id}/partitions/partition-{sequence_id}`
@@ -96,7 +98,7 @@ become elected the leader.
 
 For instance, let's say the goal is to atomically get and increment the topic's
 sequence ID. To do so, a client must create the following sequential, ephemeral
-ZNode: `/topics/{topic_name}/sequence_id/lock/lock-{sequence_id}`.
+ZNode: `/topics/{topic_name}/sequence-id/lock/lock-{sequence_id}`.
 
 If the client has the lowest sequence ID of all clients trying to obtain a lock,
 it has successfully obtained the lock. Otherwise, it sets a `watch` on the ZNode
