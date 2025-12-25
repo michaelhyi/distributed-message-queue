@@ -51,33 +51,34 @@ Users can interface with this distributed system using a client defined in
 This system uses the following ZNodes in ZooKeeper:
 
 ```
-PERSISTENT: /free-partitions
-EPHEMERAL & SEQUENTIAL: /free-partitions/partition-{sequence_id} -> {partition_ip_addr}:{partition_port}
-PERSISTENT: /free-partitions/lock
-EPHEMERAL & SEQUENTIAL: /free-partitions/lock/lock-{sequence_id}
+PERSISTENT: /partitions
+PERSISTENT: /partitions/lock
+EPHEMERAL & SEQUENTIAL: /partitions/lock/lock-{sequence_id}
+PERSISTENT: /partitions/free-count -> {integer}
+EPHEMERAL & SEQUENTIAL: /partitions/partition-{sequence_id} -> {partition_ip_addr}:{partition_port}
 
 PERSISTENT: /topics
 PERSISTENT: /topics/{topic_name}
 
-PERSISTENT: /topics/{topic_name}/sequence-id -> {atomic integer counter}
+PERSISTENT: /topics/{topic_name}/sequence-id -> {integer}
 PERSISTENT: /topics/{topic_name}/sequence-id/lock
 EPHEMERAL & SEQUENTIAL: /topics/{topic_name}/sequence-id/lock/lock-{sequence_id}
 
 PERSISTENT: /topics/{topic_name}/shards
 PERSISTENT & SEQUENTIAL: /topics/{topic_name}/shards/shard-{sequence_id}
-EPHEMERAL & SEQUENTIAL: /topics/{topic_name}/shards/shard-{sequence_id}/partitions/partition-{sequence_id} -> {partition_ip_addr}:{partition_port}
+PERSISTENT: /topics/{topic_name}/shards/shard-{sequence_id}/partitions
+EPHEMERAL & SEQUENTIAL: /topics/{topic_name}/shards/shard-{sequence_id}/partitions/partition-{sequence_id} -> {pointer to entry in /partitions list, stores path to entry}
 
 PERSISTENT: /topics/{topic_name}/consumers
 EPHEMERAL & SEQUENTIAL: /topics/{topic_name}/consumers/consumer-{sequence_id}
 ```
 
-The `/free-partitions` parent ZNode is a freelist of partitions.
+The `/partitions` parent ZNode is a global list of partitions. The
+`/partitions/free-count` ZNode stores the number of free partitions.
 
 The `/topics/{topic_name}/sequence-id` ZNode stores an atomic counter,
 representing the next expected sequence ID of an incoming write to that topic.
 This facilitates ordering, which you can read about in the section below.
-The `/topics/{topic_name}/sequence-id/lock` ZNode and its children facilitate
-distributed locking.
 
 The `/topics/{topic_name}/shards/shard-{sequence_id}/partitions/partition-{sequence_id}`
 ZNode stores metadata regarding each partition of the given shard. The
