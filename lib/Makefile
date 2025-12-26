@@ -5,6 +5,7 @@ TEST_TARGET := test_lib
 OBJ := api.o \
 	   dmqp.o \
 	   network.o \
+	   zookeeper_util.o
 
 DEBUG_OBJ := $(OBJ:%.o=debug_%.o)
 
@@ -13,6 +14,7 @@ TEST_OBJ := test_api.o \
  			test_integration_dmqp.o \
  			test_integration_network.o \
  			test_network.o \
+			test_zookeeper_util.o
 
 DEPS := $(OBJ:.o=.d) $(DEBUG_OBJ:.o=.d) $(TEST_OBJ:.o=.d)
 
