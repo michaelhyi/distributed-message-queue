@@ -4,14 +4,15 @@ FROM debian:bookworm-slim
 RUN rm /etc/dpkg/dpkg.cfg.d/docker
 
 RUN apt-get update && apt-get install -y \
+    less \
+    vim \
+
     man-db \
     manpages \
     manpages-dev \
 
     # ps
     procps \
-
-    vim \
 
     # wget used for installing zookeeper
     wget \
