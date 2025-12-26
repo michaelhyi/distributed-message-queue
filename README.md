@@ -67,7 +67,7 @@ EPHEMERAL & SEQUENTIAL: /topics/{topic_name}/sequence-id/lock/lock-{sequence_id}
 PERSISTENT: /topics/{topic_name}/shards
 PERSISTENT & SEQUENTIAL: /topics/{topic_name}/shards/shard-{sequence_id}
 PERSISTENT: /topics/{topic_name}/shards/shard-{sequence_id}/partitions
-EPHEMERAL & SEQUENTIAL: /topics/{topic_name}/shards/shard-{sequence_id}/partitions/partition-{sequence_id}
+PERSISTENT & SEQUENTIAL: /topics/{topic_name}/shards/shard-{sequence_id}/partitions/partition-{sequence_id}
 
 PERSISTENT: /topics/{topic_name}/consumers
 EPHEMERAL & SEQUENTIAL: /topics/{topic_name}/consumers/consumer-{sequence_id}
@@ -80,7 +80,7 @@ partition has a ephemeral, sequential ZNode named
 partition and the topic it is allocated to in the following format:
 ```
 {partition_ip_addr}:{partition_port} // free or unallocated to topic
-{partition_ip_addr}:{partition_port};/topics/{topic_name}/shards/shard-{sequence_id}/partitions/partition-{sequence_id} // allocated to topic shard
+{partition_ip_addr}:{partition_port};/topics/{topic_name}/shards/shard-{sequence_id} // allocated to topic shard
 ```
 
 The `/topics/{topic_name}/sequence-id` ZNode stores an integer, representing the
