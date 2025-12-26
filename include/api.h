@@ -9,14 +9,15 @@
  * Initializes the client by establishing a connection to the metadata
  * server.
  *
- * @param server metadata server
+ * @param host comma separated host:port pairs, each corresponding to a metadata 
+ * server. e.g. "127.0.0.1:3000,127.0.0.1:3001,127.0.0.1:3002" 
  * @returns 0 if success, -1 if error with global `errno` set
  * @throws `EINVAL` invalid arguments
  * @throws `EALREADY` client already initialized
  * @throws `EIO` internal service error, likely establishing connection to
  * metadata server failed
  */
-int client_init(const struct server *server);
+int client_init(const char *host);
 
 /**
  * Closes connections initialized by the client.
