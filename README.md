@@ -54,35 +54,44 @@ This system uses the following ZNodes in ZooKeeper:
 PERSISTENT: /partitions
 PERSISTENT: /partitions/lock
 EPHEMERAL & SEQUENTIAL: /partitions/lock/lock-{sequence_id}
-PERSISTENT: /partitions/free-count -> {integer}
-EPHEMERAL & SEQUENTIAL: /partitions/partition-{sequence_id} -> {partition_ip_addr}:{partition_port}
+PERSISTENT: /partitions/free-count
+EPHEMERAL & SEQUENTIAL: /partitions/partition-{sequence_id}
 
 PERSISTENT: /topics
 PERSISTENT: /topics/{topic_name}
 
-PERSISTENT: /topics/{topic_name}/sequence-id -> {integer}
+PERSISTENT: /topics/{topic_name}/sequence-id
 PERSISTENT: /topics/{topic_name}/sequence-id/lock
 EPHEMERAL & SEQUENTIAL: /topics/{topic_name}/sequence-id/lock/lock-{sequence_id}
 
 PERSISTENT: /topics/{topic_name}/shards
 PERSISTENT & SEQUENTIAL: /topics/{topic_name}/shards/shard-{sequence_id}
 PERSISTENT: /topics/{topic_name}/shards/shard-{sequence_id}/partitions
-EPHEMERAL & SEQUENTIAL: /topics/{topic_name}/shards/shard-{sequence_id}/partitions/partition-{sequence_id} -> {pointer to entry in /partitions list, stores path to entry}
+EPHEMERAL & SEQUENTIAL: /topics/{topic_name}/shards/shard-{sequence_id}/partitions/partition-{sequence_id}
 
 PERSISTENT: /topics/{topic_name}/consumers
 EPHEMERAL & SEQUENTIAL: /topics/{topic_name}/consumers/consumer-{sequence_id}
 ```
 
 The `/partitions` parent ZNode is a global list of partitions. The
-`/partitions/free-count` ZNode stores the number of free partitions.
+`/partitions/free-count` ZNode stores the number of free partitions. Each
+partition has a ephemeral, sequential ZNode named
+`/partitions/partition-{sequence_id}`. It stores the IP address and port of the
+partition and the topic it is allocated to in the following format:
+```
+{partition_ip_addr}:{partition_port} // free or unallocated to topic
+{partition_ip_addr}:{partition_port};/topics/{topic_name}/shards/shard-{sequence_id}/partitions/partition-{sequence_id} // allocated to topic shard
+```
 
-The `/topics/{topic_name}/sequence-id` ZNode stores an atomic counter,
-representing the next expected sequence ID of an incoming write to that topic.
-This facilitates ordering, which you can read about in the section below.
+The `/topics/{topic_name}/sequence-id` ZNode stores an integer, representing the
+next expected sequence ID of an incoming write to that topic. This facilitates
+ordering, which you can read about in the section below.
 
 The `/topics/{topic_name}/shards/shard-{sequence_id}/partitions/partition-{sequence_id}`
 ZNode stores metadata regarding each partition of the given shard. The
-partition with the lowest sequence ID is the leader of the replica set.
+partition with the lowest sequence ID is the leader of the replica set. The
+ZNode is a pointer to a child of the `/partitions` parent ZNode by storing the
+partition's path.
 
 The `/topics/{topic_name}/consumers/consumer-{sequence_id}` ZNode enables
 consumer grouping, allowing multiple consumers to share shards without overlap.
