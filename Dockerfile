@@ -40,11 +40,11 @@ RUN cd /opt && \
     tar -xvzf apache-zookeeper-3.8.5-bin.tar.gz && \
     mv apache-zookeeper-3.8.5-bin zookeeper && \
     rm apache-zookeeper-3.8.5-bin.tar.gz && \
-    mkdir -p /data/zookeeper && \
-    echo "tickTime=2500\ndataDir=/data/zookeeper\nclientPort=2181\nmaxClientCnxns=80" > /opt/zookeeper/conf/zoo.cfg
+    mkdir -p /data/zookeeper/dev && \
+    mkdir -p /data/zookeeper/test
 
 # start & init zookeeper server, start shell
-CMD /opt/zookeeper/bin/zkServer.sh start && \
-    chmod +x ./scripts/init_zookeeper.sh && \
-    ./scripts/init_zookeeper.sh && \
+CMD /opt/zookeeper/bin/zkServer.sh start ./conf/zoo_dev.cfg && \
+    chmod +x ./scripts/init_zookeeper.sh && ./scripts/init_zookeeper.sh && \
+    /opt/zookeeper/bin/zkServer.sh start ./conf/zoo_test.cfg && \
     /bin/bash
