@@ -43,8 +43,11 @@ RUN cd /opt && \
     mkdir -p /data/zookeeper/dev && \
     mkdir -p /data/zookeeper/test
 
-# start & init zookeeper server, start shell
+# start & init zookeeper servers, start shell
 CMD /opt/zookeeper/bin/zkServer.sh start ./conf/zoo_dev.cfg && \
-    chmod +x ./scripts/init_zookeeper.sh && ./scripts/init_zookeeper.sh && \
+    chmod +x ./scripts/init_zookeeper.sh && \
+    ./scripts/init_zookeeper.sh 127.0.0.1:2181 && \
+
     /opt/zookeeper/bin/zkServer.sh start ./conf/zoo_test.cfg && \
+
     /bin/bash

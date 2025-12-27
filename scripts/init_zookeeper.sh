@@ -2,8 +2,14 @@
 
 set -euo pipefail
 
-/opt/zookeeper/bin/zkCli.sh -server 127.0.0.1:2181 create /partitions
-/opt/zookeeper/bin/zkCli.sh -server 127.0.0.1:2181 create /partitions/lock
-/opt/zookeeper/bin/zkCli.sh -server 127.0.0.1:2181 create /partitions/free-count 0
+if [ $# -ne 1 ]; then
+    echo "Usage: $0 [host:port]"
+    exit 1
+fi
 
-/opt/zookeeper/bin/zkCli.sh -server 127.0.0.1:2181 create /topics
+HOST=$1
+
+/opt/zookeeper/bin/zkCli.sh -server $HOST create /partitions
+/opt/zookeeper/bin/zkCli.sh -server $HOST create /partitions/lock
+/opt/zookeeper/bin/zkCli.sh -server $HOST create /partitions/free-count 0
+/opt/zookeeper/bin/zkCli.sh -server $HOST create /topics
