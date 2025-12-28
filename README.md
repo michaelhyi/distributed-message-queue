@@ -1,9 +1,9 @@
 # Distributed Message Queue
 
-A distributed message queue implemented in C, modelling a very simplified version
-of Kafka. This distributed system uses a custom application-layer network
-protocol called DMQP and Apache ZooKeeper for distributed consensus, partition
-discovery, and metadata.
+A distributed message queue implemented in C, modelling a very simplified
+version of Kafka. This distributed system uses a custom application-layer
+network protocol called DMQP and Apache ZooKeeper for distributed consensus,
+partition discovery, and metadata.
 
 ## Features
 - Partitions: Topics, Sharding, Replication
@@ -68,9 +68,6 @@ PERSISTENT: /topics/{topic_name}/shards
 PERSISTENT & SEQUENTIAL: /topics/{topic_name}/shards/shard-{sequence_id}
 PERSISTENT: /topics/{topic_name}/shards/shard-{sequence_id}/partitions
 PERSISTENT & SEQUENTIAL: /topics/{topic_name}/shards/shard-{sequence_id}/partitions/partition-{sequence_id}
-
-PERSISTENT: /topics/{topic_name}/consumers
-EPHEMERAL & SEQUENTIAL: /topics/{topic_name}/consumers/consumer-{sequence_id}
 ```
 
 The `/partitions` parent ZNode is a global list of partitions. The
@@ -92,9 +89,6 @@ ZNode stores metadata regarding each partition of the given shard. The
 partition with the lowest sequence ID is the leader of the replica set. The
 ZNode is a pointer to a child of the `/partitions` parent ZNode by storing the
 partition's path.
-
-The `/topics/{topic_name}/consumers/consumer-{sequence_id}` ZNode enables
-consumer grouping, allowing multiple consumers to share shards without overlap.
 
 ### Leader Election
 
@@ -164,19 +158,9 @@ All queue operations at the partition level are protected by mutex locks. This
 guarantees ordering and atomicity at the partition level. All ZooKeeper
 operations used by the client are atomic.
 
-Consumers will be assigned specific shards to consume from. This reduces the
-overhead of peeking at every shard, only the specific shards that are assigned
-to that consumer. Ideally, there is one consumer per shard. There cannot be more
-consumers than shards. If there are less consumers than shards, consumers have
-to peek the sequence ID of each assigned shard to determine the true head of
-their assigned shards. This ensures that consumers process messages in order.
-
-Consumers are registered at the following ephemeral ZooKeeper node:
-```
-/topics/{topic_name}/consumers/consumer-{sequence_id}
-```
-
-The client determines how to balance shards between consumers.
+Each topic has an expected sequence ID for its next message stored in the 
+`/topics/{topic_name}/sequence-id` ZNode. When a partition receives a DMQP
+message, it expects it to contain the same sequence ID stored in the ZNode.
 
 #### Security
 
@@ -215,7 +199,15 @@ make
 - [ ] Split-Brain Problem
 - [ ] Write-Through -> High Latency
 - [ ] Synchronous Replication -> High Latency
-- [ ] Compaction / Retention Policy (Queues May Grow Indefinitely)
-- [ ] Security: Authentication
-- [ ] Caching Metadata from ZooKeeper
 - [ ] Use Criterion Specific Memory Allocator
+
+## Recommended Future Features
+These are features that would be great for this project that I do not intend to
+implement. The reason for this is that I wanted to keep this project simple
+while learning what I wanted from distributed systems.
+
+- [ ] update_topic() (upscaling + downscaling) and delete_topic()
+- [ ] Consumer Grouping to Reduce
+- [ ] Compaction / Retention Policy (Queues May Grow Indefinitely)
+- [ ] Caching Metadata from ZooKeeper
+- [ ] Security: Authentication
