@@ -5,6 +5,7 @@
 
 #define MAX_TOPIC_NAME_LEN 32
 
+// TODO: have specific error for conn failure
 /**
  * Initializes the client by establishing a connection to the metadata
  * server.
@@ -14,8 +15,7 @@
  * @returns 0 if success, -1 if error with global `errno` set
  * @throws `EINVAL` invalid arguments
  * @throws `EALREADY` client already initialized
- * @throws `EIO` internal service error, likely establishing connection to
- * metadata server failed
+ * @throws `EIO` unexpected error, likely connection to metadata server failure
  */
 int client_init(const char *host);
 
@@ -37,8 +37,7 @@ int client_destroy(void);
  * @throws `EINVAL` invalid arguments or topic name too long (max 32 chars)
  * @throws `EEXIST` topic already exists
  * @throws `ENODEV` partition allocation failure
- * @throws `EIO` internal service error, likely connection to distributed system
- * servers fail
+ * @throws `EIO` unexpected error 
  */
 int create_topic(const struct topic *topic);
 
@@ -51,8 +50,7 @@ int create_topic(const struct topic *topic);
  * @throws `EINVAL` invalid arguments or topic name too long (max 32 chars)
  * @throws `ENODATA` topic does not exist
  * @throws `ENODEV` partition allocation failure
- * @throws `EIO` internal service error, likely connection to distributed system
- * servers fail
+ * @throws `EIO` unexpected error 
  */
 int update_topic(const struct topic *topic);
 
@@ -64,8 +62,7 @@ int update_topic(const struct topic *topic);
  * @returns 0 if success, -1 if error with global `errno` set
  * @throws `EINVAL` invalid arguments or topic name too long (max 32 chars)
  * @throws `ENODATA` topic does not exist
- * @throws `EIO` internal service error, likely connection to distributed system
- * servers fail
+ * @throws `EIO` unexpected error 
  */
 int delete_topic(const char *topic_name);
 
@@ -77,8 +74,7 @@ int delete_topic(const char *topic_name);
  * @throws `EINVAL` invalid arguments or topic name too long (max 32 chars)
  * @throws `ENODATA` topic does not exist
  * @throws `EMFILE` topic's consumer limit reached
- * @throws `EIO` internal service error, likely connection to distributed system
- * servers fail
+ * @throws `EIO` unexpected error 
  */
 int consumer_init(const char *topic_name);
 
@@ -91,8 +87,7 @@ int consumer_init(const char *topic_name);
  * @returns 0 if success, -1 if error with global `errno` set
  * @throws `EINVAL` invalid arguments or topic name too long (max 32 chars)
  * @throws `ENODATA` topic does not exist
- * @throws `EIO` internal service error, likely connection to distributed system
- * servers fail
+ * @throws `EIO` unexpected error 
  */
 int push(const char *topic_name, const struct message *buf);
 
@@ -106,8 +101,7 @@ int push(const char *topic_name, const struct message *buf);
  * @throws `EINVAL` invalid arguments or topic name too long (max 32 chars)
  * @throws `ENODATA` topic does not exist
  * @throws `EACCES` current process not assigned as a consumer of this topic
- * @throws `EIO` internal service error, likely connection to distributed system
- * servers fail
+ * @throws `EIO` unexpected error 
  */
 int pop(const char *topic_name, struct message *buf);
 
