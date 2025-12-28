@@ -1,6 +1,9 @@
-LDFLAGS 	:= -lzookeeper_mt
-TARGET 		:= lib.a
-TEST_TARGET := test_lib
+# TODO: give project a name + make this an actual system library
+
+LDFLAGS 		:= -lzookeeper_mt
+TARGET 			:= lib.a
+TEST_TARGET 	:= test_lib
+TEST_API_TARGET := test_api
 
 OBJ := api.o \
 	   dmqp.o \
@@ -27,8 +30,13 @@ include ../tools/common.mk
 CFLAGS += -D_GNU_SOURCE # allows usleep() and kill()
 CFLAGS += -DTHREADED 	# allows zoo_create()
 
+.PHONY: $(TEST_API_TARGET)
+
 $(TARGET): $(OBJ)
 	@$(AR) $(AR_FLAGS) $(TARGET) $(OBJ)
+
+$(TEST_API_TARGET): $(DEBUG_OBJ) $(TEST_OBJ)
+	@$(CC) debug_api.o debug_zookeeper_util.o test_api.o -o $(TEST_API_TARGET) $(LDFLAGS) 
 
 debug: $(DEBUG_OBJ)
 
