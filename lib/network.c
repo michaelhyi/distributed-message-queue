@@ -13,14 +13,39 @@
 #include <sys/time.h>
 #include <unistd.h>
 
-struct connection_handler_args {
-    int socket; // socket of connection
-    int (*message_handler)(
-        int socket); // handler that reads a message, parses it, and serves it.
-                     // takes in the socket of connection as an argument to
-                     // handle responses. returns 0 on success, -1 if error with
-                     // global `errno` set
-};
+int dmqp_client_init(const char *host, unsigned short port) {
+    if (!host) {
+        errno = EINVAL;
+        return -1;
+    }
+
+    int client = socket(AF_INET, SOCK_STREAM, 0);
+    if (client < 0) {
+        errno = EIO;
+        return -1;
+    }
+
+    struct sockaddr_in address;
+    memset(&address, 0, sizeof address);
+    address.sin_family = AF_INET;
+    address.sin_port = htons(port);
+
+    if (inet_pton(AF_INET, host, &address.sin_addr) <= 0) {
+        goto err;
+    }
+
+    if (connect(client, (const struct sockaddr *)&address, sizeof address) <
+        0) {
+        goto err;
+    }
+
+    return client;
+
+err:
+    close(client);
+    errno = EIO;
+    return -1;
+}
 
 static volatile sig_atomic_t running = 1;
 static struct sigaction sa;
@@ -40,292 +65,158 @@ static void signal_handler(int sig) {
 /**
  * Initializes signal handling. Gracefully terminates server when `SIGINT` or
  * `SIGTERM` is received. Ignores when `SIGPIPE` is received.
- *
- * @returns 0 if success, -1 if error with global `errno` set
  */
-static int signal_init() {
+static void signal_init() {
     sa.sa_handler = signal_handler;
     sigemptyset(&sa.sa_mask);
     sa.sa_flags = 0;
 
-    int res = sigaction(SIGINT, &sa, NULL);
-    if (res < 0) {
-        return -1;
-    }
-
-    res = sigaction(SIGTERM, &sa, NULL);
-    if (res < 0) {
-        return -1;
-    }
+    sigaction(SIGINT, &sa, NULL);
+    sigaction(SIGTERM, &sa, NULL);
 
     sa_ignore.sa_handler = SIG_IGN;
     sigemptyset(&sa_ignore.sa_mask);
     sa_ignore.sa_flags = 0;
-    res = sigaction(SIGPIPE, &sa_ignore, NULL);
-    if (res < 0) {
-        return -1;
-    }
-
-    return 0;
-}
-
-/**
- * Sets a timeout on a socket.
- *
- * @param socket socket to configure
- * @param timeout the timeout in seconds
- * @returns 0 if success, -1 if error with global `errno` set
- */
-static int set_socket_timeout(int socket, int timeout) {
-    struct timeval tv = {.tv_sec = timeout, .tv_usec = 0};
-    int res = setsockopt(socket, SOL_SOCKET, SO_RCVTIMEO, (const void *)&tv,
-                         sizeof(tv));
-    if (res < 0) {
-        return -1;
-    }
-
-    return 0;
-}
-
-/**
- * Enables TCP keepalive on a socket.
- *
- * @param socket socket to configure
- * @returns 0 if success, -1 if error with global `errno` set
- */
-static int set_socket_keepalive(int socket) {
-    int keepalive = 1;
-    int res = setsockopt(socket, SOL_SOCKET, SO_KEEPALIVE, &keepalive,
-                         sizeof(keepalive));
-
-    if (res < 0) {
-        return -1;
-    }
-
-    return 0;
+    sigaction(SIGPIPE, &sa_ignore, NULL);
 }
 
 /**
  * Listens on a connection.
  *
- * Throws an error if `arg` is null, `arg->socket` is invalid, or
- * `arg->message_handler` is null.
- *
- * @param arg pointer to args of type `struct connection_handler_args`. must be
- * freed once copied locally
+ * @param arg pointer to client socket. must be freed once copied
  */
 static void *connection_handler(void *arg) {
-    struct connection_handler_args args = {
-        .socket = -1,
-        .message_handler = NULL}; // initialized to prevent compiler error
-
-    if (arg == NULL) {
-        errno = EINVAL;
-        goto cleanup;
-    }
-
-    args = *(struct connection_handler_args *)arg;
+    int client = *(int *)arg;
     free(arg);
 
-    if (args.socket < 0 || args.message_handler == NULL) {
-        errno = EINVAL;
-        goto cleanup;
-    }
-
     while (running) {
-        int res = args.message_handler(args.socket);
-        if (res < 0) {
-            goto cleanup;
+        struct dmqp_message buf;
+        if (read_dmqp_message(socket, &buf) < 0) {
+            break;
+        }
+
+        switch (buf.header.method) {
+        case DMQP_PUSH:
+            handle_dmqp_push(&buf, socket);
+            break;
+        case DMQP_POP:
+            handle_dmqp_pop(&buf, socket);
+            break;
+        case DMQP_PEEK_SEQUENCE_ID:
+            handle_dmqp_peek_sequence_id(&buf, socket);
+            break;
+        case DMQP_RESPONSE:
+            handle_dmqp_response(&buf, socket);
+            break;
+        default:
+            struct dmqp_header header = {.sequence_id = 0,
+                                         .length = 0,
+                                         .method = DMQP_RESPONSE,
+                                         .status_code = ENOSYS};
+            struct dmqp_message response = {.header = header};
+            send_dmqp_message(client, &response, 0);
+            break;
+        }
+
+        if (buf.payload) {
+            free(buf.payload);
         }
     }
 
-cleanup:
-    if (args.socket >= 0) {
-        close(args.socket);
-    }
-
+    close(client);
     return NULL;
 }
 
 /**
- * Creates a detached thread to handle accepted TCP connections.
+ * Creates a detached thread to handle accepted TCP clients.
  *
- * Throws if `socket` is invalid or if `message_handler` is null.
- *
- * @param socket socket of accepted TCP connection
- * @param message_handler function from the application-layer protocol that
- * handles messages. takes in the socket of the connection that sent the message
- * as a param. returns 0 on success, -1 if error with global `errno` set.
- * @returns 0 if success, -1 if error with global `errno` set
+ * @param socket client socket
  */
-static int connection_thread_init(int socket,
-                                  int (*message_handler)(int socket)) {
-    if (socket < 0 || message_handler == NULL) {
-        errno = EINVAL;
-        return -1;
-    }
+static void connection_thread_init(int socket) {
+    int *args = malloc(sizeof(int));
+    *args = socket;
 
-    struct connection_handler_args *args =
-        malloc(sizeof(struct connection_handler_args));
-    if (args == NULL) {
-        errno = ENOMEM;
-        return -1;
-    }
-
-    args->socket = socket;
-    args->message_handler = message_handler;
-
-    pthread_t thread;
     pthread_attr_t attr;
-    int res = pthread_attr_init(&attr);
-    if (res != 0) {
-        free(args);
-        errno = res;
-        return -1;
-    }
-
-    res = pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
-    if (res != 0) {
-        free(args);
-        errno = res;
-        return -1;
-    }
-
-    res = pthread_create(&thread, &attr, connection_handler, args);
-    if (res != 0) {
-        free(args);
-        errno = res;
-        return -1;
-    }
-
-    res = pthread_attr_destroy(&attr);
-    if (res != 0) {
-        errno = res;
-        return -1;
-    }
-
-    return 0;
+    pthread_attr_init(&attr);
+    pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
+    pthread_create(NULL, &attr, connection_handler, args);
+    pthread_attr_destroy(&attr);
 }
 
-int tcp_client_init(const char *server_host, unsigned short server_port) {
-    if (server_host == NULL) {
-        errno = EINVAL;
-        return -1;
-    }
+int dmqp_server_init(unsigned short port) {
+    signal_init();
 
-    int client_socket = socket(AF_INET, SOCK_STREAM, 0);
-    if (client_socket < 0) {
-        return -1;
-    }
-
-    struct sockaddr_in server_address;
-    memset(&server_address, 0, sizeof(server_address));
-    server_address.sin_family = AF_INET;
-    server_address.sin_port = htons(server_port);
-
-    int res = inet_pton(AF_INET, server_host, &server_address.sin_addr);
-    if (res <= 0) {
-        close(client_socket);
-        return -1;
-    }
-
-    res = connect(client_socket, (const struct sockaddr *)&server_address,
-                  sizeof(server_address));
-    if (res < 0) {
-        close(client_socket);
-        return -1;
-    }
-
-    return client_socket;
-}
-
-int tcp_server_init(unsigned short server_port,
-                    int (*message_handler)(int socket)) {
-    if (message_handler == NULL) {
-        errno = EINVAL;
-        return -1;
-    }
-
-    int res = signal_init();
-    if (res < 0) {
-        return -1;
-    }
-
-    int server_socket = socket(AF_INET, SOCK_STREAM, 0);
-    if (server_socket < 0) {
+    int server = socket(AF_INET, SOCK_STREAM, 0);
+    if (server < 0) {
+        errno = EIO;
         return -1;
     }
 
     int opt = 1;
-    res = setsockopt(server_socket, SOL_SOCKET, SO_REUSEADDR | SO_REUSEPORT,
-                     &opt, sizeof(opt));
-    if (res < 0) {
-        close(server_socket);
-        return -1;
+    if (setsockopt(server, SOL_SOCKET, SO_REUSEADDR | SO_REUSEPORT, &opt,
+                   sizeof opt) < 0) {
+        goto err;
     }
 
-    struct sockaddr_in server_address;
-    memset(&server_address, 0, sizeof(server_address));
-    server_address.sin_family = AF_INET;
-    server_address.sin_addr.s_addr = INADDR_ANY;
-    server_address.sin_port = htons(server_port);
-    socklen_t address_len = sizeof(server_address);
+    struct sockaddr_in address;
+    memset(&address, 0, sizeof address);
+    address.sin_family = AF_INET;
+    address.sin_addr.s_addr = INADDR_ANY;
+    address.sin_port = htons(port);
+    socklen_t address_len = sizeof address;
 
-    res = bind(server_socket, (const struct sockaddr *)&server_address,
-               address_len);
-    if (res < 0) {
-        close(server_socket);
-        return -1;
+    if (bind(server, (const struct sockaddr *)&address, address_len) < 0) {
+        goto err;
     }
 
-    res = listen(server_socket, LISTEN_BACKLOG);
-    if (res < 0) {
-        close(server_socket);
-        return -1;
+    if (listen(server, LISTEN_BACKLOG) < 0) {
+        goto err;
     }
 
-    printf("server listening on port %d\n", ntohs(server_address.sin_port));
+    printf("DMQP Server listening on port %d\n", ntohs(address.sin_port));
 
     while (running) {
         struct sockaddr_in client_address;
-        socklen_t client_address_len = sizeof(client_address);
+        socklen_t client_address_len = sizeof client_address;
 
-        int client_socket =
-            accept(server_socket, (struct sockaddr *)&client_address,
-                   &client_address_len);
-        if (client_socket < 0) {
+        int client = accept(server, (struct sockaddr *)&client_address,
+                            &client_address_len);
+        if (client < 0) {
             continue;
         }
 
-        res = set_socket_timeout(client_socket, 30);
-        if (res < 0) {
-            close(client_socket);
-            continue;
-        }
+        // 30s timeout
+        struct timeval tv = {.tv_sec = 30, .tv_usec = 0};
+        setsockopt(socket, SOL_SOCKET, SO_RCVTIMEO, (const void *)&tv,
+                   sizeof tv);
 
-        res = set_socket_keepalive(client_socket);
-        if (res < 0) {
-            close(client_socket);
-            continue;
-        }
+        // tcp keepalive
+        int keepalive = 1;
+        setsockopt(socket, SOL_SOCKET, SO_KEEPALIVE, &keepalive,
+                   sizeof keepalive);
 
-        res = connection_thread_init(client_socket, message_handler);
-        if (res < 0) {
-            close(client_socket);
-            continue;
-        }
+        connection_thread_init(client);
     }
 
-    close(server_socket);
+    close(server);
     return 0;
+
+err:
+    close(server);
+    errno = EIO;
+    return -1;
 }
 
-ssize_t read_all(int fd, void *buf, size_t count) {
-    if (fd < 0 || buf == NULL) {
-        errno = EINVAL;
-        return -1;
-    }
-
+/**
+ * Reads all bytes into a buffer from a file descriptor. Operation will return
+ * once all `count` bytes are sent.
+ *
+ * @param fd file descriptor to read from
+ * @param buf buffer to write to
+ * @param count number of bytes to read
+ * @returns 0 on success, -1 on error with global `errno` set
+ */
+static int read_all(int fd, void *buf, size_t count) {
     unsigned int total = 0;
 
     while (total < count) {
@@ -335,54 +226,158 @@ ssize_t read_all(int fd, void *buf, size_t count) {
             if (errno == EINTR) {
                 continue;
             }
-
             return -1;
-        }
-
-        if (n == 0) {
-            return total;
         }
 
         total += n;
     }
 
-    return total;
+    return 0;
 }
 
-ssize_t send_all(int socket, const void *buffer, size_t length, int flags) {
-    if (socket < 0 || buffer == NULL) {
+/**
+ * Reads a DMQP header from a file descriptor. Converts header fields to host
+ * byte order.
+ *
+ * @param fd file descriptor to read from
+ * @param buf DMQP header buffer to write to
+ * @returns 0 on success, -1 if error with global `errno` set
+ * @throws `EIO` unexpected error
+ */
+static int read_dmqp_header(int fd, struct dmqp_header *buf) {
+    char header_wire_buf[DMQP_HEADER_SIZE];
+    if (read_all(fd, header_wire_buf, DMQP_HEADER_SIZE) < 0) {
+        errno = EIO;
+        return -1;
+    }
+
+    memcpy(&buf->sequence_id, header_wire_buf, 4);
+    memcpy(&buf->length, header_wire_buf + 4, 4);
+    memcpy(&buf->method, header_wire_buf + 8, 2);
+    memcpy(&buf->status_code, header_wire_buf + 10, 2);
+
+    buf->sequence_id = ntohl(buf->sequence_id);
+    buf->length = ntohl(buf->length);
+    buf->method = ntohs(buf->method);
+    buf->status_code = ntohs(buf->status_code);
+    return 0;
+}
+
+int read_dmqp_message(int fd, struct dmqp_message *buf) {
+    if (fd < 0 || !buf) {
         errno = EINVAL;
         return -1;
     }
 
+    if (read_dmqp_header(fd, &buf->header) < 0) {
+        errno = EIO;
+        return -1;
+    }
+
+    if (buf->header.length > MAX_PAYLOAD_LENGTH) {
+        errno = EMSGSIZE;
+        return -1;
+    }
+
+    if (buf->header.length == 0) {
+        buf->payload = NULL;
+        return 0;
+    }
+
+    buf->payload = malloc(buf->header.length);
+    if (read_all(fd, buf->payload, buf->header.length) < 0) {
+        free(buf->payload);
+        errno = EIO;
+        return -1;
+    }
+
+    return 0;
+}
+
+/**
+ * Sends all bytes from a buffer to a socket. Operation will return once all
+ * `length` bytes are sent.
+ *
+ * @param socket socket to send to
+ * @param buffer buffer to send
+ * @param length number of bytes to read
+ * @param flags same flags param as that of `send` syscall
+ * @returns 0 on success, -1 on error with global `errno` set
+ */
+static int send_all(int socket, const void *buffer, size_t length, int flags) {
     unsigned int total = 0;
 
     while (total < length) {
-        ssize_t n = send(socket, (char *)buffer + total, length - total, flags);
+        int n = send(socket, (char *)buffer + total, length - total, flags);
         if (n <= 0) {
             if (errno == EINTR) {
                 continue;
             }
-
             return -1;
         }
 
         total += n;
     }
 
-    return total;
+    return 0;
 }
 
-int is_socket(int fd) {
-    struct stat buf;
+/**
+ * Sends a DMQP header to a socket. Converts header fields to network byte
+ * order (big endian).
+ *
+ * @param socket socket to write to
+ * @param buf DMQP header buffer to send
+ * @param flags same flags param as `send` syscall
+ * @returns 0 on success, -1 if error with global `errno` set
+ * @throws `EIO` unexpected error
+ */
+static int send_dmqp_header(int socket, const struct dmqp_header *buffer,
+                            int flags) {
+    uint32_t network_byte_ordered_sequence_id = htonl(buffer->sequence_id);
+    uint32_t network_byte_ordered_length = htonl(buffer->length);
+    uint16_t network_byte_ordered_method = htons(buffer->method);
+    int16_t network_byte_ordered_status_code = htons(buffer->status_code);
 
-    int res = fstat(fd, &buf);
-    if (res < 0) {
+    char header_wire_buf[DMQP_HEADER_SIZE];
+    memcpy(header_wire_buf, &network_byte_ordered_sequence_id, 4);
+    memcpy(header_wire_buf + 4, &network_byte_ordered_length, 4);
+    memcpy(header_wire_buf + 8, &network_byte_ordered_method, 2);
+    memcpy(header_wire_buf + 10, &network_byte_ordered_status_code, 2);
+
+    if (send_all(socket, header_wire_buf, DMQP_HEADER_SIZE, flags) < 0) {
+        errno = EIO;
+        return -1;
+    }
+
+    return 0;
+}
+
+int send_dmqp_message(int socket, const struct dmqp_message *buffer,
+                      int flags) {
+    if (socket < 0 || !buffer ||
+        (buffer->header.length > 0 && buffer->payload == NULL)) {
+        errno = EINVAL;
+        return -1;
+    }
+
+    if (buffer->header.length > MAX_PAYLOAD_LENGTH) {
+        errno = EMSGSIZE;
+        return -1;
+    }
+
+    if (send_dmqp_header(socket, &buffer->header, flags) < 0) {
+        errno = EIO;
+        return -1;
+    }
+
+    if (buffer->header.length == 0) {
         return 0;
     }
 
-    if (S_ISSOCK(buf.st_mode)) {
-        return 1;
+    if (send_all(socket, buffer->payload, buffer->header.length, flags) < 0) {
+        errno = EIO;
+        return -1;
     }
 
     return 0;

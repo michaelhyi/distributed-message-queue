@@ -1,4 +1,5 @@
 # TODO: give project a name + make this an actual system library
+# TODO: test_api target not deleting on `clean`, maybe just separate common mk file?
 
 LDFLAGS 		:= -lzookeeper_mt
 TARGET 			:= lib.a
@@ -6,7 +7,6 @@ TEST_TARGET 	:= test_lib
 TEST_API_TARGET := test_api
 
 OBJ := api.o \
-	   dmqp.o \
 	   network.o \
 	   zookeeper_util.o
 

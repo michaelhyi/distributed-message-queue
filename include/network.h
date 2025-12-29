@@ -1,75 +1,109 @@
 #ifndef NETWORK_H
 #define NETWORK_H
 
-#include <stddef.h>
-#include <sys/types.h>
+#include <stdint.h>
 
 #define LISTEN_BACKLOG 128
+#define MAX_PAYLOAD_LENGTH 1 << 20 // 1MB
+#define DMQP_HEADER_SIZE 12 // bytes
+
+enum dmqp_method { DMQP_PUSH, DMQP_POP, DMQP_PEEK_SEQUENCE_ID, DMQP_RESPONSE };
+
+struct dmqp_header {
+    uint32_t sequence_id; // unique sequence number of queue entry
+    uint32_t length;      // payload length
+    uint16_t method;      // maps to `enum dmqp_method`
+    int16_t status_code;  // unix errno
+};
+
+struct dmqp_message {
+    struct dmqp_header header;
+    void *payload;
+};
 
 // TODO: TLS
 
 /**
- * Initializes a client connection to a server.
+ * Initializes a DMQP client connection to a DMQP server.
  *
- * Throws an error if `server_host` is null or network operations fail.
- *
- * @param server_host the server host address
- * @param server_port the server port
- * @returns the socket of the client, -1 if error with global `errno` set
+ * @param host the server host address
+ * @param port the server port
+ * @returns the socket of the DMQP client, -1 if error with global `errno` set
+ * @throws `EINVAL` invalid args
+ * @throws `EIO` unexpected error
  */
-int tcp_client_init(const char *server_host, unsigned short server_port);
+int dmqp_client_init(const char *host, unsigned short port);
 
 /**
- * Initializes a server and creates a new thread for each connection. Signals
- * are handled to gracefully exit.
+ * Initializes a DMQP server. Signals are handled to gracefully exit.
  *
- * Throws an error if `message_handler` is null or network operations fail.
- *
- * @param server_port the port to bind the server to
- * @param message_handler function from the application-layer protocol that
- * handles messages. takes in the socket of the connection that sent the message
- * as a param. returns 0 on success, -1 if error with global `errno` set. passed
- * down to connection handler thread to handle messages received at server
+ * @param port the port to bind the server to
  * @returns 0 on success, -1 on error with global `errno` set. does not return
  * until the server is interrupted or terminated
+ * @throws `EIO` unexpected error
  */
-int tcp_server_init(unsigned short server_port, int (*message_handler)(int socket));
+int dmqp_server_init(unsigned short port);
 
 /**
- * Reads all bytes into a buffer from a file descriptor.
- *
- * Throws an error if fd is invalid, `buf` is null, or network operations fail.
+ * Reads a DMQP message from a file descriptor. Converts header fields to host
+ * byte order.
  *
  * @param fd file descriptor to read from
- * @param buf buffer to write to
- * @param count number of bytes to read
- * @returns the number of bytes read (may be partial read), -1 if error with
- * global `errno` set
+ * @param buf DMQP message buffer to write to
+ * @returns 0 on success, -1 if error with global `errno` set
+ * @throws `EINVAL` invalid args
+ * @throws `EMSGSIZE` message payload too large
+ * @throws `EIO` unexpected error
  */
-ssize_t read_all(int fd, void *buf, size_t count);
+int read_dmqp_message(int fd, struct dmqp_message *buf);
 
 /**
- * Sends all bytes from a buffer to a socket.
+ * Sends a DMQP message to a socket. Converts header fields to network byte
+ * order (big endian).
  *
- * Throws an error if `socket` is invalid, `buffer` is null, or network
- * operations fail.
- *
- * @param socket socket to send to
- * @param buffer buffer to send
- * @param length number of bytes to read
- * @param flags same flags param as that of `send` syscall
- * @returns the number of bytes sent (may be partial write), -1 if error with
- * global `errno` set
+ * @param socket socket to write to
+ * @param buffer DMQP message buffer to send
+ * @param flags same flags param as send syscall
+ * @returns 0 on success, -1 if error with global `errno` set
+ * @throws `EINVAL` invalid args
+ * @throws `EMSGSIZE` message payload too large
+ * @throws `EIO` unexpected error
  */
-ssize_t send_all(int socket, const void *buffer, size_t length, int flags);
+int send_dmqp_message(int socket, const struct dmqp_message *buffer, int flags);
 
-// TODO: test
+// ----------------------------------------------------------------------------
+// The following functions must be implemented separately by each DMQP server.
+
 /**
- * Checks if a given file descriptor is a valid socket.
+ * Handles a DMQP message with method `DMQP_PUSH`.
  *
- * @param fd file descriptor to validate
- * @returns 1 if `fd` is a socket, 0 otherwise
+ * @param message message received by server
+ * @param client socket to reply on
  */
-int is_socket(int fd);
+void handle_dmqp_push(const struct dmqp_message *message, int client);
+
+/**
+ * Handles a DMQP message with method `DMQP_POP`.
+ *
+ * @param message message received by server
+ * @param client socket to reply on
+ */
+void handle_dmqp_pop(const struct dmqp_message *message, int client);
+
+/**
+ * Handles a DMQP message with method `DMQP_PEEK_SEQUENCE_ID`.
+ *
+ * @param message message received by server
+ * @param reply_socket socket to reply on
+ */
+void handle_dmqp_peek_sequence_id(const struct dmqp_message *message, int client);
+
+/**
+ * Handles a DMQP message with method `DMQP_RESPONSE`.
+ *
+ * @param message message received by server
+ * @param client socket to reply on
+ */
+void handle_dmqp_response(const struct dmqp_message *message, int client);
 
 #endif
