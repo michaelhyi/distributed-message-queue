@@ -16,7 +16,6 @@
 #define MAX_PATH_LEN 128
 
 static zhandle_t *zh;
-
 static void watcher(zhandle_t *zzh, int type, int state, const char *path,
                     void *watcherCtx) {
     (void)zzh;
@@ -41,7 +40,37 @@ void teardown() {
     zookeeper_close(zh);
 }
 
-// TODO: reorder file contents
+static struct test test_cases[] = {
+    {NULL, NULL, test_client_init_throws_if_invalid_args},
+    {NULL, NULL, test_client_init_throws_if_client_already_initialized},
+    {NULL, NULL, test_client_init_success},
+    {NULL, NULL, test_create_topic_throws_if_client_uninitialized},
+    {setup, teardown, test_create_topic_throws_if_invalid_args},
+    {setup, teardown, test_create_topic_throws_if_not_enough_partitions},
+    {setup, teardown, test_create_topic_throws_if_topic_already_exists},
+    {setup, teardown, test_create_topic_success},
+};
+
+int main() {
+    unsigned int passed = 0;
+
+    for (int i = 0; i < len(test_cases); i++) {
+        if (test_cases[i].setup) {
+            test_cases[i].setup();
+        }
+
+        if (test_cases[i].test_case() >= 0) {
+            passed++;
+        }
+
+        if (test_cases[i].teardown) {
+            test_cases[i].teardown();
+        }
+    }
+
+    printf("Successfully passed %d/%d tests\n!", passed, len(test_cases));
+    return 0;
+}
 
 int test_client_init_throws_if_invalid_args() {
     // arrange
@@ -289,62 +318,3 @@ int test_create_topic_success() {
 
     return 0;
 }
-
-static struct test test_cases[] = {
-    {NULL, NULL, test_client_init_throws_if_invalid_args},
-    {NULL, NULL, test_client_init_throws_if_client_already_initialized},
-    {NULL, NULL, test_client_init_success},
-    {NULL, NULL, test_create_topic_throws_if_client_uninitialized},
-    {setup, teardown, test_create_topic_throws_if_invalid_args},
-    {setup, teardown, test_create_topic_throws_if_not_enough_partitions},
-    {setup, teardown, test_create_topic_throws_if_topic_already_exists},
-    {setup, teardown, test_create_topic_success},
-};
-
-int main() {
-    unsigned int passed = 0;
-
-    for (int i = 0; i < len(test_cases); i++) {
-        if (test_cases[i].setup) {
-            test_cases[i].setup();
-        }
-
-        if (test_cases[i].test_case() >= 0) {
-            passed++;
-        }
-
-        if (test_cases[i].teardown) {
-            test_cases[i].teardown();
-        }
-    }
-
-    printf("Successfully passed %d/%d tests\n!", passed, len(test_cases));
-    return 0;
-}
-
-// TODO: impl these
-// Test(api, test_update_topic_throws_if_args_null);
-// Test(api, test_update_topic_throws_if_server_host_null);
-// Test(api, test_update_topic_throws_if_topic_name_null);
-// Test(api, test_update_topic_throws_if_topic_does_not_exist);
-// Test(api, test_update_topic_throws_if_not_enough_partitions);
-// Test(api, test_update_topic_success_scale_up);
-// Test(api, test_update_topic_success_scale_down);
-// Test(api, test_update_topic_success_no_scale);
-
-// // TODO: what happens when we update a topic while its serving consumers?
-// // TODO: what happens when we delete a topic while its serving consumers?
-// Test(api, test_delete_topic_throws_if_args_null);
-// Test(api, test_delete_topic_throws_if_server_host_null);
-// Test(api, test_delete_topic_throws_if_topic_name_null);
-// Test(api, test_delete_topic_throws_if_topic_does_not_exist);
-// Test(api, test_delete_topic_success);
-
-// Test(api, test_consumer_init_throws_if_args_null);
-// Test(api, test_consumer_init_throws_if_server_host_null);
-// Test(api, test_consumer_init_throws_if_topic_name_null);
-// Test(api, test_consumer_init_throws_if_topic_does_not_exist);
-// Test(api, test_consumer_init_throws_if_consumer_limit_reached);
-// Test(api, test_consumer_init_success);
-
-// TODO: complete the rest of tests
