@@ -25,53 +25,6 @@ static void watcher(zhandle_t *zzh, int type, int state, const char *path,
     (void)watcherCtx;
 }
 
-void setup() {
-    errno = 0;
-    zoo_set_debug_level(0);
-    zh = zookeeper_init(TEST_ZOOKEEPER_SERVER_HOST, watcher, 10000, 0, 0, 0);
-
-    client_init(TEST_ZOOKEEPER_SERVER_HOST);
-}
-
-void teardown() {
-    zoo_deleteall(zh, "/topics", -1);
-    zoo_deleteall(zh, "/partitions", -1);
-    client_destroy();
-    zookeeper_close(zh);
-}
-
-static struct test test_cases[] = {
-    {NULL, NULL, test_client_init_throws_if_invalid_args},
-    {NULL, NULL, test_client_init_throws_if_client_already_initialized},
-    {NULL, NULL, test_client_init_success},
-    {NULL, NULL, test_create_topic_throws_if_client_uninitialized},
-    {setup, teardown, test_create_topic_throws_if_invalid_args},
-    {setup, teardown, test_create_topic_throws_if_not_enough_partitions},
-    {setup, teardown, test_create_topic_throws_if_topic_already_exists},
-    {setup, teardown, test_create_topic_success},
-};
-
-int main() {
-    unsigned int passed = 0;
-
-    for (int i = 0; i < arrlen(test_cases); i++) {
-        if (test_cases[i].setup) {
-            test_cases[i].setup();
-        }
-
-        if (test_cases[i].test_case() >= 0) {
-            passed++;
-        }
-
-        if (test_cases[i].teardown) {
-            test_cases[i].teardown();
-        }
-    }
-
-    printf("Successfully passed %d/%d tests\n!", passed, arrlen(test_cases));
-    return 0;
-}
-
 int test_client_init_throws_if_invalid_args() {
     // arrange
     errno = 0;
@@ -91,7 +44,7 @@ int test_client_init_throws_if_client_already_initialized() {
     assert(client_init("127.0.0.1:2181") < 0);
     assert(errno == EALREADY);
 
-    // cleanup
+    // teardown
     client_destroy();
     return 0;
 }
@@ -104,7 +57,7 @@ int test_client_init_success() {
     assert(client_init("127.0.0.1:2181") >= 0);
     assert(!errno);
 
-    // cleanup
+    // teardown
     client_destroy();
     return 0;
 }
@@ -316,5 +269,52 @@ int test_create_topic_success() {
         }
     }
 
+    return 0;
+}
+
+void setup() {
+    errno = 0;
+    zoo_set_debug_level(0);
+    zh = zookeeper_init(TEST_ZOOKEEPER_SERVER_HOST, watcher, 10000, 0, 0, 0);
+
+    client_init(TEST_ZOOKEEPER_SERVER_HOST);
+}
+
+void teardown() {
+    zoo_deleteall(zh, "/topics", -1);
+    zoo_deleteall(zh, "/partitions", -1);
+    client_destroy();
+    zookeeper_close(zh);
+}
+
+static struct test test_cases[] = {
+    {NULL, NULL, test_client_init_throws_if_invalid_args},
+    {NULL, NULL, test_client_init_throws_if_client_already_initialized},
+    {NULL, NULL, test_client_init_success},
+    {NULL, NULL, test_create_topic_throws_if_client_uninitialized},
+    {setup, teardown, test_create_topic_throws_if_invalid_args},
+    {setup, teardown, test_create_topic_throws_if_not_enough_partitions},
+    {setup, teardown, test_create_topic_throws_if_topic_already_exists},
+    {setup, teardown, test_create_topic_success},
+};
+
+int main() {
+    unsigned int passed = 0;
+
+    for (int i = 0; i < arrlen(test_cases); i++) {
+        if (test_cases[i].setup) {
+            test_cases[i].setup();
+        }
+
+        if (test_cases[i].test_case() >= 0) {
+            passed++;
+        }
+
+        if (test_cases[i].teardown) {
+            test_cases[i].teardown();
+        }
+    }
+
+    printf("Successfully passed %d/%d tests\n!", passed, arrlen(test_cases));
     return 0;
 }
