@@ -8,4 +8,10 @@
         return -1;                                                             \
     }
 
+struct test {
+    void (*setup)(void); 
+    void (*teardown)(void);
+    int (*test_case)(void);
+};
+
 #endif 
