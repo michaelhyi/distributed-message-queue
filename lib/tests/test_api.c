@@ -2,13 +2,14 @@
 // 127.0.0.1:2182
 
 #include "api.h"
+#include "test.h"
 
 #include <errno.h>
 #include <stdio.h>
 #include <string.h>
 #include <zookeeper/zookeeper.h>
 
-#include "test.h"
+#include "util.h"
 #include "zookeeper_util.h"
 
 #define TEST_ZOOKEEPER_SERVER_HOST "127.0.0.1:2182"
@@ -38,6 +39,21 @@ void teardown() {
     zoo_deleteall(zh, "/partitions", -1);
     client_destroy();
     zookeeper_close(zh);
+}
+
+// TODO: test client_init() and client_destroy()
+// TODO: reorder file contents
+
+int test_create_topic_throws_if_client_uninitialized() {
+    // arrange
+    errno = 0;
+    struct topic topic = {
+        .name = "utest-topic", .shards = 1, .replication_factor = 0};
+
+    // act & assert
+    assert(create_topic(&topic) < 0);
+    assert(errno == EINVAL);
+    return 0;
 }
 
 int test_create_topic_throws_if_invalid_args() {
@@ -238,24 +254,32 @@ int test_create_topic_success() {
     return 0;
 }
 
-int (*test_cases[])(void) = {test_create_topic_throws_if_invalid_args,
-                             test_create_topic_throws_if_not_enough_partitions,
-                             test_create_topic_throws_if_topic_already_exists,
-                             test_create_topic_success};
+static struct test test_cases[] = {
+    {NULL, NULL, test_create_topic_throws_if_client_uninitialized},
+    {setup, teardown, test_create_topic_throws_if_invalid_args},
+    {setup, teardown, test_create_topic_throws_if_not_enough_partitions},
+    {setup, teardown, test_create_topic_throws_if_topic_already_exists},
+    {setup, teardown, test_create_topic_success},
+};
 
 int main() {
     unsigned int passed = 0;
-    size_t num_tests = sizeof test_cases / sizeof test_cases[0];
 
-    for (size_t i = 0; i < num_tests; i++) {
-        setup();
-        if (test_cases[i]() >= 0) {
+    for (int i = 0; i < len(test_cases); i++) {
+        if (test_cases[i].setup) {
+            test_cases[i].setup();
+        }
+
+        if (test_cases[i].test_case() >= 0) {
             passed++;
         }
-        teardown();
+
+        if (test_cases[i].teardown) {
+            test_cases[i].teardown();
+        }
     }
 
-    printf("Successfully passed %d/%ld tests\n!", passed, num_tests);
+    printf("Successfully passed %d/%d tests\n!", passed, len(test_cases));
     return 0;
 }
 

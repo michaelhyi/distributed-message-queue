@@ -375,7 +375,7 @@ static int create_shard(const char *topic_name,
 }
 
 int create_topic(const struct topic *topic) {
-    if (topic == NULL || topic->name == NULL ||
+    if (!zh || topic == NULL || topic->name == NULL ||
         strnlen(topic->name, MAX_TOPIC_NAME_LEN + 1) > MAX_TOPIC_NAME_LEN ||
         topic->shards == 0 || topic->replication_factor == 0) {
         errno = EINVAL;
