@@ -91,24 +91,24 @@ static void *connection_handler(void *arg) {
 
     while (running) {
         struct dmqp_message buf;
-        if (read_dmqp_message(socket, &buf) < 0) {
+        if (read_dmqp_message(client, &buf) < 0) {
             break;
         }
 
         switch (buf.header.method) {
         case DMQP_PUSH:
-            handle_dmqp_push(&buf, socket);
+            handle_dmqp_push(&buf, client);
             break;
         case DMQP_POP:
-            handle_dmqp_pop(&buf, socket);
+            handle_dmqp_pop(&buf, client);
             break;
         case DMQP_PEEK_SEQUENCE_ID:
-            handle_dmqp_peek_sequence_id(&buf, socket);
+            handle_dmqp_peek_sequence_id(&buf, client);
             break;
         case DMQP_RESPONSE:
-            handle_dmqp_response(&buf, socket);
+            handle_dmqp_response(&buf, client);
             break;
-        default:
+        default:;
             struct dmqp_header header = {.sequence_id = 0,
                                          .length = 0,
                                          .method = DMQP_RESPONSE,
@@ -136,10 +136,11 @@ static void connection_thread_init(int socket) {
     int *args = malloc(sizeof(int));
     *args = socket;
 
+    pthread_t tid;
     pthread_attr_t attr;
     pthread_attr_init(&attr);
     pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
-    pthread_create(NULL, &attr, connection_handler, args);
+    pthread_create(&tid, &attr, connection_handler, args);
     pthread_attr_destroy(&attr);
 }
 
@@ -187,12 +188,12 @@ int dmqp_server_init(unsigned short port) {
 
         // 30s timeout
         struct timeval tv = {.tv_sec = 30, .tv_usec = 0};
-        setsockopt(socket, SOL_SOCKET, SO_RCVTIMEO, (const void *)&tv,
+        setsockopt(client, SOL_SOCKET, SO_RCVTIMEO, (const void *)&tv,
                    sizeof tv);
 
         // tcp keepalive
         int keepalive = 1;
-        setsockopt(socket, SOL_SOCKET, SO_KEEPALIVE, &keepalive,
+        setsockopt(client, SOL_SOCKET, SO_KEEPALIVE, &keepalive,
                    sizeof keepalive);
 
         connection_thread_init(client);

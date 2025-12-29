@@ -4,7 +4,7 @@
 #include <stdint.h>
 
 #define LISTEN_BACKLOG 128
-#define MAX_PAYLOAD_LENGTH 1 << 20 // 1MB
+#define MAX_PAYLOAD_LENGTH (1 << 20) // 1MB
 #define DMQP_HEADER_SIZE 12 // bytes
 
 enum dmqp_method { DMQP_PUSH, DMQP_POP, DMQP_PEEK_SEQUENCE_ID, DMQP_RESPONSE };
@@ -57,6 +57,7 @@ int dmqp_server_init(unsigned short port);
  */
 int read_dmqp_message(int fd, struct dmqp_message *buf);
 
+// TODO: must validate socket
 /**
  * Sends a DMQP message to a socket. Converts header fields to network byte
  * order (big endian).
