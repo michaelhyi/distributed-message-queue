@@ -141,7 +141,6 @@ int test_dmqp_server_init_handles_signals() {
 
         // assert
         assert(args.result >= 0);
-        dprintf("error: %s\n", strerror(args._errno));
         assert(!args._errno);
     }
 
@@ -211,14 +210,14 @@ int test_read_dmqp_message_success_when_no_payload() {
     // below is the wire format for
     // struct dmqp_header header = {.sequence_id = htonl(5),
     //                              .length = 0,
-    //                              .method = htons(DMQP_PUSH),
+    //                              .method = htons(DMQP_RESPONSE),
     //                              .status_code = 0};
     char header_wire[DMQP_HEADER_SIZE];
     memset(header_wire, 0, sizeof header_wire);
 
     uint32_t sequence_id = htonl(5);
     memcpy(header_wire, &sequence_id, 4);
-    header_wire[8] = htons(DMQP_PUSH);
+    header_wire[8] = htons(DMQP_RESPONSE);
 
     int fds[2];
     socketpair(AF_UNIX, SOCK_STREAM, 0, fds);
@@ -248,13 +247,13 @@ int test_read_dmqp_message_success_with_payload() {
     // below is the wire format for
     // struct dmqp_header header = {.sequence_id = htonl(5),
     //                              .length = htonl(13),
-    //                              .method = htons(DMQP_PUSH),
+    //                              .method = htons(DMQP_RESPONSE),
     //                              .status_code = htons(3)};
     char header_wire[DMQP_HEADER_SIZE];
     memset(header_wire, 0, sizeof(header_wire));
     uint32_t sequence_id = htonl(5);
     uint32_t length = htonl(13);
-    uint16_t method = htons(DMQP_PUSH);
+    uint16_t method = htons(DMQP_RESPONSE);
     int16_t status_code = htons(3);
 
     memcpy(header_wire, &sequence_id, 4);
@@ -277,7 +276,7 @@ int test_read_dmqp_message_success_with_payload() {
     assert(!errno);
     assert(buf.header.sequence_id == 5);
     assert(buf.header.length == 13);
-    assert(buf.header.method == DMQP_PUSH);
+    assert(buf.header.method == DMQP_RESPONSE);
     assert(buf.header.status_code == 3);
     assert(memcmp(buf.payload, payload, 13) == 0);
 
@@ -350,8 +349,10 @@ int test_send_dmqp_message_success_when_no_payload() {
     // arrange
     errno = 0;
 
-    struct dmqp_header header = {
-        .sequence_id = 5, .length = 0, .method = DMQP_PUSH, .status_code = 0};
+    struct dmqp_header header = {.sequence_id = 5,
+                                 .length = 0,
+                                 .method = DMQP_RESPONSE,
+                                 .status_code = 0};
 
     int fds[2];
     socketpair(AF_UNIX, SOCK_STREAM, 0, fds);
@@ -361,7 +362,7 @@ int test_send_dmqp_message_success_when_no_payload() {
 
     uint32_t expected_sequence_id = htonl(5);
     uint32_t expected_length = 0;
-    uint16_t expected_method = htons(DMQP_PUSH);
+    uint16_t expected_method = htons(DMQP_RESPONSE);
     int16_t expected_status_code = 0;
 
     // act & assert
@@ -391,14 +392,16 @@ int test_send_dmqp_message_success_with_payload() {
     socketpair(AF_UNIX, SOCK_STREAM, 0, fds);
 
     char payload[] = "Hello, World!";
-    struct dmqp_header header = {
-        .sequence_id = 5, .length = 13, .method = DMQP_PUSH, .status_code = 3};
+    struct dmqp_header header = {.sequence_id = 5,
+                                 .length = 13,
+                                 .method = DMQP_RESPONSE,
+                                 .status_code = 3};
     struct dmqp_message buf = {.header = header, .payload = payload};
     char header_wire_buf[DMQP_HEADER_SIZE];
 
     uint32_t expected_sequence_id = htonl(5);
     uint32_t expected_length = htonl(13);
-    uint16_t expected_method = htons(DMQP_PUSH);
+    uint16_t expected_method = htons(DMQP_RESPONSE);
     int16_t expected_status_code = htons(3);
 
     // act
