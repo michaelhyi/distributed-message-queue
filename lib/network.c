@@ -31,17 +31,16 @@ int dmqp_client_init(const char *host, unsigned short port) {
     address.sin_port = htons(port);
 
     if (inet_pton(AF_INET, host, &address.sin_addr) <= 0) {
-        goto err;
+        goto cleanup;
     }
 
-    if (connect(client, (const struct sockaddr *)&address, sizeof address) <
-        0) {
-        goto err;
+    if (connect(client, (struct sockaddr *)&address, sizeof address) < 0) {
+        goto cleanup;
     }
 
     return client;
 
-err:
+cleanup:
     close(client);
     errno = EIO;
     return -1;
@@ -156,7 +155,7 @@ int dmqp_server_init(unsigned short port) {
     int opt = 1;
     if (setsockopt(server, SOL_SOCKET, SO_REUSEADDR | SO_REUSEPORT, &opt,
                    sizeof opt) < 0) {
-        goto err;
+        goto cleanup;
     }
 
     struct sockaddr_in address;
@@ -167,11 +166,11 @@ int dmqp_server_init(unsigned short port) {
     socklen_t address_len = sizeof address;
 
     if (bind(server, (const struct sockaddr *)&address, address_len) < 0) {
-        goto err;
+        goto cleanup;
     }
 
     if (listen(server, LISTEN_BACKLOG) < 0) {
-        goto err;
+        goto cleanup;
     }
 
     printf("DMQP Server listening on port %d\n", ntohs(address.sin_port));
@@ -202,7 +201,7 @@ int dmqp_server_init(unsigned short port) {
     close(server);
     return 0;
 
-err:
+cleanup:
     close(server);
     errno = EIO;
     return -1;
