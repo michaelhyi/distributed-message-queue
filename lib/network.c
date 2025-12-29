@@ -46,19 +46,19 @@ cleanup:
     return -1;
 }
 
-static volatile sig_atomic_t running = 1;
+volatile int server_running = 0;
 static struct sigaction sa;
 static struct sigaction sa_ignore;
 
 /**
- * Simple signal handler that sets `running` to zero to terminate server
+ * Simple signal handler that sets `server_running` to zero to terminate server
  * threads.
  *
  * @param sig signal received by process
  */
 static void signal_handler(int sig) {
     (void)sig; // unused
-    running = 0;
+    server_running = 0;
 }
 
 /**
@@ -88,7 +88,7 @@ static void *connection_handler(void *arg) {
     int client = *(int *)arg;
     free(arg);
 
-    while (running) {
+    while (server_running) {
         struct dmqp_message buf;
         if (read_dmqp_message(client, &buf) < 0) {
             break;
@@ -153,8 +153,11 @@ int dmqp_server_init(unsigned short port) {
     }
 
     int opt = 1;
-    if (setsockopt(server, SOL_SOCKET, SO_REUSEADDR | SO_REUSEPORT, &opt,
-                   sizeof opt) < 0) {
+    if (setsockopt(server, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof opt) < 0) {
+        goto cleanup;
+    }
+
+    if (setsockopt(server, SOL_SOCKET, SO_REUSEPORT, &opt, sizeof opt) < 0) {
         goto cleanup;
     }
 
@@ -173,9 +176,10 @@ int dmqp_server_init(unsigned short port) {
         goto cleanup;
     }
 
+    server_running = 1;
     printf("DMQP Server listening on port %d\n", ntohs(address.sin_port));
 
-    while (running) {
+    while (server_running) {
         struct sockaddr_in client_address;
         socklen_t client_address_len = sizeof client_address;
 

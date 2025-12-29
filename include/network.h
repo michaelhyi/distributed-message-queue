@@ -21,6 +21,8 @@ struct dmqp_message {
     void *payload;
 };
 
+extern volatile int server_running;
+
 // TODO: TLS
 
 /**
