@@ -427,6 +427,37 @@ int test_send_dmqp_message_success_with_payload() {
     return 0;
 }
 
+int test_dmqp_server_init_handles_message_with_unknown_method() {
+    // arrange
+    errno = 0;
+    struct targs args = {.port = 8082};
+    pthread_t tid;
+    pthread_create(&tid, NULL, start_test_dmqp_server, &args);
+    sleep(1); // wait 1s for server to initialize
+
+    int client = dmqp_client_init("127.0.0.1", 8082);
+
+    struct dmqp_header header = {0};
+    header.method = DMQP_RESPONSE + 1;
+    struct dmqp_message message = {.header = header, .payload = NULL};
+
+    // act & assert
+    assert(send_dmqp_message(client, &message, 0) >= 0);
+    assert(!errno);
+    assert(read_dmqp_message(client, &message) >= 0);
+    assert(!errno);
+    assert(message.header.sequence_id == 0);
+    assert(message.header.length == 0);
+    assert(message.header.method == DMQP_RESPONSE);
+    assert(message.header.status_code == ENOSYS);
+
+    // teardown
+    pthread_kill(tid, SIGTERM);
+    pthread_join(tid, NULL);
+    close(client);
+    return 0;
+}
+
 static struct test test_cases[] = {
     {NULL, NULL, test_dmqp_client_init_throws_when_invalid_args},
     {NULL, NULL, test_dmqp_client_init_throws_when_server_does_not_exist},
@@ -439,7 +470,8 @@ static struct test test_cases[] = {
     {NULL, NULL, test_send_dmqp_message_throws_when_invalid_args},
     {NULL, NULL, test_send_dmqp_message_throws_when_payload_too_large},
     {NULL, NULL, test_send_dmqp_message_success_when_no_payload},
-    {NULL, NULL, test_send_dmqp_message_success_with_payload}};
+    {NULL, NULL, test_send_dmqp_message_success_with_payload},
+    {NULL, NULL, test_dmqp_server_init_handles_message_with_unknown_method}};
 
 int main() {
     unsigned int passed = 0;
