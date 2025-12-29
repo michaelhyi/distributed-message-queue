@@ -8,6 +8,6 @@
 #define dprintf(...)
 #endif
 
-#define len(arr) (int)(sizeof arr / sizeof arr[0])
+#define arrlen(arr) (int)(sizeof arr / sizeof arr[0])
 
 #endif

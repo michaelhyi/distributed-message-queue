@@ -54,7 +54,7 @@ static struct test test_cases[] = {
 int main() {
     unsigned int passed = 0;
 
-    for (int i = 0; i < len(test_cases); i++) {
+    for (int i = 0; i < arrlen(test_cases); i++) {
         if (test_cases[i].setup) {
             test_cases[i].setup();
         }
@@ -68,7 +68,7 @@ int main() {
         }
     }
 
-    printf("Successfully passed %d/%d tests\n!", passed, len(test_cases));
+    printf("Successfully passed %d/%d tests\n!", passed, arrlen(test_cases));
     return 0;
 }
 

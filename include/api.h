@@ -42,26 +42,26 @@ int create_topic(const struct topic *topic);
  * distribute between shards.
  *
  * @param topic_name name of the topic to push to
- * @param buf the message to push
+ * @param message the message to push
  * @returns 0 if success, -1 if error with global `errno` set
  * @throws `EINVAL` invalid arguments or topic name too long (max 32 chars) or client not initialized
  * @throws `ENODATA` topic does not exist
  * @throws `EIO` unexpected error 
  */
-int push(const char *topic_name, const struct message *buf);
+int push(const char *topic_name, const struct message *message);
 
 /**
  * Pops a message from the distributed message queue, only popping from the
  * shard assigned to the consumer.
  *
  * @param topic_name name of the topic to pop from
- * @param buf output param to return the message
+ * @param message output param to return the message
  * @returns 0 if success, -1 if error with global `errno` set
  * @throws `EINVAL` invalid arguments or topic name too long (max 32 chars) or client not initialized
  * @throws `ENODATA` topic does not exist
  * @throws `EACCES` current process not assigned as a consumer of this topic
  * @throws `EIO` unexpected error 
  */
-int pop(const char *topic_name, struct message *buf);
+int pop(const char *topic_name, struct message *message);
 
 #endif
