@@ -206,7 +206,8 @@ These are features that would be great for this project that I do not intend to
 implement. The reason for this is that I wanted to keep this project simple
 while learning what I wanted from distributed systems.
 
-- [ ] update_topic() (upscaling + downscaling) and delete_topic()
+- [ ] update_topic() (upscaling + downscaling) and delete_topic() (both
+operations should be disabled if topics not empty)
 - [ ] Consumer Grouping to Reduce
 - [ ] Compaction / Retention Policy (Queues May Grow Indefinitely)
 - [ ] Caching Metadata from ZooKeeper
