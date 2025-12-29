@@ -186,6 +186,10 @@ int dmqp_server_init(unsigned short port) {
         int client = accept(server, (struct sockaddr *)&client_address,
                             &client_address_len);
         if (client < 0) {
+            if (errno == EINTR) {
+                errno = 0;
+            }
+
             continue;
         }
 
