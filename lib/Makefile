@@ -6,6 +6,8 @@ TARGET 			:= lib.a
 TEST_TARGET 	:= test_lib
 TEST_API_TARGET := test_api
 
+TEST_NETWORK_TARGET := test_network
+
 OBJ := api.o \
 	   network.o \
 	   zookeeper_util.o
@@ -13,9 +15,6 @@ OBJ := api.o \
 DEBUG_OBJ := $(OBJ:%.o=debug_%.o)
 
 TEST_OBJ := test_api.o \
- 			test_dmqp.o \
- 			test_integration_dmqp.o \
- 			test_integration_network.o \
  			test_network.o \
 			test_zookeeper_util.o
 
@@ -30,7 +29,7 @@ include ../tools/common.mk
 CFLAGS += -D_GNU_SOURCE # allows usleep() and kill()
 CFLAGS += -DTHREADED 	# allows zoo_create()
 
-.PHONY: $(TEST_API_TARGET)
+.PHONY: $(TEST_API_TARGET) $(TEST_NETWORK_TARGET)
 
 $(TARGET): $(OBJ)
 	@$(AR) $(AR_FLAGS) $(TARGET) $(OBJ)
@@ -38,7 +37,14 @@ $(TARGET): $(OBJ)
 $(TEST_API_TARGET): $(DEBUG_OBJ) $(TEST_OBJ)
 	@$(CC) debug_api.o debug_zookeeper_util.o test_api.o -o $(TEST_API_TARGET) $(LDFLAGS) 
 
+$(TEST_NETWORK_TARGET): $(DEBUG_OBJ) $(TEST_OBJ)
+	@$(CC) debug_network.o test_network.o -o $(TEST_NETWORK_TARGET) $(LDFLAGS) 
+
 debug: $(DEBUG_OBJ)
+
+# TODO:
+# clean:
+# 	@rm -f $(TEST_API_TARGET) $(TEST_NETWORK_TARGET)
 
 help:
 	@echo "Available targets:"
