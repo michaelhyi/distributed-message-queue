@@ -8,6 +8,8 @@ TEST_API_TARGET := test_api
 
 TEST_NETWORK_TARGET := test_network
 
+TEST_ZOOKEEPER_UTIL_TARGET := test_zookeeper_util 
+
 OBJ := api.o \
 	   network.o \
 	   zookeeper_util.o
@@ -39,6 +41,9 @@ $(TEST_API_TARGET): $(DEBUG_OBJ) $(TEST_OBJ)
 
 $(TEST_NETWORK_TARGET): $(DEBUG_OBJ) $(TEST_OBJ)
 	@$(CC) debug_network.o test_network.o -o $(TEST_NETWORK_TARGET) $(LDFLAGS) 
+
+$(TEST_ZOOKEEPER_UTIL_TARGET): $(DEBUG_OBJ) $(TEST_OBJ)
+	@$(CC) debug_zookeeper_util.o test_zookeeper_util.o -o $(TEST_ZOOKEEPER_UTIL_TARGET) $(LDFLAGS) 
 
 debug: $(DEBUG_OBJ)
 

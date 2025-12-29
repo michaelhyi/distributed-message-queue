@@ -1,20 +1,16 @@
+// This test suite requires that a test ZooKeeper server be running at
+// 127.0.0.1:2182
+
+#include "test.h"
 #include "zookeeper_util.h"
 
-#include <criterion/criterion.h>
 #include <errno.h>
 
-#ifdef DEBUG
-TestSuite(zookeeper_util);
-#else
-TestSuite(zookeeper_util, .timeout = 10);
-#endif
+#include "util.h"
 
-struct args {
-    zhandle_t *zh;
-    const char *path;
-    int version;
-};
+#define TEST_ZOOKEEPER_SERVER_HOST "127.0.0.1:2182"
 
+static zhandle_t *zh;
 static void watcher(zhandle_t *zzh, int type, int state, const char *path,
                     void *watcherCtx) {
     (void)zzh;
@@ -24,118 +20,119 @@ static void watcher(zhandle_t *zzh, int type, int state, const char *path,
     (void)watcherCtx;
 }
 
-Test(zookeeper_util, test_zoo_deleteall_throws_when_invalid_args) {
+int test_zoo_deleteall_throws_when_invalid_args() {
     // arrange
-    errno = 0;
-    zhandle_t *zh = zookeeper_init("127.0.0.1:2181", watcher, 10000, 0, 0, 0);
-
-    char path[512] = "/";
-    strcat(path, criterion_current_test->name);
-
-    struct args test_cases[] = {
+    char *path = "/utest";
+    struct {
+        zhandle_t *zh;
+        const char *path;
+        int version;
+    } cases[] = {
         {NULL, NULL, -1},
         {NULL, path, -1},
         {zh, NULL, -1},
     };
 
-    for (int i = 0; i < (int)(sizeof(test_cases) / sizeof(test_cases[0]));
-         i++) {
+    for (int i = 0; i < arrlen(cases); i++) {
         // arrange
         errno = 0;
-        struct args test_case = test_cases[i];
 
-        // act
-        int res =
-            zoo_deleteall(test_case.zh, test_case.path, test_case.version);
-
-        // assert
-        cr_assert(res < 0);
-        cr_assert_eq(errno, EINVAL);
+        // act & assert
+        assert(zoo_deleteall(cases[i].zh, cases[i].path, cases[i].version) < 0);
+        assert(errno == EINVAL);
     }
+    return 0;
 }
 
-Test(zookeeper_util, test_zoo_deleteall_throws_when_znode_does_not_exist) {
+int test_zoo_deleteall_throws_when_znode_does_not_exist() {
     // arrange
-    errno = 0;
-    zhandle_t *zh = zookeeper_init("127.0.0.1:2181", watcher, 10000, 0, 0, 0);
+    char *path = "/utest";
 
-    char path[512] = "/";
-    strcat(path, criterion_current_test->name);
-
-    // act
-    int res = zoo_deleteall(zh, path, -1);
-
-    // assert
-    cr_assert(res < 0);
-    cr_assert_eq(errno, ENODATA);
+    // act & assert
+    assert(zoo_deleteall(zh, path, -1) < 0);
+    assert(errno == ENODATA);
+    return 0;
 }
 
-Test(zookeeper_util, test_zoo_deleteall_success_when_no_children) {
+int test_zoo_deleteall_success_when_no_children() {
     // arrange
-    errno = 0;
-    zhandle_t *zh = zookeeper_init("127.0.0.1:2181", watcher, 10000, 0, 0, 0);
+    char *path = "/utest";
+    zoo_create(zh, path, NULL, -1, &ZOO_OPEN_ACL_UNSAFE, ZOO_PERSISTENT, NULL,
+               0);
+    char buffer[512];
+    int buffer_len = sizeof(buffer);
 
-    char path[512] = "/";
-    strcat(path, criterion_current_test->name);
+    // act & assert
+    assert(zoo_deleteall(zh, path, -1) >= 0);
+    assert(!errno);
+    assert(zoo_get(zh, path, 0, buffer, &buffer_len, NULL) == ZNONODE);
+    return 0;
+}
+
+int test_zoo_deleteall_success() {
+    // arrange
+    char *path = "/utest";
     zoo_create(zh, path, NULL, -1, &ZOO_OPEN_ACL_UNSAFE, ZOO_PERSISTENT, NULL,
                0);
 
+    path = "/utest/child1";
+    zoo_create(zh, path, NULL, -1, &ZOO_OPEN_ACL_UNSAFE, ZOO_PERSISTENT, NULL,
+               0);
+
+    path = "/utest/child2";
+    zoo_create(zh, path, NULL, -1, &ZOO_OPEN_ACL_UNSAFE, ZOO_PERSISTENT, NULL,
+               0);
+
+    path = "/utest/child2/grandchild1";
+    zoo_create(zh, path, NULL, -1, &ZOO_OPEN_ACL_UNSAFE, ZOO_PERSISTENT, NULL,
+               0);
+
+    path = "/utest/child2/grandchild2";
+    zoo_create(zh, path, NULL, -1, &ZOO_OPEN_ACL_UNSAFE, ZOO_PERSISTENT, NULL,
+               0);
+
+    path = "/utest";
     char buffer[512];
     int buffer_len = sizeof(buffer);
 
     // act
-    int res = zoo_deleteall(zh, path, -1);
-    int rc = zoo_get(zh, path, 0, buffer, &buffer_len, NULL);
-
-    // assert
-    cr_assert(res >= 0);
-    cr_assert_eq(errno, 0);
-    cr_assert_eq(rc, ZNONODE);
+    assert(zoo_deleteall(zh, path, -1) >= 0);
+    assert(!errno);
+    assert(zoo_get(zh, path, 0, buffer, &buffer_len, NULL) == ZNONODE);
+    return 0;
 }
 
-Test(zookeeper_util, test_zoo_deleteall_success) {
-    // arrange
+void setup() {
     errno = 0;
-    zhandle_t *zh = zookeeper_init("127.0.0.1:2181", watcher, 10000, 0, 0, 0);
+    zoo_set_debug_level(0);
+    zh = zookeeper_init(TEST_ZOOKEEPER_SERVER_HOST, watcher, 10000, 0, 0, 0);
+}
 
-    char path[512] = "/";
-    strcat(path, criterion_current_test->name);
-    zoo_create(zh, path, NULL, -1, &ZOO_OPEN_ACL_UNSAFE, ZOO_PERSISTENT, NULL,
-               0);
+void teardown() { zookeeper_close(zh); }
 
-    strcat(path, "/child1");
-    zoo_create(zh, path, NULL, -1, &ZOO_OPEN_ACL_UNSAFE, ZOO_PERSISTENT, NULL,
-               0);
+static struct test test_cases[] = {
+    {setup, teardown, test_zoo_deleteall_throws_when_invalid_args},
+    {setup, teardown, test_zoo_deleteall_throws_when_znode_does_not_exist},
+    {setup, teardown, test_zoo_deleteall_success_when_no_children},
+    {setup, teardown, test_zoo_deleteall_success}};
 
-    memset(path, 0, sizeof(path));
-    snprintf(path, sizeof(path), "/%s/child2", criterion_current_test->name);
-    zoo_create(zh, path, NULL, -1, &ZOO_OPEN_ACL_UNSAFE, ZOO_PERSISTENT, NULL,
-               0);
+int main() {
+    unsigned int passed = 0;
 
-    memset(path, 0, sizeof(path));
-    snprintf(path, sizeof(path), "/%s/child2/grandchild1",
-             criterion_current_test->name);
-    zoo_create(zh, path, NULL, -1, &ZOO_OPEN_ACL_UNSAFE, ZOO_PERSISTENT, NULL,
-               0);
+    for (int i = 0; i < arrlen(test_cases); i++) {
+        if (test_cases[i].setup) {
+            test_cases[i].setup();
+        }
 
-    memset(path, 0, sizeof(path));
-    snprintf(path, sizeof(path), "/%s/child2/grandchild2",
-             criterion_current_test->name);
-    zoo_create(zh, path, NULL, -1, &ZOO_OPEN_ACL_UNSAFE, ZOO_PERSISTENT, NULL,
-               0);
+        if (test_cases[i].test_case() >= 0) {
+            passed++;
+        }
 
-    memset(path, 0, sizeof(path));
-    snprintf(path, sizeof(path), "/%s", criterion_current_test->name);
+        if (test_cases[i].teardown) {
+            test_cases[i].teardown();
+        }
+    }
 
-    char buffer[512];
-    int buffer_len = sizeof(buffer);
-
-    // act
-    int res = zoo_deleteall(zh, path, -1);
-    int rc = zoo_get(zh, path, 0, buffer, &buffer_len, NULL);
-
-    // assert
-    cr_assert(res >= 0);
-    cr_assert_eq(errno, 0);
-    cr_assert_eq(rc, ZNONODE);
+    printf("Successfully passed %d/%d tests\n!", passed, arrlen(test_cases));
+    return 0;
 }
