@@ -5,27 +5,23 @@
 
 #define MAX_TOPIC_NAME_LEN 32
 
-// TODO: have specific error for conn failure
 /**
  * Initializes the client by establishing a connection to the metadata
- * server.
+ * server. Behavior is undefined and handled by ZooKeeper if the connection fails.
  *
  * @param host comma separated host:port pairs, each corresponding to a metadata 
  * server. e.g. "127.0.0.1:3000,127.0.0.1:3001,127.0.0.1:3002" 
  * @returns 0 if success, -1 if error with global `errno` set
  * @throws `EINVAL` invalid arguments
  * @throws `EALREADY` client already initialized
- * @throws `EIO` unexpected error, likely connection to metadata server failure
+ * @throws `EIO` unexpected error
  */
 int client_init(const char *host);
 
 /**
- * Closes connections initialized by the client.
- *
- * @returns 0 if success, -1 if error with global `errno` set
- * @throws `EINVAL` client not initialized
+ * Closes resources initialized by the client.
  */
-int client_destroy(void);
+void client_destroy(void);
 
 /**
  * Creates a topic in the distributed message queue, allocating partitions as

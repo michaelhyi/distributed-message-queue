@@ -13,7 +13,6 @@
 
 static zhandle_t *zh = NULL;
 
-// TODO: impl
 void watcher(zhandle_t *zzh, int type, int state, const char *path,
              void *watcherCtx) {
     (void)zzh;
@@ -24,12 +23,12 @@ void watcher(zhandle_t *zzh, int type, int state, const char *path,
 }
 
 int client_init(const char *host) {
-    if (host == NULL) {
+    if (!host) {
         errno = EINVAL;
         return -1;
     }
 
-    if (zh != NULL) {
+    if (zh) {
         errno = EALREADY;
         return -1;
     }
@@ -43,21 +42,13 @@ int client_init(const char *host) {
     return 0;
 }
 
-int client_destroy(void) {
-    if (zh == NULL) {
-        errno = EINVAL;
-        return -1;
+void client_destroy(void) {
+    if (!zh) {
+        return;
     }
 
-    int res = zookeeper_close(zh);
-    if (res < 0) {
-        zh = NULL;
-        errno = EIO;
-        return -1;
-    }
-
+    zookeeper_close(zh);
     zh = NULL;
-    return 0;
 }
 
 /**

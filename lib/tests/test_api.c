@@ -41,8 +41,44 @@ void teardown() {
     zookeeper_close(zh);
 }
 
-// TODO: test client_init() and client_destroy()
 // TODO: reorder file contents
+
+int test_client_init_throws_if_invalid_args() {
+    // arrange
+    errno = 0;
+
+    // act & assert
+    assert(client_init(NULL) < 0);
+    assert(errno == EINVAL);
+    return 0;
+}
+
+int test_client_init_throws_if_client_already_initialized() {
+    // arrange
+    errno = 0;
+    client_init("127.0.0.1:2181");
+
+    // act & assert
+    assert(client_init("127.0.0.1:2181") < 0);
+    assert(errno == EALREADY);
+
+    // cleanup
+    client_destroy();
+    return 0;
+}
+
+int test_client_init_success() {
+    // arrange
+    errno = 0;
+
+    // act & assert
+    assert(client_init("127.0.0.1:2181") >= 0);
+    assert(!errno);
+
+    // cleanup
+    client_destroy();
+    return 0;
+}
 
 int test_create_topic_throws_if_client_uninitialized() {
     // arrange
@@ -255,6 +291,9 @@ int test_create_topic_success() {
 }
 
 static struct test test_cases[] = {
+    {NULL, NULL, test_client_init_throws_if_invalid_args},
+    {NULL, NULL, test_client_init_throws_if_client_already_initialized},
+    {NULL, NULL, test_client_init_success},
     {NULL, NULL, test_create_topic_throws_if_client_uninitialized},
     {setup, teardown, test_create_topic_throws_if_invalid_args},
     {setup, teardown, test_create_topic_throws_if_not_enough_partitions},
