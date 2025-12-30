@@ -1,63 +1,96 @@
-# TODO: give project a name + make this an actual system library
-# TODO: test_api target not deleting on `clean`, maybe just separate common mk file?
+CC 	   := gcc
+CFLAGS := -I../include \
+		  -Wall -Wextra -Werror \
+		  -pedantic \
+		  -std=c11 \
+		  -MMD -MP
 
-LDFLAGS 		:= -lzookeeper_mt
-TARGET 			:= lib.a
-TEST_TARGET 	:= test_lib
-TEST_API_TARGET := test_api
+CFLAGS += -D_GNU_SOURCE # allows usleep(), kill()
+CFLAGS += -DTHREADED 	# allows zoo_create()
 
-TEST_NETWORK_TARGET := test_network
+RELEASE_CFLAGS := -O2
+DEBUG_CFLAGS   := -g -O0 -fno-inline -DDEBUG
+TEST_CFLAGS    := -I.
+LDFLAGS 	   := -lzookeeper_mt
 
-TEST_ZOOKEEPER_UTIL_TARGET := test_zookeeper_util 
+AR 		 := ar
+AR_FLAGS := rcs
+
+GDB := gdb
+
+VALGRIND  	   := valgrind
+VALGRIND_FLAGS := --leak-check=full \
+				  --show-leak-kinds=all \
+				  --track-origins=yes \
+				  --trace-children=yes \
+
+TEST_DIR := tests
+
+TARGET 		:= libmessageq.a
+TEST_TARGET := test_api \
+			   test_network \
+			   test_zookeeper_util 
 
 OBJ := api.o \
 	   network.o \
 	   zookeeper_util.o
-
 DEBUG_OBJ := $(OBJ:%.o=debug_%.o)
-
-TEST_OBJ := test_api.o \
- 			test_network.o \
-			test_zookeeper_util.o
+TEST_OBJ  := $(OBJ:%.o=test_%.o)
 
 DEPS := $(OBJ:.o=.d) $(DEBUG_OBJ:.o=.d) $(TEST_OBJ:.o=.d)
 
-OVERRIDE_LDFLAGS := 1
-OVERRIDE_TARGET  := 1
-OVERRIDE_HELP    := 1
+GDB_TARGET      := $(TEST_TARGET:%=gdb-%)
+VALGRIND_TARGET := $(TEST_TARGET:%=valgrind-%)
 
-include ../tools/common.mk
+.DELETE_ON_ERROR:
+.PHONY: all release debug test $(GDB_TARGET) $(VALGRIND_TARGET) format clean help
 
-CFLAGS += -D_GNU_SOURCE # allows usleep() and kill()
-CFLAGS += -DTHREADED 	# allows zoo_create()
-
-.PHONY: $(TEST_API_TARGET) $(TEST_NETWORK_TARGET)
+all: release
+release: $(TARGET)
 
 $(TARGET): $(OBJ)
-	@$(AR) $(AR_FLAGS) $(TARGET) $(OBJ)
+	@$(AR) $(AR_FLAGS) $@ $^
 
-$(TEST_API_TARGET): $(DEBUG_OBJ) $(TEST_OBJ)
-	@$(CC) debug_api.o debug_zookeeper_util.o test_api.o -o $(TEST_API_TARGET) $(LDFLAGS) 
-
-$(TEST_NETWORK_TARGET): $(DEBUG_OBJ) $(TEST_OBJ)
-	@$(CC) debug_network.o test_network.o -o $(TEST_NETWORK_TARGET) $(LDFLAGS) 
-
-$(TEST_ZOOKEEPER_UTIL_TARGET): $(DEBUG_OBJ) $(TEST_OBJ)
-	@$(CC) debug_zookeeper_util.o test_zookeeper_util.o -o $(TEST_ZOOKEEPER_UTIL_TARGET) $(LDFLAGS) 
+$(OBJ): CFLAGS += $(RELEASE_CFLAGS)
+$(OBJ): %.o: %.c
+	@$(CC) $(CFLAGS) -c $< -o $@
 
 debug: $(DEBUG_OBJ)
+$(DEBUG_OBJ): CFLAGS += $(DEBUG_CFLAGS)
+$(DEBUG_OBJ): debug_%.o: %.c
+	@$(CC) $(CFLAGS) -c $< -o $@
 
-# TODO:
-# clean:
-# 	@rm -f $(TEST_API_TARGET) $(TEST_NETWORK_TARGET)
+test: $(TEST_TARGET)
+$(TEST_TARGET): %: %.o $(DEBUG_OBJ)
+	@$(CC) $^ -o $@ $(LDFLAGS) 
+
+$(TEST_OBJ): CFLAGS += $(TEST_CFLAGS) $(DEBUG_CFLAGS)
+$(TEST_OBJ): %.o: $(TEST_DIR)/%.c
+	@$(CC) $(CFLAGS) -c $< -o $@
+
+$(GDB_TARGET): gdb-%: %
+	@$(GDB) $<
+
+$(VALGRIND_TARGET): valgrind-%: %
+	@$(VALGRIND) $(VALGRIND_FLAGS) ./$<
+
+format:
+	@find . \( -name "*.c" -o -name "*.h" \) -exec clang-format -style='{BasedOnStyle: llvm, IndentWidth: 4}' -i {} +
+
+clean:
+	@rm -f $(TARGET) $(TEST_TARGET)
+	@rm -f $(OBJ) $(DEBUG_OBJ) $(TEST_OBJ)
+	@rm -f $(DEPS)
 
 help:
 	@echo "Available targets:"
 	@echo "	release           - Build release library"
 	@echo "	debug             - Build debug objects"
-	@echo "	test              - Build test executable"
-	@echo "	gdb-server-test   - Start GDB server for tests"
-	@echo "	gdb-test          - Attach to GDB server for tests"
-	@echo "	valgrind-test     - Run tests under Valgrind"
+	@echo "	test              - Build test binaries"
+	@echo "	gdb-{binary}      - Run GDB on binary"
+	@echo "	valgrind-{binary} - Run Valgrind on binary"
+	@echo "	format            - Format source code"
 	@echo "	clean             - Remove all build artifacts"
 	@echo "	help              - Display this message"
+
+-include $(DEPS)
