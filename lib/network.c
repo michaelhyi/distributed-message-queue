@@ -46,6 +46,7 @@ cleanup:
 }
 
 volatile int server_running = 0;
+unsigned short server_port = 0;
 static struct sigaction sa;
 static struct sigaction sa_ignore;
 
@@ -174,8 +175,13 @@ int dmqp_server_init(unsigned short port) {
         goto cleanup;
     }
 
+    if (getsockname(server, (struct sockaddr *)&address, &address_len) < 0) {
+        goto cleanup;
+    }
+
     server_running = 1;
-    printf("DMQP Server listening on port %d\n", ntohs(address.sin_port));
+    server_port = ntohs(address.sin_port);
+    printf("DMQP Server listening on port %d\n", server_port);
 
     while (server_running) {
         struct sockaddr_in client_address;

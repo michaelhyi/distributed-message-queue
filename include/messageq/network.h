@@ -22,6 +22,7 @@ struct dmqp_message {
 };
 
 extern volatile int server_running;
+extern unsigned short server_port;
 
 // TODO: TLS
 
