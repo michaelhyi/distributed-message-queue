@@ -57,7 +57,7 @@ $(DEBUG_OBJ): debug_%.o: %.c
 	@$(CC) $(CFLAGS) -c $< -o $@
 
 test: $(TEST_TARGET)
-$(TEST_TARGET): %: %.o $(DEBUG_OBJ)
+$(TEST_TARGET): %: %.o $(filter-out debug_main.o, $(DEBUG_OBJ))
 	@$(CC) $^ -o $@ $(LDFLAGS) 
 
 $(TEST_OBJ): CFLAGS += $(TEST_CFLAGS) $(DEBUG_CFLAGS)

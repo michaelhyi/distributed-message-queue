@@ -4,6 +4,8 @@
 #include <stdio.h>
 #include <string.h>
 
+#include "util.h"
+
 #define assert(expr)                                                           \
     if (!(expr)) {                                                             \
         fprintf(stderr, "Assertion failed at %s:%d with error: %s\n",          \
