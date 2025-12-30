@@ -466,3 +466,5 @@
 //     close(mock_sockets[0]);
 //     partition_destroy();
 // }
+
+int main() { return 0; }
