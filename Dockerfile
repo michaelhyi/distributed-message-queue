@@ -6,16 +6,13 @@ RUN rm /etc/dpkg/dpkg.cfg.d/docker
 RUN apt-get update && apt-get install -y \
     less \
     vim \
+    # ps
+    procps \
+    wget \
 
     man-db \
     manpages \
     manpages-dev \
-
-    # ps
-    procps \
-
-    # wget used for installing zookeeper
-    wget \
 
     # zookeeper
     default-jdk \
@@ -23,13 +20,11 @@ RUN apt-get update && apt-get install -y \
 
     # gcc, make 
 	build-essential \
-
 	gdb \
-	gdbserver \
 	valgrind \
     clang-format \
 
-    # tests 
+    # tests
     libcriterion-dev && \
 
     rm -rf /var/lib/apt/lists/*

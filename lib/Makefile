@@ -4,7 +4,6 @@ CFLAGS := -I../include \
 		  -pedantic \
 		  -std=c11 \
 		  -MMD -MP
-
 CFLAGS += -D_GNU_SOURCE # allows usleep(), kill()
 CFLAGS += -DTHREADED 	# allows zoo_create()
 
@@ -22,18 +21,16 @@ VALGRIND  	   := valgrind
 VALGRIND_FLAGS := --leak-check=full \
 				  --show-leak-kinds=all \
 				  --track-origins=yes \
-				  --trace-children=yes \
-
-TEST_DIR := tests
+				  --trace-children=yes
 
 TARGET 		:= libmessageq.a
 TEST_TARGET := test_api \
 			   test_network \
 			   test_zookeeper_util 
 
-OBJ := api.o \
-	   network.o \
-	   zookeeper_util.o
+OBJ 	  := api.o \
+	   		 network.o \
+	   		 zookeeper_util.o
 DEBUG_OBJ := $(OBJ:%.o=debug_%.o)
 TEST_OBJ  := $(OBJ:%.o=test_%.o)
 
@@ -65,7 +62,7 @@ $(TEST_TARGET): %: %.o $(DEBUG_OBJ)
 	@$(CC) $^ -o $@ $(LDFLAGS) 
 
 $(TEST_OBJ): CFLAGS += $(TEST_CFLAGS) $(DEBUG_CFLAGS)
-$(TEST_OBJ): %.o: $(TEST_DIR)/%.c
+$(TEST_OBJ): %.o: tests/%.c
 	@$(CC) $(CFLAGS) -c $< -o $@
 
 $(GDB_TARGET): gdb-%: %
