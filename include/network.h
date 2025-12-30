@@ -59,12 +59,11 @@ int dmqp_server_init(unsigned short port);
  */
 int read_dmqp_message(int fd, struct dmqp_message *buf);
 
-// TODO: must validate socket
 /**
- * Sends a DMQP message to a socket. Converts header fields to network byte
- * order (big endian).
+ * Sends a DMQP message to a file descriptor. Converts header fields to network
+ * byte order (big endian).
  *
- * @param socket socket to write to
+ * @param fd file descriptor to write to
  * @param buffer DMQP message buffer to send
  * @param flags same flags param as send syscall
  * @returns 0 on success, -1 if error with global `errno` set
@@ -72,7 +71,7 @@ int read_dmqp_message(int fd, struct dmqp_message *buf);
  * @throws `EMSGSIZE` message payload too large
  * @throws `EIO` unexpected error
  */
-int send_dmqp_message(int socket, const struct dmqp_message *buffer, int flags);
+int send_dmqp_message(int fd, const struct dmqp_message *buffer, int flags);
 
 // ----------------------------------------------------------------------------
 // The following functions must be implemented separately by each DMQP server.

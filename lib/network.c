@@ -358,9 +358,8 @@ static int send_dmqp_header(int socket, const struct dmqp_header *buffer,
     return 0;
 }
 
-int send_dmqp_message(int socket, const struct dmqp_message *buffer,
-                      int flags) {
-    if (socket < 0 || !buffer ||
+int send_dmqp_message(int fd, const struct dmqp_message *buffer, int flags) {
+    if (fd < 0 || !buffer ||
         (buffer->header.length > 0 && buffer->payload == NULL)) {
         errno = EINVAL;
         return -1;
@@ -371,7 +370,7 @@ int send_dmqp_message(int socket, const struct dmqp_message *buffer,
         return -1;
     }
 
-    if (send_dmqp_header(socket, &buffer->header, flags) < 0) {
+    if (send_dmqp_header(fd, &buffer->header, flags) < 0) {
         errno = EIO;
         return -1;
     }
@@ -380,7 +379,7 @@ int send_dmqp_message(int socket, const struct dmqp_message *buffer,
         return 0;
     }
 
-    if (send_all(socket, buffer->payload, buffer->header.length, flags) < 0) {
+    if (send_all(fd, buffer->payload, buffer->header.length, flags) < 0) {
         errno = EIO;
         return -1;
     }
