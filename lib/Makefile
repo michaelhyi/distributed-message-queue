@@ -36,11 +36,12 @@ TEST_OBJ  := $(OBJ:%.o=test_%.o)
 
 DEPS := $(OBJ:.o=.d) $(DEBUG_OBJ:.o=.d) $(TEST_OBJ:.o=.d)
 
-GDB_TARGET      := $(TEST_TARGET:%=gdb-%)
-VALGRIND_TARGET := $(TEST_TARGET:%=valgrind-%)
+GDB_TEST_TARGET      := $(TEST_TARGET:%=gdb-%)
+VALGRIND_TEST_TARGET := $(TEST_TARGET:%=valgrind-%)
 
 .DELETE_ON_ERROR:
-.PHONY: all release debug test $(GDB_TARGET) $(VALGRIND_TARGET) format clean help
+.PHONY: all release debug test $(GDB_TEST_TARGET) $(VALGRIND_TEST_TARGET) \
+		format clean help
 
 all: release
 release: $(TARGET)
@@ -65,10 +66,10 @@ $(TEST_OBJ): CFLAGS += $(TEST_CFLAGS) $(DEBUG_CFLAGS)
 $(TEST_OBJ): %.o: tests/%.c
 	@$(CC) $(CFLAGS) -c $< -o $@
 
-$(GDB_TARGET): gdb-%: %
+$(GDB_TEST_TARGET): gdb-%: %
 	@$(GDB) $<
 
-$(VALGRIND_TARGET): valgrind-%: %
+$(VALGRIND_TEST_TARGET): valgrind-%: %
 	@$(VALGRIND) $(VALGRIND_FLAGS) ./$<
 
 format:
