@@ -2,9 +2,9 @@
 #define QUEUE_H
 
 struct queue_entry {
+    unsigned int id;
     void *data;
     unsigned int size;
-    long timestamp;
 };
 
 struct queue_node {
@@ -21,19 +21,24 @@ struct queue {
  * Initializes a queue.
  *
  * @param queue the queue to init
- * @returns 0 on success, -1 if error with global `errno` set
  */
-int queue_init(struct queue *queue);
+void queue_init(struct queue *queue);
+
+/**
+ * Destroys a queue, freeing all its resources.
+ *
+ * @param queue the queue to destroy
+ */
+void queue_destroy(struct queue *queue);
 
 /**
  * Pushes data on a queue.
  *
- * Throws an error if any args are null, if `entry->data` is null, or if
- * `entry->size` is 0.
- *
  * @param queue the queue to update
  * @param entry the entry to push
  * @returns 0 on success, -1 if error with global `errno` set
+ * @throws `EINVAL` invalid args
+ * @throws `ENOMEM` out of memory
  */
 int queue_push(struct queue *queue, const struct queue_entry *entry);
 
@@ -41,35 +46,21 @@ int queue_push(struct queue *queue, const struct queue_entry *entry);
  * Pops data off a queue.
  *
  * @param queue the queue to update
- * @param entry output param returning the popped queue entry
- * @returns 0 if success, -1 if error with global `errno` set
+ * @returns popped queue entry if success, must be freed by caller. `NULL` if
+ * error with global `errno` set. must be freed by caller
+ * @throws `EINVAL` invalid args
+ * @throws `ENODATA` queue empty
  */
-int queue_pop(struct queue *queue, struct queue_entry *entry);
+struct queue_entry *queue_pop(struct queue *queue);
 
 /**
- * Gets the head of a queue.
+ * Gets the ID of the head of a queue.
  *
  * @param queue the queue to peek
- * @param entry output param returning the head queue entry
- * @returns 0 if success, -1 if error with global `errno` set
+ * @returns queue's head id if success, -1 if error
+ * @throws `EINVAL` invalid args
+ * @throws `ENODATA` queue empty
  */
-int queue_peek(struct queue *queue, struct queue_entry *entry);
-
-/**
- * Gets the timestamp of the head of a queue.
- *
- * @param queue the queue to peek
- * @param timestamp output param returning the head timestamp
- * @returns 0 if success, -1 if error with global `errno` set
- */
-int queue_peek_timestamp(struct queue *queue, long *timestamp);
-
-/**
- * Destroys a queue. No threads should hold the queue's lock.
- *
- * @param queue the queue to destroy
- * @returns 0 on success, -1 if error with global `errno` set
- */
-int queue_destroy(struct queue *queue);
+int queue_peek_id(struct queue *queue);
 
 #endif

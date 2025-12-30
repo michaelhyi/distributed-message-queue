@@ -5,66 +5,75 @@
 #include <string.h>
 #include <time.h>
 
+void queue_init(struct queue *queue) {
+    if (!queue) {
+        return;
+    }
+
+    queue->head = NULL;
+    queue->tail = NULL;
+}
+
+void queue_destroy(struct queue *queue) {
+    if (!queue) {
+        return;
+    }
+
+    struct queue_node *curr = queue->head;
+    while (curr) {
+        struct queue_node *temp = curr->next;
+        free(curr->entry.data);
+        free(curr);
+        curr = temp;
+    }
+
+    queue->head = NULL;
+    queue->tail = NULL;
+}
+
 /**
- * Creates a new queue node with the given entry. Deep copies the entry. Must be
- * holding the queue's lock.
+ * Creates a new queue node with the given entry. Deep copies the entry.
  *
  * @param entry entry to copy in node
  * @returns pointer to the queue node, `NULL` if error with global `errno` set
+ * @throws `ENOMEM` malloc failure
  */
 static struct queue_node *create_node(const struct queue_entry *entry) {
-    if (entry == NULL || entry->data == NULL || entry->size == 0) {
-        errno = EINVAL;
-        return NULL;
-    }
-
     struct queue_node *node = malloc(sizeof(struct queue_node));
-    if (node == NULL) {
+    if (!node) {
         errno = ENOMEM;
         return NULL;
     }
 
     node->entry.data = malloc(entry->size);
-    if (node->entry.data == NULL) {
+    if (!node->entry.data) {
         free(node);
         errno = ENOMEM;
         return NULL;
     }
     memcpy(node->entry.data, entry->data, entry->size);
     node->entry.size = entry->size;
-    node->entry.timestamp = entry->timestamp;
+    node->entry.id = entry->id;
     node->next = NULL;
 
     return node;
 }
 
-int queue_init(struct queue *queue) {
-    if (queue == NULL) {
-        errno = EINVAL;
-        return -1;
-    }
-
-    queue->head = NULL;
-    queue->tail = NULL;
-    return 0;
-}
-
 int queue_push(struct queue *queue, const struct queue_entry *entry) {
-    if (queue == NULL || entry == NULL || entry->data == NULL ||
-        entry->size == 0) {
+    if (!queue || !entry || !entry->data || !entry->size) {
         errno = EINVAL;
         return -1;
     }
 
     struct queue_node *node = create_node(entry);
-    if (node == NULL) {
+    if (!node) {
         return -1;
     }
 
-    if (queue->head == NULL) {
+    if (!queue->head) { // empty
         queue->head = node;
         queue->tail = node;
-    } else if (queue->head == queue->tail) {
+    } else if (queue->head == queue->tail) { // queue has 1 element
         queue->head->next = node;
         queue->tail = node;
     } else {
@@ -75,77 +84,39 @@ int queue_push(struct queue *queue, const struct queue_entry *entry) {
     return 0;
 }
 
-int queue_pop(struct queue *queue, struct queue_entry *entry) {
-    if (queue == NULL || entry == NULL) {
+struct queue_entry *queue_pop(struct queue *queue) {
+    if (!queue) {
         errno = EINVAL;
-        return -1;
+        return NULL;
     }
 
-    if (queue->head == NULL) {
+    if (!queue->head) { // empty
         errno = ENODATA;
-        return -1;
+        return NULL;
     }
 
     struct queue_node *node = queue->head;
 
-    if (queue->head == queue->tail) {
+    if (queue->head == queue->tail) { // queue has 1 element
         queue->head = NULL;
         queue->tail = NULL;
     } else {
         queue->head = queue->head->next;
     }
 
-    *entry = node->entry;
-    free(node);
-    return 0;
+    return &node->entry;
 }
 
-int queue_peek(struct queue *queue, struct queue_entry *entry) {
-    if (queue == NULL || entry == NULL) {
+int queue_peek_id(struct queue *queue) {
+    if (!queue) {
         errno = EINVAL;
         return -1;
     }
 
-    if (queue->head == NULL) {
+    if (!queue->head) {
         errno = ENODATA;
         return -1;
     }
 
-    *entry = queue->head->entry;
-    return 0;
-}
-
-int queue_peek_timestamp(struct queue *queue, long *timestamp) {
-    if (queue == NULL || timestamp == NULL) {
-        errno = EINVAL;
-        return -1;
-    }
-
-    if (queue->head == NULL) {
-        errno = ENODATA;
-        return -1;
-    }
-
-    *timestamp = queue->head->entry.timestamp;
-    return 0;
-}
-
-int queue_destroy(struct queue *queue) {
-    if (queue == NULL) {
-        errno = EINVAL;
-        return -1;
-    }
-
-    struct queue_node *curr = queue->head;
-
-    while (curr != NULL) {
-        struct queue_node *temp = curr->next;
-        free(curr->entry.data);
-        free(curr);
-        curr = temp;
-    }
-
-    queue->head = NULL;
-    queue->tail = NULL;
-    return 0;
+    return queue->head->entry.id;
 }
