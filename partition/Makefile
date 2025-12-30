@@ -26,7 +26,7 @@ OBJ 	   := main.o \
 	   		  partition.o \
 	   		  queue.o
 DEBUG_OBJ := $(OBJ:%.o=debug_%.o)
-TEST_OBJ  := $(filter-out main.o, $(OBJ):%.o=test_%.o)
+TEST_OBJ  := $(filter-out test_main.o, $(OBJ:%.o=test_%.o))
 
 DEPS := $(OBJ:.o=.d) $(DEBUG_OBJ:.o=.d) $(TEST_OBJ:.o=.d)
 
