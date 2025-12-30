@@ -7,10 +7,11 @@
 
 /**
  * Initializes the client by establishing a connection to the metadata
- * server. Behavior is undefined and handled by ZooKeeper if the connection fails.
+ * server. Behavior is undefined and handled by ZooKeeper if the connection
+ * fails.
  *
- * @param host comma separated host:port pairs, each corresponding to a metadata 
- * server. e.g. "127.0.0.1:3000,127.0.0.1:3001,127.0.0.1:3002" 
+ * @param host comma separated host:port pairs, each corresponding to a metadata
+ * server. e.g. "127.0.0.1:3000,127.0.0.1:3001,127.0.0.1:3002"
  * @returns 0 if success, -1 if error with global `errno` set
  * @throws `EINVAL` invalid arguments
  * @throws `EALREADY` client already initialized
@@ -30,10 +31,11 @@ void client_destroy(void);
  *
  * @param topic the topic to create
  * @returns 0 if success, -1 if error with global `errno` set
- * @throws `EINVAL` invalid arguments or topic name too long (max 32 chars) or client not initialized
+ * @throws `EINVAL` invalid arguments or topic name too long (max 32 chars) or
+ * client not initialized
  * @throws `EEXIST` topic already exists
  * @throws `ENODEV` partition allocation failure
- * @throws `EIO` unexpected error 
+ * @throws `EIO` unexpected error
  */
 int create_topic(const struct topic *topic);
 
@@ -44,9 +46,10 @@ int create_topic(const struct topic *topic);
  * @param topic_name name of the topic to push to
  * @param message the message to push
  * @returns 0 if success, -1 if error with global `errno` set
- * @throws `EINVAL` invalid arguments or topic name too long (max 32 chars) or client not initialized
+ * @throws `EINVAL` invalid arguments or topic name too long (max 32 chars) or
+ * client not initialized
  * @throws `ENODATA` topic does not exist
- * @throws `EIO` unexpected error 
+ * @throws `EIO` unexpected error
  */
 int push(const char *topic_name, const struct message *message);
 
@@ -57,10 +60,11 @@ int push(const char *topic_name, const struct message *message);
  * @param topic_name name of the topic to pop from
  * @param message output param to return the message
  * @returns 0 if success, -1 if error with global `errno` set
- * @throws `EINVAL` invalid arguments or topic name too long (max 32 chars) or client not initialized
+ * @throws `EINVAL` invalid arguments or topic name too long (max 32 chars) or
+ * client not initialized
  * @throws `ENODATA` topic does not exist
  * @throws `EACCES` current process not assigned as a consumer of this topic
- * @throws `EIO` unexpected error 
+ * @throws `EIO` unexpected error
  */
 int pop(const char *topic_name, struct message *message);
 

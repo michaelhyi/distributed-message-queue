@@ -5,7 +5,7 @@
 
 #define LISTEN_BACKLOG 128
 #define MAX_PAYLOAD_LENGTH (1 << 20) // 1MB
-#define DMQP_HEADER_SIZE 12 // bytes
+#define DMQP_HEADER_SIZE 12          // bytes
 
 enum dmqp_method { DMQP_PUSH, DMQP_POP, DMQP_PEEK_SEQUENCE_ID, DMQP_RESPONSE };
 
@@ -99,7 +99,8 @@ void handle_dmqp_pop(const struct dmqp_message *message, int client);
  * @param message message received by server
  * @param reply_socket socket to reply on
  */
-void handle_dmqp_peek_sequence_id(const struct dmqp_message *message, int client);
+void handle_dmqp_peek_sequence_id(const struct dmqp_message *message,
+                                  int client);
 
 /**
  * Handles a DMQP message with method `DMQP_RESPONSE`.
