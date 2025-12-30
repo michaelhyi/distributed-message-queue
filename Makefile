@@ -1,6 +1,6 @@
-MODULES := lib partition samples
+MODULES := lib partition
 
-.PHONY: all format $(MODULES) clean help
+.PHONY: all $(MODULES) format clean help
 
 all: $(MODULES)
 $(MODULES):
