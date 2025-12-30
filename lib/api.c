@@ -1,4 +1,4 @@
-#include "api.h"
+#include "messageq/api.h"
 
 #include <errno.h>
 #include <stdlib.h>

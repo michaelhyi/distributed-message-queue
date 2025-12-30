@@ -1,5 +1,6 @@
-#include "network.h"
-#include "test.h"
+#include "messageq/network.h"
+#include "messageq/test.h"
+#include "messageq/util.h"
 
 #include <arpa/inet.h>
 #include <errno.h>
@@ -8,8 +9,6 @@
 #include <stdlib.h>
 #include <sys/socket.h>
 #include <unistd.h>
-
-#include "util.h"
 
 struct targs {
     unsigned short port;

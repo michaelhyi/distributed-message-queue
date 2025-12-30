@@ -1,4 +1,4 @@
-#include "network.h"
+#include "messageq/network.h"
 
 #include <arpa/inet.h>
 #include <errno.h>

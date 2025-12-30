@@ -1,15 +1,15 @@
 // This test suite requires that a test ZooKeeper server be running at
 // 127.0.0.1:2182
 
-#include "api.h"
-#include "test.h"
+#include "messageq/api.h"
+#include "messageq/test.h"
+#include "messageq/util.h"
 
 #include <errno.h>
 #include <stdio.h>
 #include <string.h>
 #include <zookeeper/zookeeper.h>
 
-#include "util.h"
 #include "zookeeper_util.h"
 
 #define TEST_ZOOKEEPER_SERVER_HOST "127.0.0.1:2182"

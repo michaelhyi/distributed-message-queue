@@ -1,9 +1,18 @@
 #ifndef API_H
 #define API_H
 
-#include "types.h"
-
 #define MAX_TOPIC_NAME_LEN 32
+
+struct topic {
+    char *name;
+    unsigned int shards;
+    unsigned int replication_factor;
+};
+
+struct message {
+    void *data;
+    unsigned int size;
+};
 
 /**
  * Initializes the client by establishing a connection to the metadata
