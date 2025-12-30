@@ -20,7 +20,8 @@ VALGRIND_FLAGS := --leak-check=full \
 
 TARGET 		 := partition
 DEBUG_TARGET := debug_partition
-TEST_TARGET  := test_partition
+TEST_TARGET  := test_partition \
+				test_queue
 
 OBJ 	   := main.o \
 	   		  partition.o \
@@ -30,9 +31,12 @@ TEST_OBJ  := $(filter-out test_main.o, $(OBJ:%.o=test_%.o))
 
 DEPS := $(OBJ:.o=.d) $(DEBUG_OBJ:.o=.d) $(TEST_OBJ:.o=.d)
 
+GDB_TEST_TARGET      := $(TEST_TARGET:%=gdb-%)
+VALGRIND_TEST_TARGET := $(TEST_TARGET:%=valgrind-%)
+
 .DELETE_ON_ERROR:
-.PHONY: all release debug test gdb gdb-test valgrind valgrind-test format \
-		clean help
+.PHONY: all release debug test gdb $(GDB_TEST_TARGET) valgrind \
+		$(VALGRIND_TEST_TARGET) format clean help
 
 all: release
 release: $(TARGET)
@@ -53,7 +57,7 @@ $(DEBUG_OBJ): debug_%.o: %.c
 	@$(CC) $(CFLAGS) -c $< -o $@
 
 test: $(TEST_TARGET)
-$(TEST_TARGET): $(TEST_OBJ) $(DEBUG_OBJ)
+$(TEST_TARGET): %: %.o $(DEBUG_OBJ)
 	@$(CC) $^ -o $@ $(LDFLAGS) 
 
 $(TEST_OBJ): CFLAGS += $(TEST_CFLAGS) $(DEBUG_CFLAGS)
@@ -63,13 +67,13 @@ $(TEST_OBJ): %.o: tests/%.c
 gdb: $(DEBUG_TARGET)
 	@$(GDB) $<
 
-gdb-test: $(TEST_TARGET)
-	@$(GDB) $< 
+$(GDB_TEST_TARGET): gdb-%: %
+	@$(GDB) $<
 
 valgrind: $(DEBUG_TARGET)
 	@$(VALGRIND) $(VALGRIND_FLAGS) ./$<
 
-valgrind-test: $(TEST_TARGET)
+$(VALGRIND_TEST_TARGET): valgrind-%: %
 	@$(VALGRIND) $(VALGRIND_FLAGS) ./$<
 
 format:
