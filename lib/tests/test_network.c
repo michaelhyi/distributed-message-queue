@@ -61,27 +61,6 @@ static int send_all(int socket, const void *buffer, size_t length, int flags) {
     return 0;
 }
 
-void handle_dmqp_push(const struct dmqp_message *message, int client) {
-    (void)message;
-    (void)client;
-}
-
-void handle_dmqp_pop(const struct dmqp_message *message, int client) {
-    (void)message;
-    (void)client;
-}
-
-void handle_dmqp_peek_sequence_id(const struct dmqp_message *message,
-                                  int client) {
-    (void)message;
-    (void)client;
-}
-
-void handle_dmqp_response(const struct dmqp_message *message, int client) {
-    (void)message;
-    (void)client;
-}
-
 int test_dmqp_client_init_throws_when_invalid_args() {
     // arrange
     errno = 0;
@@ -130,7 +109,7 @@ int test_dmqp_server_init_handles_signals() {
     int signals[] = {SIGTERM, SIGINT};
 
     for (int i = 0; i < arrlen(signals); i++) {
-        struct targs args = {.port = 8081};
+        struct targs args = {.port = 8081 + i};
         pthread_t tid;
         pthread_create(&tid, NULL, start_test_dmqp_server, &args);
         sleep(1); // wait 1s for server to initialize
@@ -430,12 +409,12 @@ int test_send_dmqp_message_success_with_payload() {
 int test_dmqp_server_init_handles_message_with_unknown_method() {
     // arrange
     errno = 0;
-    struct targs args = {.port = 8082};
+    struct targs args = {.port = 8083};
     pthread_t tid;
     pthread_create(&tid, NULL, start_test_dmqp_server, &args);
     sleep(1); // wait 1s for server to initialize
 
-    int client = dmqp_client_init("127.0.0.1", 8082);
+    int client = dmqp_client_init("127.0.0.1", 8083);
 
     struct dmqp_header header = {0};
     header.method = DMQP_RESPONSE + 1;

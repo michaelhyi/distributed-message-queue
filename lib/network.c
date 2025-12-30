@@ -390,3 +390,27 @@ int send_dmqp_message(int socket, const struct dmqp_message *buffer,
 
     return 0;
 }
+
+__attribute__((weak)) void handle_dmqp_push(const struct dmqp_message *message,
+                                            int client) {
+    (void)message;
+    (void)client;
+}
+
+__attribute__((weak)) void handle_dmqp_pop(const struct dmqp_message *message,
+                                           int client) {
+    (void)message;
+    (void)client;
+}
+
+__attribute__((weak)) void
+handle_dmqp_peek_sequence_id(const struct dmqp_message *message, int client) {
+    (void)message;
+    (void)client;
+}
+
+__attribute__((weak)) void
+handle_dmqp_response(const struct dmqp_message *message, int client) {
+    (void)message;
+    (void)client;
+}
