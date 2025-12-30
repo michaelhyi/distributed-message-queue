@@ -47,7 +47,7 @@ int queue_push(struct queue *queue, const struct queue_entry *entry);
  *
  * @param queue the queue to update
  * @returns popped queue entry if success, must be freed by caller. `NULL` if
- * error with global `errno` set. must be freed by caller
+ * error with global `errno` set
  * @throws `EINVAL` invalid args
  * @throws `ENODATA` queue empty
  */
