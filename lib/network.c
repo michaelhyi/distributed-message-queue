@@ -25,8 +25,7 @@ int dmqp_client_init(const char *host, unsigned short port) {
         return -1;
     }
 
-    struct sockaddr_in address;
-    memset(&address, 0, sizeof address);
+    struct sockaddr_in address = {0};
     address.sin_family = AF_INET;
     address.sin_port = htons(port);
 
@@ -108,11 +107,11 @@ static void *connection_handler(void *arg) {
             handle_dmqp_response(&buf, client);
             break;
         default:;
-            struct dmqp_header header = {.sequence_id = 0,
-                                         .length = 0,
-                                         .method = DMQP_RESPONSE,
-                                         .status_code = ENOSYS};
+            struct dmqp_header header = {0};
+            header.method = DMQP_RESPONSE;
+            header.status_code = ENOSYS;
             struct dmqp_message response = {.header = header};
+
             send_dmqp_message(client, &response, 0);
             break;
         }
@@ -161,14 +160,13 @@ int dmqp_server_init(unsigned short port) {
         goto cleanup;
     }
 
-    struct sockaddr_in address;
-    memset(&address, 0, sizeof address);
+    struct sockaddr_in address = {0};
     address.sin_family = AF_INET;
     address.sin_addr.s_addr = INADDR_ANY;
     address.sin_port = htons(port);
     socklen_t address_len = sizeof address;
 
-    if (bind(server, (const struct sockaddr *)&address, address_len) < 0) {
+    if (bind(server, (struct sockaddr *)&address, address_len) < 0) {
         goto cleanup;
     }
 
@@ -195,8 +193,7 @@ int dmqp_server_init(unsigned short port) {
 
         // 30s timeout
         struct timeval tv = {.tv_sec = 30, .tv_usec = 0};
-        setsockopt(client, SOL_SOCKET, SO_RCVTIMEO, (const void *)&tv,
-                   sizeof tv);
+        setsockopt(client, SOL_SOCKET, SO_RCVTIMEO, (void *)&tv, sizeof tv);
 
         // tcp keepalive
         int keepalive = 1;

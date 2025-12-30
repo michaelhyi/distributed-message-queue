@@ -60,10 +60,8 @@ void client_destroy(void) {
  */
 static int get_num_free_partitions() {
     char buffer[16] = {0};
-    int buffer_len = sizeof(buffer) - 1;
-    int rc =
-        zoo_get(zh, "/partitions/free-count", 0, buffer, &buffer_len, NULL);
-    if (rc) {
+    int buffer_len = sizeof buffer - 1;
+    if (zoo_get(zh, "/partitions/free-count", 0, buffer, &buffer_len, NULL)) {
         errno = EIO;
         return -1;
     }
@@ -95,20 +93,10 @@ static int get_num_free_partitions() {
  * @throws `EIO` unexpected error
  */
 static int init_topic_metadata(const char *topic_name) {
-    if (topic_name == NULL || strnlen(topic_name, MAX_SERVER_ADDRESS_LEN + 1) >
-                                  MAX_SERVER_ADDRESS_LEN) {
-        errno = EINVAL;
-        return -1;
-    }
-
     char path[MAX_PATH_LEN];
 
     // /topics/{topic_name}
-    int n = snprintf(path, sizeof(path), "/topics/%s", topic_name);
-    if (n < 0) {
-        errno = EIO;
-        return -1;
-    }
+    snprintf(path, sizeof path, "/topics/%s", topic_name);
     int rc = zoo_create(zh, path, NULL, -1, &ZOO_OPEN_ACL_UNSAFE,
                         ZOO_PERSISTENT, NULL, 0);
     if (rc == ZNODEEXISTS) {
@@ -120,40 +108,25 @@ static int init_topic_metadata(const char *topic_name) {
     }
 
     // /topics/{topic_name}/sequence-id
-    n = snprintf(path, sizeof(path), "/topics/%s/sequence-id", topic_name);
-    if (n < 0) {
-        errno = EIO;
-        return -1;
-    }
-    rc = zoo_create(zh, path, "0", 1, &ZOO_OPEN_ACL_UNSAFE, ZOO_PERSISTENT,
-                    NULL, 0);
-    if (rc) {
+    snprintf(path, sizeof path, "/topics/%s/sequence-id", topic_name);
+    if (zoo_create(zh, path, "0", 1, &ZOO_OPEN_ACL_UNSAFE, ZOO_PERSISTENT, NULL,
+                   0)) {
         errno = EIO;
         return -1;
     }
 
     // /topics/{topic_name}/sequence-id/lock
-    n = snprintf(path, sizeof(path), "/topics/%s/sequence-id/lock", topic_name);
-    if (n < 0) {
-        errno = EIO;
-        return -1;
-    }
-    rc = zoo_create(zh, path, NULL, -1, &ZOO_OPEN_ACL_UNSAFE, ZOO_PERSISTENT,
-                    NULL, 0);
-    if (rc) {
+    snprintf(path, sizeof path, "/topics/%s/sequence-id/lock", topic_name);
+    if (zoo_create(zh, path, NULL, -1, &ZOO_OPEN_ACL_UNSAFE, ZOO_PERSISTENT,
+                   NULL, 0)) {
         errno = EIO;
         return -1;
     }
 
     // /topics/{topic_name}/shards
-    n = snprintf(path, sizeof(path), "/topics/%s/shards", topic_name);
-    if (n < 0) {
-        errno = EIO;
-        return -1;
-    }
-    rc = zoo_create(zh, path, NULL, -1, &ZOO_OPEN_ACL_UNSAFE, ZOO_PERSISTENT,
-                    NULL, 0);
-    if (rc) {
+    snprintf(path, sizeof path, "/topics/%s/shards", topic_name);
+    if (zoo_create(zh, path, NULL, -1, &ZOO_OPEN_ACL_UNSAFE, ZOO_PERSISTENT,
+                   NULL, 0)) {
         errno = EIO;
         return -1;
     }
@@ -176,14 +149,8 @@ static int init_topic_metadata(const char *topic_name) {
  * @throws `EIO` unexpected error
  */
 static int get_free_partition(char *partition_id) {
-    if (partition_id == NULL) {
-        errno = EINVAL;
-        return -1;
-    }
-
     struct String_vector partitions;
-    int rc = zoo_get_children(zh, "/partitions", 0, &partitions);
-    if (rc) {
+    if (zoo_get_children(zh, "/partitions", 0, &partitions)) {
         errno = EIO;
         return -1;
     }
@@ -195,15 +162,11 @@ static int get_free_partition(char *partition_id) {
         }
 
         char path[MAX_PATH_LEN] = {0};
-        int n = snprintf(path, sizeof(path), "/partitions/%s", partition);
-        if (n < 0) {
-            continue;
-        }
+        snprintf(path, sizeof(path), "/partitions/%s", partition);
 
         char buffer[512] = {0};
         int buffer_len = sizeof(buffer);
-        rc = zoo_get(zh, path, 0, buffer, &buffer_len, NULL);
-        if (rc) {
+        if (zoo_get(zh, path, 0, buffer, &buffer_len, NULL)) {
             continue;
         }
         buffer[buffer_len] = '\0';
@@ -233,28 +196,15 @@ static int get_free_partition(char *partition_id) {
  * @throws `EIO` unexpected error
  */
 static int create_replica(const char *shard_path) {
-    if (shard_path == NULL) {
-        errno = EINVAL;
-        return -1;
-    }
-
     char partition_id[MAX_PATH_LEN] = {0};
-    int res = get_free_partition(partition_id);
-    if (res < 0) {
-        if (errno != ENODEV) {
-            errno = EIO;
-        }
-
-        return -1;
-    }
+    get_free_partition(partition_id);
 
     // /topics/{topic_name}/shards/shard-{sequence_id}/partitions/partition-{sequence_id}
     char path[MAX_PATH_LEN] = {0};
     strcat(path, shard_path);
     strcat(path, partition_id);
-    int rc = zoo_create(zh, path, partition_id, strlen(partition_id),
-                        &ZOO_OPEN_ACL_UNSAFE, ZOO_PERSISTENT, NULL, 0);
-    if (rc) {
+    if (zoo_create(zh, path, partition_id, strlen(partition_id),
+                   &ZOO_OPEN_ACL_UNSAFE, ZOO_PERSISTENT, NULL, 0)) {
         errno = EIO;
         return -1;
     }
@@ -262,8 +212,7 @@ static int create_replica(const char *shard_path) {
     // get data of allocated partition and append its assigned shard
     char buffer[512] = {0};
     int buffer_len = sizeof(buffer) - 1;
-    rc = zoo_get(zh, partition_id, 0, buffer, &buffer_len, NULL);
-    if (rc) {
+    if (zoo_get(zh, partition_id, 0, buffer, &buffer_len, NULL)) {
         errno = EIO;
         return -1;
     }
@@ -271,27 +220,15 @@ static int create_replica(const char *shard_path) {
 
     strcat(buffer, ";");
     strcat(buffer, shard_path);
-    rc = zoo_set(zh, partition_id, buffer, strlen(buffer), -1);
-    if (rc) {
+    if (zoo_set(zh, partition_id, buffer, strlen(buffer), -1)) {
         errno = EIO;
         return -1;
     }
 
     int free_cnt = get_num_free_partitions();
-    if (free_cnt < 0) {
-        errno = EIO;
-        return -1;
-    }
-
     char buf[16] = {0};
-    int n = snprintf(buf, sizeof buf, "%d", free_cnt - 1);
-    if (n < 0) {
-        errno = EIO;
-        return -1;
-    }
-
-    rc = zoo_set(zh, "/partitions/free-count", buf, strlen(buf), -1);
-    if (rc) {
+    snprintf(buf, sizeof buf, "%d", free_cnt - 1);
+    if (zoo_set(zh, "/partitions/free-count", buf, strlen(buf), -1)) {
         errno = EIO;
         return -1;
     }
@@ -318,27 +255,14 @@ static int create_replica(const char *shard_path) {
  */
 static int create_shard(const char *topic_name,
                         unsigned int replication_factor) {
-    if (topic_name == NULL ||
-        strnlen(topic_name, MAX_TOPIC_NAME_LEN + 1) > MAX_TOPIC_NAME_LEN ||
-        replication_factor == 0) {
-        errno = EINVAL;
-        return -1;
-    }
-
     char path[MAX_PATH_LEN];
 
     // /topics/{topic_name}/shards/shard-{sequence_id}
-    int n =
-        snprintf(path, sizeof(path), "/topics/%s/shards/shard-", topic_name);
-    if (n < 0) {
-        errno = EIO;
-        return -1;
-    }
+    snprintf(path, sizeof(path), "/topics/%s/shards/shard-", topic_name);
     char path_buffer[MAX_PATH_LEN];
-    int rc = zoo_create(zh, path, NULL, -1, &ZOO_OPEN_ACL_UNSAFE,
-                        ZOO_PERSISTENT_SEQUENTIAL, path_buffer,
-                        sizeof(path_buffer) - 1);
-    if (rc) {
+    if (zoo_create(zh, path, NULL, -1, &ZOO_OPEN_ACL_UNSAFE,
+                   ZOO_PERSISTENT_SEQUENTIAL, path_buffer,
+                   sizeof(path_buffer) - 1)) {
         errno = EIO;
         return -1;
     }
@@ -347,16 +271,14 @@ static int create_shard(const char *topic_name,
     char partitions_path_buffer[MAX_PATH_LEN] = {0};
     strcat(partitions_path_buffer, path_buffer);
     strcat(partitions_path_buffer, "/partitions");
-    rc = zoo_create(zh, partitions_path_buffer, NULL, -1, &ZOO_OPEN_ACL_UNSAFE,
-                    ZOO_PERSISTENT, NULL, 0);
-    if (rc) {
+    if (zoo_create(zh, partitions_path_buffer, NULL, -1, &ZOO_OPEN_ACL_UNSAFE,
+                   ZOO_PERSISTENT, NULL, 0)) {
         errno = EIO;
         return -1;
     }
 
     for (unsigned int replica = 0; replica < replication_factor; replica++) {
-        int res = create_replica(path_buffer);
-        if (res < 0) {
+        if (create_replica(path_buffer) < 0) {
             errno = EIO;
             return -1;
         }
@@ -366,9 +288,9 @@ static int create_shard(const char *topic_name,
 }
 
 int create_topic(const struct topic *topic) {
-    if (!zh || topic == NULL || topic->name == NULL ||
+    if (!zh || !topic || !topic->name ||
         strnlen(topic->name, MAX_TOPIC_NAME_LEN + 1) > MAX_TOPIC_NAME_LEN ||
-        topic->shards == 0 || topic->replication_factor == 0) {
+        !topic->shards || !topic->replication_factor) {
         errno = EINVAL;
         return -1;
     }
