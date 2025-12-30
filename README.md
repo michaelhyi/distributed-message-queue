@@ -199,7 +199,6 @@ make
 - [ ] Split-Brain Problem
 - [ ] Write-Through -> High Latency
 - [ ] Synchronous Replication -> High Latency
-- [ ] Use Criterion Specific Memory Allocator
 
 ## Recommended Future Features
 These are features that would be great for this project that I do not intend to
