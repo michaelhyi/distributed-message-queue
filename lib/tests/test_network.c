@@ -437,7 +437,7 @@ int test_dmqp_server_init_handles_message_with_unknown_method() {
     return 0;
 }
 
-static struct test test_cases[] = {
+struct test_case tests[] = {
     {NULL, NULL, test_dmqp_client_init_throws_when_invalid_args},
     {NULL, NULL, test_dmqp_client_init_throws_when_server_does_not_exist},
     {NULL, NULL, test_dmqp_client_init_success},
@@ -452,23 +452,7 @@ static struct test test_cases[] = {
     {NULL, NULL, test_send_dmqp_message_success_with_payload},
     {NULL, NULL, test_dmqp_server_init_handles_message_with_unknown_method}};
 
-int main() {
-    unsigned int passed = 0;
+struct test_suite suite = {
+    .name = "test_network", .setup = NULL, .teardown = NULL};
 
-    for (int i = 0; i < arrlen(test_cases); i++) {
-        if (test_cases[i].setup) {
-            test_cases[i].setup();
-        }
-
-        if (test_cases[i].test_case() >= 0) {
-            passed++;
-        }
-
-        if (test_cases[i].teardown) {
-            test_cases[i].teardown();
-        }
-    }
-
-    printf("Successfully passed %d/%d tests\n!", passed, arrlen(test_cases));
-    return 0;
-}
+int main() { run_suite(); }

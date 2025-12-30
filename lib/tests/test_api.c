@@ -287,7 +287,7 @@ void teardown() {
     zookeeper_close(zh);
 }
 
-static struct test test_cases[] = {
+struct test_case tests[] = {
     {NULL, NULL, test_client_init_throws_if_invalid_args},
     {NULL, NULL, test_client_init_throws_if_client_already_initialized},
     {NULL, NULL, test_client_init_success},
@@ -295,26 +295,8 @@ static struct test test_cases[] = {
     {setup, teardown, test_create_topic_throws_if_invalid_args},
     {setup, teardown, test_create_topic_throws_if_not_enough_partitions},
     {setup, teardown, test_create_topic_throws_if_topic_already_exists},
-    {setup, teardown, test_create_topic_success},
-};
+    {setup, teardown, test_create_topic_success}};
 
-int main() {
-    unsigned int passed = 0;
+struct test_suite suite = {.name = "test_api", .setup = NULL, .teardown = NULL};
 
-    for (int i = 0; i < arrlen(test_cases); i++) {
-        if (test_cases[i].setup) {
-            test_cases[i].setup();
-        }
-
-        if (test_cases[i].test_case() >= 0) {
-            passed++;
-        }
-
-        if (test_cases[i].teardown) {
-            test_cases[i].teardown();
-        }
-    }
-
-    printf("Successfully passed %d/%d tests\n!", passed, arrlen(test_cases));
-    return 0;
-}
+int main() { run_suite(); }

@@ -110,29 +110,13 @@ void setup() {
 
 void teardown() { zookeeper_close(zh); }
 
-static struct test test_cases[] = {
+struct test_case tests[] = {
     {setup, teardown, test_zoo_deleteall_throws_when_invalid_args},
     {setup, teardown, test_zoo_deleteall_throws_when_znode_does_not_exist},
     {setup, teardown, test_zoo_deleteall_success_when_no_children},
     {setup, teardown, test_zoo_deleteall_success}};
 
-int main() {
-    unsigned int passed = 0;
+struct test_suite suite = {
+    .name = "test_zookeeper_util", .setup = NULL, .teardown = NULL};
 
-    for (int i = 0; i < arrlen(test_cases); i++) {
-        if (test_cases[i].setup) {
-            test_cases[i].setup();
-        }
-
-        if (test_cases[i].test_case() >= 0) {
-            passed++;
-        }
-
-        if (test_cases[i].teardown) {
-            test_cases[i].teardown();
-        }
-    }
-
-    printf("Successfully passed %d/%d tests\n!", passed, arrlen(test_cases));
-    return 0;
-}
+int main() { run_suite(); }
