@@ -209,6 +209,7 @@ int dmqp_server_init(unsigned short port) {
     server_running = 1;
     server_port = ntohs(address.sin_port);
     pthread_mutex_unlock(&server_lock);
+    pthread_cond_broadcast(&server_running_cond);
 
     printf("DMQP Server listening on port %d\n", server_port);
 
