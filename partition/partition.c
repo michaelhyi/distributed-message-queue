@@ -8,11 +8,16 @@
 struct queue queue;
 pthread_mutex_t queue_lock;
 
-int partition_init() {
+int partition_init(const char *service_discovery_host) {
+    if (!service_discovery_host) {
+        errno = EINVAL;
+        return -1;
+    }
+
     queue_init(&queue);
     pthread_mutex_init(&queue_lock, NULL);
 
-    if (dmqp_server_init(0) < 0) {
+    if (dmqp_server_init(0, service_discovery_host) < 0) {
         partition_destroy();
         errno = EIO;
         return -1;

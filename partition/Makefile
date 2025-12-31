@@ -8,7 +8,7 @@ CFLAGS := -I../include \
 RELEASE_CFLAGS := -O2
 DEBUG_CFLAGS   := -g -O0 -fno-inline -DDEBUG
 TEST_CFLAGS    := -I.
-LDFLAGS 	   := -L../lib -lmessageq
+LDFLAGS 	   := -L../lib -lmessageq -lzookeeper_mt
 
 GDB := gdb
 
