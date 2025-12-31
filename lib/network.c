@@ -158,6 +158,7 @@ int dmqp_server_init(unsigned short port, const char *zookeeper_host) {
         return -1;
     }
 
+    zhandle_t *zh = NULL;
     signal_init();
 
     int server = socket(AF_INET, SOCK_STREAM, 0);
@@ -193,8 +194,7 @@ int dmqp_server_init(unsigned short port, const char *zookeeper_host) {
         goto cleanup;
     }
 
-    zhandle_t *zh = zookeeper_init(zookeeper_host, watcher, 10000, 0, 0, 0);
-    if (!zh) {
+    if (!(zh = zookeeper_init(zookeeper_host, watcher, 10000, 0, 0, 0))) {
         goto cleanup;
     }
 
