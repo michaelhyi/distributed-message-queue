@@ -7,8 +7,6 @@
 
 #include "zookeeper_util.h"
 
-#define MAX_SERVER_ADDRESS_LEN 21 // ipv4:port fomat xxx.xxx.xxx.xxx:xxxxx
-#define ZOOKEEPER_SEQ_ID_LEN 10
 #define MAX_PATH_LEN 128
 
 static zhandle_t *zh = NULL;
