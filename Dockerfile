@@ -41,5 +41,7 @@ CMD /opt/zookeeper/bin/zkServer.sh start ./conf/zoo_dev.cfg && \
     ./scripts/init_zookeeper.sh 127.0.0.1:2181 && \
 
     /opt/zookeeper/bin/zkServer.sh start ./conf/zoo_test.cfg && \
+    chmod +x ./scripts/init_zookeeper.sh && \
+    ./scripts/init_zookeeper.sh 127.0.0.1:2182 && \
 
     /bin/bash

@@ -12,6 +12,7 @@
 #include <sys/stat.h>
 #include <sys/time.h>
 #include <unistd.h>
+#include <zookeeper/zookeeper.h>
 
 int dmqp_client_init(const char *host, unsigned short port) {
     if (!host) {
@@ -45,8 +46,7 @@ cleanup:
     return -1;
 }
 
-volatile int server_running = 0;
-unsigned short server_port = 0;
+static volatile int server_running = 0;
 static struct sigaction sa;
 static struct sigaction sa_ignore;
 
@@ -77,6 +77,15 @@ static void signal_init() {
     sigemptyset(&sa_ignore.sa_mask);
     sa_ignore.sa_flags = 0;
     sigaction(SIGPIPE, &sa_ignore, NULL);
+}
+
+static void watcher(zhandle_t *zzh, int type, int state, const char *path,
+                    void *watcherCtx) {
+    (void)zzh;
+    (void)type;
+    (void)state;
+    (void)path;
+    (void)watcherCtx;
 }
 
 /**
@@ -143,7 +152,12 @@ static void connection_thread_init(int socket) {
     pthread_attr_destroy(&attr);
 }
 
-int dmqp_server_init(unsigned short port) {
+int dmqp_server_init(unsigned short port, const char *zookeeper_host) {
+    if (!zookeeper_host) {
+        errno = EINVAL;
+        return -1;
+    }
+
     signal_init();
 
     int server = socket(AF_INET, SOCK_STREAM, 0);
@@ -179,9 +193,27 @@ int dmqp_server_init(unsigned short port) {
         goto cleanup;
     }
 
+    zhandle_t *zh = zookeeper_init(zookeeper_host, watcher, 10000, 0, 0, 0);
+    if (!zh) {
+        goto cleanup;
+    }
+
+    // TODO: obtain lock
+
+    // TODO: use localhost for now, must dynamically detect in the future
+    // 15 max buf len
+    char host[16] = "127.0.0.1:";
+    snprintf(host, sizeof host, "127.0.0.1:%d", ntohs(address.sin_port));
+    if (zoo_create(zh, "/partitions/partition-", host, strlen(host),
+                   &ZOO_OPEN_ACL_UNSAFE, ZOO_EPHEMERAL_SEQUENTIAL, NULL, 0)) {
+        // TODO: release lock
+        goto cleanup;
+    }
+
+    // TODO: release lock
+
     server_running = 1;
-    server_port = ntohs(address.sin_port);
-    printf("DMQP Server listening on port %d\n", server_port);
+    printf("DMQP Server listening on port %d\n", ntohs(address.sin_port));
 
     while (server_running) {
         struct sockaddr_in client_address;
@@ -213,6 +245,7 @@ int dmqp_server_init(unsigned short port) {
     return 0;
 
 cleanup:
+    zookeeper_close(zh);
     close(server);
     errno = EIO;
     return -1;

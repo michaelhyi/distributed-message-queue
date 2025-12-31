@@ -21,9 +21,6 @@ struct dmqp_message {
     void *payload;
 };
 
-extern volatile int server_running;
-extern unsigned short server_port;
-
 // TODO: TLS
 
 /**
@@ -38,14 +35,17 @@ extern unsigned short server_port;
 int dmqp_client_init(const char *host, unsigned short port);
 
 /**
- * Initializes a DMQP server. Signals are handled to gracefully exit.
+ * Initializes a DMQP server and registers the current process as a partition in
+ * ZooKeeper. Signals are handled to gracefully exit.
  *
  * @param port the port to bind the server to
+ * @param zookeeper_host the host of the ZooKeeper server
  * @returns 0 on success, -1 on error with global `errno` set. does not return
  * until the server is interrupted or terminated
+ * @throws `EINVAL` invalid args
  * @throws `EIO` unexpected error
  */
-int dmqp_server_init(unsigned short port);
+int dmqp_server_init(unsigned short port, const char *zookeeper_host);
 
 /**
  * Reads a DMQP message from a file descriptor. Converts header fields to host

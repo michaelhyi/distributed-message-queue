@@ -9,6 +9,11 @@
 #include <stdlib.h>
 #include <sys/socket.h>
 #include <unistd.h>
+#include <zookeeper/zookeeper.h>
+
+#include "zookeeper_util.h"
+
+#define TEST_ZOOKEEPER_SERVER_HOST "127.0.0.1:2182"
 
 struct targs {
     unsigned short port;
@@ -18,7 +23,7 @@ struct targs {
 
 static void *start_test_dmqp_server(void *arg) {
     struct targs *args = (struct targs *)arg;
-    args->result = dmqp_server_init(args->port);
+    args->result = dmqp_server_init(args->port, TEST_ZOOKEEPER_SERVER_HOST);
     args->_errno = errno;
     return NULL;
 }
@@ -58,6 +63,15 @@ static int send_all(int socket, const void *buffer, size_t length, int flags) {
     }
 
     return 0;
+}
+
+static void watcher(zhandle_t *zzh, int type, int state, const char *path,
+                    void *watcherCtx) {
+    (void)zzh;
+    (void)type;
+    (void)state;
+    (void)path;
+    (void)watcherCtx;
 }
 
 int test_dmqp_client_init_throws_when_invalid_args() {
@@ -102,6 +116,16 @@ int test_dmqp_client_init_success() {
     return 0;
 }
 
+int test_dmqp_server_init_throws_when_invalid_args() {
+    // arrange
+    errno = 0;
+
+    // act & assert
+    assert(dmqp_server_init(8080, NULL) < 0);
+    assert(errno == EINVAL);
+    return 0;
+}
+
 int test_dmqp_server_init_handles_signals() {
     // arrange
     errno = 0;
@@ -122,6 +146,50 @@ int test_dmqp_server_init_handles_signals() {
         assert(!args._errno);
     }
 
+    return 0;
+}
+
+int test_dmqp_server_init_registers_with_zookeeper() {
+    // arrange
+    errno = 0;
+    struct targs args = {.port = 8083};
+    pthread_t tid;
+    pthread_create(&tid, NULL, start_test_dmqp_server, &args);
+    sleep(1); // wait 1s for server to initialize
+
+    zhandle_t *zh =
+        zookeeper_init(TEST_ZOOKEEPER_SERVER_HOST, watcher, 10000, 0, 0, 0);
+
+    // act & assert
+    struct String_vector partitions;
+    assert(!zoo_get_children(zh, "/partitions", 0, &partitions));
+
+    int found = 0;
+    for (int i = 0; i < partitions.count; i++) {
+        char path[512];
+        snprintf(path, sizeof path, "/partitions/%s", partitions.data[i]);
+
+        char buf[512];
+        int buflen = sizeof buf;
+        assert(!zoo_get(zh, path, 0, buf, &buflen, NULL));
+
+        if (strcmp(buf, "127.0.0.1:8082") == 0) {
+            found = 1;
+            break;
+        }
+    }
+    assert(found);
+
+    // teardown
+    pthread_kill(tid, SIGTERM);
+    pthread_join(tid, NULL);
+
+    // assert
+    assert(args.result >= 0);
+    assert(!args._errno);
+
+    // teardown
+    zookeeper_close(zh);
     return 0;
 }
 
@@ -408,12 +476,12 @@ int test_send_dmqp_message_success_with_payload() {
 int test_dmqp_server_init_handles_message_with_unknown_method() {
     // arrange
     errno = 0;
-    struct targs args = {.port = 8083};
+    struct targs args = {.port = 8084};
     pthread_t tid;
     pthread_create(&tid, NULL, start_test_dmqp_server, &args);
     sleep(1); // wait 1s for server to initialize
 
-    int client = dmqp_client_init("127.0.0.1", 8083);
+    int client = dmqp_client_init("127.0.0.1", 8084);
 
     struct dmqp_header header = {0};
     header.method = DMQP_RESPONSE + 1;
@@ -440,7 +508,9 @@ struct test_case tests[] = {
     {NULL, NULL, test_dmqp_client_init_throws_when_invalid_args},
     {NULL, NULL, test_dmqp_client_init_throws_when_server_does_not_exist},
     {NULL, NULL, test_dmqp_client_init_success},
+    {NULL, NULL, test_dmqp_server_init_throws_when_invalid_args},
     {NULL, NULL, test_dmqp_server_init_handles_signals},
+    {NULL, NULL, test_dmqp_server_init_registers_with_zookeeper},
     {NULL, NULL, test_read_dmqp_message_throws_when_invalid_args},
     {NULL, NULL, test_read_dmqp_message_throws_when_payload_too_large},
     {NULL, NULL, test_read_dmqp_message_success_when_no_payload},
