@@ -225,18 +225,37 @@ int dmqp_server_init(unsigned short port) {
         struct sockaddr_in client_address;
         socklen_t client_address_len = sizeof client_address;
 
+        fd_set readfds;
+        FD_ZERO(&readfds);
+        FD_SET(server, &readfds);
+        struct timeval tv = {.tv_sec = 1, .tv_usec = 0};
+        int ready = select(server + 1, &readfds, NULL, NULL, &tv);
+        if (ready < 0) {
+            if (errno == EINTR) {
+                errno = 0;
+                continue;
+            }
+
+            break;
+        }
+
+        if (!ready || !FD_ISSET(server, &readfds)) {
+            continue;
+        }
+
         int client = accept(server, (struct sockaddr *)&client_address,
                             &client_address_len);
         if (client < 0) {
             if (errno == EINTR) {
                 errno = 0;
+                continue;
             }
 
-            continue;
+            break;
         }
 
-        // 30s timeout
-        struct timeval tv = {.tv_sec = 30, .tv_usec = 0};
+        // 30s timeout on reads/writes
+        tv.tv_sec = 30;
         setsockopt(client, SOL_SOCKET, SO_RCVTIMEO, (void *)&tv, sizeof tv);
 
         // tcp keepalive
