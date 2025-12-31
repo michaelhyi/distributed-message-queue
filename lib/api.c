@@ -31,6 +31,7 @@ int client_init(const char *host) {
         return -1;
     }
 
+    zoo_set_debug_level(0);
     zh = zookeeper_init(host, watcher, 10000, 0, 0, 0);
     if (!zh) {
         errno = EIO;
