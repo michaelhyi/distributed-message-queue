@@ -1,6 +1,7 @@
 #ifndef NETWORK_H
 #define NETWORK_H
 
+#include <pthread.h>
 #include <stdint.h>
 
 #define LISTEN_BACKLOG 128
@@ -21,6 +22,11 @@ struct dmqp_message {
     void *payload;
 };
 
+extern pthread_mutex_t server_lock;
+extern pthread_cond_t server_running_cond;
+extern int server_running;
+extern unsigned short server_port;
+
 // TODO: TLS
 
 /**
@@ -36,7 +42,8 @@ int dmqp_client_init(const char *host, unsigned short port);
 
 /**
  * Initializes a DMQP server and registers the current process as a partition in
- * ZooKeeper. Signals are handled to gracefully exit.
+ * ZooKeeper. Signals are handled to gracefully exit. The caller must initialize
+ * `server_lock` and `server_running_cond` prior to calling this function.
  *
  * @param port the port to bind the server to
  * @param zookeeper_host the host of the ZooKeeper server
@@ -45,7 +52,7 @@ int dmqp_client_init(const char *host, unsigned short port);
  * @throws `EINVAL` invalid args
  * @throws `EIO` unexpected error
  */
-int dmqp_server_init(unsigned short port, const char *zookeeper_host);
+int dmqp_server_init(unsigned short port);
 
 /**
  * Reads a DMQP message from a file descriptor. Converts header fields to host

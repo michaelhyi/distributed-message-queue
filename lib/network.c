@@ -12,7 +12,6 @@
 #include <sys/stat.h>
 #include <sys/time.h>
 #include <unistd.h>
-#include <zookeeper/zookeeper.h>
 
 int dmqp_client_init(const char *host, unsigned short port) {
     if (!host) {
@@ -46,7 +45,10 @@ cleanup:
     return -1;
 }
 
-static volatile int server_running = 0;
+pthread_mutex_t server_lock;
+pthread_cond_t server_running_cond;
+int server_running = 0;
+unsigned short server_port = 0;
 static struct sigaction sa;
 static struct sigaction sa_ignore;
 
@@ -58,7 +60,10 @@ static struct sigaction sa_ignore;
  */
 static void signal_handler(int sig) {
     (void)sig; // unused
+    pthread_mutex_lock(&server_lock);
     server_running = 0;
+    pthread_mutex_unlock(&server_lock);
+    pthread_cond_broadcast(&server_running_cond);
 }
 
 /**
@@ -79,15 +84,6 @@ static void signal_init() {
     sigaction(SIGPIPE, &sa_ignore, NULL);
 }
 
-static void watcher(zhandle_t *zzh, int type, int state, const char *path,
-                    void *watcherCtx) {
-    (void)zzh;
-    (void)type;
-    (void)state;
-    (void)path;
-    (void)watcherCtx;
-}
-
 /**
  * Listens on a connection.
  *
@@ -97,8 +93,18 @@ static void *connection_handler(void *arg) {
     int client = *(int *)arg;
     free(arg);
 
-    while (server_running) {
+    for (;;) {
+        pthread_mutex_lock(&server_lock);
+        int running = server_running;
+        pthread_mutex_unlock(&server_lock);
+
+        if (!running) {
+            break;
+        }
+
         struct dmqp_message buf;
+        // TODO: this means that any 30s timeout will clean resources. must only
+        // close thread if tcp keepalive expires or connection closed
         if (read_dmqp_message(client, &buf) < 0) {
             break;
         }
@@ -152,13 +158,8 @@ static void connection_thread_init(int socket) {
     pthread_attr_destroy(&attr);
 }
 
-int dmqp_server_init(unsigned short port, const char *zookeeper_host) {
-    if (!zookeeper_host) {
-        errno = EINVAL;
-        return -1;
-    }
-
-    zhandle_t *zh = NULL;
+int dmqp_server_init(unsigned short port) {
+    int ret = 0;
     signal_init();
 
     int server = socket(AF_INET, SOCK_STREAM, 0);
@@ -169,10 +170,14 @@ int dmqp_server_init(unsigned short port, const char *zookeeper_host) {
 
     int opt = 1;
     if (setsockopt(server, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof opt) < 0) {
+        errno = EIO;
+        ret = -1;
         goto cleanup;
     }
 
     if (setsockopt(server, SOL_SOCKET, SO_REUSEPORT, &opt, sizeof opt) < 0) {
+        errno = EIO;
+        ret = -1;
         goto cleanup;
     }
 
@@ -183,39 +188,39 @@ int dmqp_server_init(unsigned short port, const char *zookeeper_host) {
     socklen_t address_len = sizeof address;
 
     if (bind(server, (struct sockaddr *)&address, address_len) < 0) {
+        errno = EIO;
+        ret = -1;
         goto cleanup;
     }
 
     if (listen(server, LISTEN_BACKLOG) < 0) {
+        errno = EIO;
+        ret = -1;
         goto cleanup;
     }
 
     if (getsockname(server, (struct sockaddr *)&address, &address_len) < 0) {
+        errno = EIO;
+        ret = -1;
         goto cleanup;
     }
 
-    if (!(zh = zookeeper_init(zookeeper_host, watcher, 10000, 0, 0, 0))) {
-        goto cleanup;
-    }
-
-    // TODO: obtain lock
-
-    // TODO: use localhost for now, must dynamically detect in the future
-    // 15 max buf len
-    char host[16] = "127.0.0.1:";
-    snprintf(host, sizeof host, "127.0.0.1:%d", ntohs(address.sin_port));
-    if (zoo_create(zh, "/partitions/partition-", host, strlen(host),
-                   &ZOO_OPEN_ACL_UNSAFE, ZOO_EPHEMERAL_SEQUENTIAL, NULL, 0)) {
-        // TODO: release lock
-        goto cleanup;
-    }
-
-    // TODO: release lock
-
+    pthread_mutex_lock(&server_lock);
     server_running = 1;
-    printf("DMQP Server listening on port %d\n", ntohs(address.sin_port));
+    server_port = ntohs(address.sin_port);
+    pthread_mutex_unlock(&server_lock);
 
-    while (server_running) {
+    printf("DMQP Server listening on port %d\n", server_port);
+
+    for (;;) {
+        pthread_mutex_lock(&server_lock);
+        int running = server_running;
+        pthread_mutex_unlock(&server_lock);
+
+        if (!running) {
+            break;
+        }
+
         struct sockaddr_in client_address;
         socklen_t client_address_len = sizeof client_address;
 
@@ -241,14 +246,9 @@ int dmqp_server_init(unsigned short port, const char *zookeeper_host) {
         connection_thread_init(client);
     }
 
-    close(server);
-    return 0;
-
 cleanup:
-    zookeeper_close(zh);
     close(server);
-    errno = EIO;
-    return -1;
+    return ret;
 }
 
 /**

@@ -3,7 +3,9 @@
 
 #ifdef DEBUG
 #include <stdio.h>
-#define dprintf(...) printf(__VA_ARGS__);
+#define dprintf(...)                                                           \
+    printf(__VA_ARGS__);                                                       \
+    fflush(stdout);
 #else
 #define dprintf(...)
 #endif
