@@ -4,6 +4,7 @@ CFLAGS := -I../include \
 		   -pedantic \
 		   -std=c11 \
 		   -MMD -MP
+CFLAGS += -D_GNU_SOURCE # allows pthread_kill()
 CFLAGS += -DTHREADED 	# allows for zoo_create()
 
 RELEASE_CFLAGS := -O2

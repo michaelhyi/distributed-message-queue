@@ -1,8 +1,111 @@
-#include <errno.h>
+#include "partition.h"
+
 #include <messageq/network.h>
-#include <stdlib.h>
-#include <sys/socket.h>
+#include <messageq/test.h>
+#include <messageq/zookeeper.h>
+
+#include <errno.h>
+#include <pthread.h>
+#include <signal.h>
+#include <string.h>
 #include <unistd.h>
+
+#define TEST_ZOOKEEPER_HOST "127.0.0.1:2182"
+
+static zhandle_t *zh;
+
+struct targ {
+    int result;
+    int _errno;
+};
+
+void *partition_thread(void *arg) {
+    struct targ *targ = (struct targ *)arg;
+    targ->result = start_partition(TEST_ZOOKEEPER_HOST);
+    targ->_errno = errno;
+    return NULL;
+}
+
+int test_start_partition_registers_with_zookeeper() {
+    // arrange
+    errno = 0;
+
+    // act
+    pthread_t tid;
+    struct targ arg = {0};
+    pthread_create(&tid, NULL, partition_thread, &arg);
+
+    struct timeval tv;
+    struct timespec ts = {0};
+    gettimeofday(&tv, NULL);
+    ts.tv_sec = tv.tv_sec + 10;
+    pthread_mutex_lock(&server_lock);
+    while (!server_running) {
+        assert(pthread_cond_timedwait(&server_running_cond, &server_lock,
+                                      &ts) != ETIMEDOUT);
+    }
+    pthread_mutex_unlock(&server_lock);
+
+    char expected_host[512] = "127.0.0.1:";
+    sprintf(expected_host, "127.0.0.1:%d", server_port);
+
+    int found = 0;
+    int retries = 5;
+    while (!found && retries-- > 0) {
+        sleep(1);
+
+        struct String_vector partitions;
+        zoo_get_children(zh, "/partitions", 0, &partitions);
+
+        for (int i = 0; i < partitions.count; i++) {
+            char path[512] = "/partitions/";
+            strcat(path, partitions.data[i]);
+
+            char buf[512];
+            int buflen = sizeof buf;
+            zoo_get(zh, path, 0, buf, &buflen, NULL);
+
+            if (strcmp(buf, expected_host) == 0) {
+                found = 1;
+                break;
+            }
+        }
+    }
+
+    // assert
+    assert(found);
+    assert(!errno);
+
+    // teardown
+    pthread_kill(tid, SIGTERM);
+    pthread_join(tid, NULL);
+
+    // assert
+    assert(arg.result >= 0);
+    assert(!arg._errno);
+    return 0;
+}
+
+int test_start_partition_becomes_leader_when_assigned_to_shard() { return -1; }
+
+int test_start_partition_becomes_replica_when_assigned_to_shard() { return -1; }
+
+int test_start_partition_becomes_leader_when_prev_leader_dies() { return -1; }
+
+void setup() { zh = zoo_init(TEST_ZOOKEEPER_HOST); }
+
+void teardown() { zookeeper_close(zh); }
+
+struct test_case tests[] = {
+    {NULL, NULL, test_start_partition_registers_with_zookeeper},
+    {NULL, NULL, test_start_partition_becomes_leader_when_assigned_to_shard},
+    {NULL, NULL, test_start_partition_becomes_replica_when_assigned_to_shard},
+    {NULL, NULL, test_start_partition_becomes_leader_when_prev_leader_dies}};
+
+struct test_suite suite = {
+    .name = "test_partition", .setup = setup, .teardown = teardown};
+
+int main() { run_suite(); }
 
 // TODO: fix tests post refactorign
 
@@ -464,5 +567,3 @@
 //     close(mock_sockets[0]);
 //     partition_destroy();
 // }
-
-int main() { return 0; }
