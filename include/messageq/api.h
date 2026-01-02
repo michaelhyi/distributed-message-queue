@@ -1,8 +1,6 @@
 #ifndef API_H
 #define API_H
 
-#define MAX_TOPIC_NAME_LEN 32
-
 struct topic {
     char *name;
     unsigned int shards;

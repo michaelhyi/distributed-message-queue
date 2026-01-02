@@ -1,12 +1,11 @@
 #include "messageq/api.h"
+#include "messageq/constants.h"
 #include "messageq/zookeeper.h"
 
 #include <errno.h>
 #include <stdlib.h>
 #include <string.h>
 #include <zookeeper/zookeeper.h>
-
-#define MAX_PATH_LEN 128
 
 static zhandle_t *zh = NULL;
 
@@ -276,7 +275,7 @@ static int create_shard(const char *topic_name,
 
 int create_topic(const struct topic *topic) {
     if (!zh || !topic || !topic->name ||
-        strnlen(topic->name, MAX_TOPIC_NAME_LEN + 1) > MAX_TOPIC_NAME_LEN ||
+        strnlen(topic->name, MAX_TOPIC_LEN + 1) > MAX_TOPIC_LEN ||
         !topic->shards || !topic->replication_factor) {
         errno = EINVAL;
         return -1;

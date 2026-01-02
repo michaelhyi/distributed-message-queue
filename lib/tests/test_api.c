@@ -2,6 +2,7 @@
 // 127.0.0.1:2182
 
 #include "messageq/api.h"
+#include "messageq/constants.h"
 #include "messageq/test.h"
 #include "messageq/util.h"
 #include "messageq/zookeeper.h"
@@ -12,7 +13,6 @@
 #include <zookeeper/zookeeper.h>
 
 #define TEST_ZOOKEEPER_SERVER_HOST "127.0.0.1:2182"
-#define MAX_PATH_LEN 128
 
 static zhandle_t *zh;
 
@@ -101,8 +101,8 @@ int test_create_topic_throws_if_not_enough_partitions() {
     char *partitions[] = {"127.0.0.1:8080", "127.0.0.1:8081", "127.0.0.1:8082",
                           "127.0.0.1:8083", "127.0.0.1:8084", "127.0.0.1:8085",
                           "127.0.0.1:8086", "127.0.0.1:8087"};
-    char partition_ids[sizeof partitions / sizeof partitions[0]][MAX_PATH_LEN];
-    for (size_t i = 0; i < sizeof partitions / sizeof partitions[0]; i++) {
+    char partition_ids[arrlen(partitions)][MAX_PATH_LEN];
+    for (size_t i = 0; i < arrlen(partitions); i++) {
         char *path = partition_ids[i];
         zoo_create(zh, "/partitions/partition-", partitions[i],
                    strlen(partitions[i]), &ZOO_OPEN_ACL_UNSAFE,
