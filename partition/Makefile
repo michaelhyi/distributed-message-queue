@@ -25,10 +25,10 @@ TEST_TARGET  := test_partition \
 				test_queue
 
 OBJ 	   := main.o \
+			  partition.o \
 	   		  queue.o
 DEBUG_OBJ := $(OBJ:%.o=debug_%.o)
-TEST_OBJ  := test_partition.o \
-			 test_queue.o
+TEST_OBJ  := $(filter-out test_main.o, $(OBJ:%.o=test_%.o))
 
 DEPS := $(OBJ:.o=.d) $(DEBUG_OBJ:.o=.d) $(TEST_OBJ:.o=.d)
 

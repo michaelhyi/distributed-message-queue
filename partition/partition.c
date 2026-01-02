@@ -1,0 +1,278 @@
+#include "partition.h"
+
+#include <messageq/network.h>
+#include <messageq/zookeeper.h>
+
+#include <errno.h>
+#include <pthread.h>
+#include <string.h>
+
+#include "queue.h"
+
+enum role role = FREE;
+int partition_id = -1;
+char assigned_topic[MAX_TOPIC_LEN + 1] = {0};
+char assigned_shard[MAX_SHARD_LEN + 1] = {0};
+
+static zhandle_t *zh;
+static struct queue queue;
+// static pthread_mutex_t queue_lock = PTHREAD_MUTEX_INITIALIZER;
+
+struct targ {
+    int result;
+    int _errno;
+};
+
+static void *server_thread(void *arg) {
+    struct targ *targ = (struct targ *)arg;
+    targ->result = dmqp_server_init(0);
+    targ->_errno = errno;
+    return NULL;
+}
+
+/**
+ * Starts a DMQP server on a separate thread.
+ *
+ * @returns the id of the server thread, `NULL` if error with `global` errno
+ * set. must be freed once copied
+ * @throws `ETIMEDOUT` DMQP server conn timeout
+ */
+static pthread_t *start_dmqp_server() {
+    pthread_t *tid = malloc(sizeof(pthread_t));
+    struct targ targ = {0};
+    pthread_create(tid, NULL, server_thread, &targ);
+
+    struct timeval tv;
+    struct timespec ts = {0};
+    gettimeofday(&tv, NULL);
+    ts.tv_sec = tv.tv_sec + 10;
+
+    pthread_mutex_lock(&server_lock);
+    while (!server_running && targ.result >= 0) {
+        if (pthread_cond_timedwait(&server_running_cond, &server_lock, &ts) ==
+            ETIMEDOUT) {
+            errno = ETIMEDOUT;
+            free(tid);
+            tid = NULL;
+            break;
+        }
+    }
+    pthread_mutex_unlock(&server_lock);
+
+    return tid;
+}
+
+static void partition_znode_watcher(zhandle_t *zzh, int type, int state,
+                                    const char *path, void *watcherCtx) {
+    (void)state;
+
+    // TODO: proper resource cleanup on error
+    // TODO: validate partition_id properly set
+    if (type == ZOO_CHANGED_EVENT) {
+        // TODO: acquire lock on partition list
+
+        char buf[512];
+        int buflen = sizeof buf;
+        if (zoo_wget(zzh, path, partition_znode_watcher, watcherCtx, buf,
+                     &buflen, NULL)) {
+            return;
+        }
+        // TODO: make sure you're nul terminating every zoo buf
+        buf[buflen] = '\0';
+
+        strtok(buf, ";");
+        char *allocated = strtok(NULL, ";");
+        if (!allocated) {
+            return;
+        }
+
+        strtok(allocated, "/");
+        char *topic = strtok(NULL, "/");
+        strncpy(assigned_topic, topic, MAX_TOPIC_LEN);
+
+        strtok(NULL, "/");
+        char *shard = strtok(NULL, "/");
+        strncpy(assigned_shard, shard, MAX_SHARD_LEN);
+
+        char shardpath[MAX_PATH_LEN];
+        snprintf(shardpath, sizeof shardpath, "/topics/%s/shards/%s/partitions",
+                 topic, shard);
+        struct String_vector partitions;
+        if (zoo_get_children(zzh, shardpath, 0, &partitions)) {
+            return;
+        }
+
+        int min_id = partition_id;
+        for (int i = 0; i < partitions.count; i++) {
+            int id = atoi(partitions.data[i] + 10);
+            if (id < min_id) {
+                min_id = id;
+                break;
+            }
+        }
+
+        if (min_id == partition_id) {
+            role = LEADER;
+        } else {
+            role = REPLICA;
+        }
+
+        // TODO: must set a watch on the node with the next smallest id
+
+        // TODO:
+        // unlock distributed lock on partition list, esp every time on return
+    }
+}
+
+/**
+ * Registers a partition into the service registry.
+ */
+static void reigster_partition() {
+    // TODO: acquire /partitions distributed lock
+
+    // TODO: must dynamically detect host in the future
+    char host[MAX_HOST_LEN + 1];
+    snprintf(host, sizeof host, "127.0.0.1:%d", server_port);
+
+    char path[MAX_PATH_LEN + 1];
+    int pathlen = sizeof path;
+    zoo_create(zh, "/partitions/partition-", host, strlen(host),
+               &ZOO_OPEN_ACL_UNSAFE, ZOO_EPHEMERAL_SEQUENTIAL, path, pathlen);
+
+    partition_id = atoi(path + 22);
+
+    zoo_wexists(zh, path, partition_znode_watcher, NULL, NULL);
+
+    // TODO: release /partitions distributed lock
+}
+
+int start_partition(char *service_discovery_host) {
+    if (!service_discovery_host) {
+        errno = EINVAL;
+        return -1;
+    }
+
+    int ret = 0;
+
+    queue_init(&queue);
+    if (!(zh = zoo_init(service_discovery_host))) {
+        ret = -1;
+        goto cleanup;
+    }
+
+    pthread_t *server_tid = start_dmqp_server();
+    if (!server_tid) {
+        ret = 1;
+        goto cleanup_zookeeper;
+    }
+
+    reigster_partition();
+    pthread_join(*server_tid, NULL);
+    free(server_tid);
+
+cleanup_zookeeper:
+    zookeeper_close(zh);
+cleanup:
+    queue_destroy(&queue);
+    return ret;
+}
+
+// TODO: test and fix all these
+// void handle_dmqp_push(const struct dmqp_message *message, int client) {
+//     struct dmqp_header res_header;
+
+//     // TODO: establish what topic this partition is part of
+//     // TODO: acquire seq id distributed lock
+//     // get seq id
+//     // if message->header.sequence_id doesnt match the topic's expected seq
+//     id,
+//     //
+
+//     pthread_mutex_lock(&queue_lock);
+//     struct queue_entry entry = {.data = message->payload,
+//                                 .size = message->header.length,
+//                                 .timestamp = message->header.sequence_id};
+
+//     if (queue_push(&queue, &entry) < 0) {
+//         if (errno != ENODATA) {
+//             errno = EIO;
+//         }
+//     }
+
+//     pthread_mutex_unlock(&queue_lock);
+
+//     res_header.method = DMQP_RESPONSE;
+//     res_header.status_code = errno;
+//     res_header.length = 0;
+//     res_header.sequence_id = 0;
+//     struct dmqp_message res_message = {.header = res_header};
+
+//     send_dmqp_message(client, &res_message, 0);
+// }
+
+// void handle_dmqp_pop(const struct dmqp_message *message, int client) {
+//     (void)message;
+//     struct queue_entry entry = {.data = NULL, .size = 0, .timestamp = 0};
+//     struct dmqp_header res_header;
+
+//     pthread_mutex_lock(&queue_lock);
+
+//     if (queue_pop(&queue, &entry) < 0) {
+//         if (errno != ENODATA) {
+//             errno = EIO;
+//         }
+//     }
+
+//     pthread_mutex_unlock(&queue_lock);
+
+//     res_header.method = DMQP_RESPONSE;
+//     res_header.status_code = errno;
+//     res_header.length = entry.size;
+//     res_header.sequence_id = entry.timestamp;
+//     struct dmqp_message res_message = {.header = res_header,
+//                                        .payload = entry.data};
+
+//     send_dmqp_message(client, &res_message, 0);
+
+//     if (entry.data != NULL) {
+//         free(entry.data);
+//     }
+// }
+
+// void handle_dmqp_peek_sequence_id(const struct dmqp_message *message,
+//                                   int client) {
+//     (void)message;
+//     struct dmqp_header res_header;
+
+//     pthread_mutex_lock(&queue_lock);
+
+//     long timestamp;
+//     if (queue_peek_timestamp(&queue, &timestamp) < 0) {
+//         if (errno != ENODATA) {
+//             errno = EIO;
+//         }
+//     }
+
+//     pthread_mutex_unlock(&queue_lock);
+
+//     res_header.method = DMQP_RESPONSE;
+//     res_header.status_code = errno;
+//     res_header.length = 0;
+//     res_header.sequence_id = timestamp;
+//     struct dmqp_message res_message = {.header = res_header, .payload =
+//     NULL};
+
+//     send_dmqp_message(client, &res_message, 0);
+// }
+
+// void handle_dmqp_response(const struct dmqp_message *message, int client) {
+//     (void)message;
+//     struct dmqp_header res_header = {.method = DMQP_RESPONSE,
+//                                      .status_code = EPROTO,
+//                                      .length = 0,
+//                                      .sequence_id = 0};
+//     struct dmqp_message res_message = {.header = res_header};
+
+//     send_dmqp_message(client, &res_message, 0);
+//     errno = EPROTO;
+// }
