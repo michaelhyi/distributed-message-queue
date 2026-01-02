@@ -1,5 +1,6 @@
 #include <messageq/api.h> // TODO: shouldn't have to import the api to get macros
 #include <messageq/network.h>
+#include <messageq/zookeeper.h>
 
 #include <errno.h>
 #include <getopt.h>
@@ -79,6 +80,8 @@ static void partition_znode_watcher(zhandle_t *zzh, int type, int state,
             role = REPLICA;
         }
 
+        // TODO: must set a watch on the node with the next smallest id
+
         // TODO:
         // unlock distributed lock on partition list, esp every time on return
     }
@@ -123,7 +126,7 @@ int main(int argc, char **argv) {
     pthread_mutex_init(&queue_lock, NULL);
 
     zoo_set_debug_level(0);
-    if (!(zh = zookeeper_init(service_discovery_host, NULL, 10000, 0, 0, 0))) {
+    if (!(zh = zoo_init(service_discovery_host))) {
         ret = 1;
         goto cleanup;
     }

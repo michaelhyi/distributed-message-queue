@@ -265,8 +265,7 @@ int test_create_topic_success() {
 
 void setup() {
     errno = 0;
-    zoo_set_debug_level(0);
-    zh = zookeeper_init(TEST_ZOOKEEPER_SERVER_HOST, NULL, 10000, 0, 0, 0);
+    zh = zoo_init(TEST_ZOOKEEPER_SERVER_HOST);
 
     client_init(TEST_ZOOKEEPER_SERVER_HOST);
 }
