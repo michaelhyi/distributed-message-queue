@@ -26,11 +26,11 @@ VALGRIND_FLAGS := --leak-check=full \
 TARGET 		:= libmessageq.a
 TEST_TARGET := test_api \
 			   test_network \
-			   test_zookeeper_util 
+			   test_zookeeper
 
 OBJ 	  := api.o \
 	   		 network.o \
-	   		 zookeeper_util.o
+	   		 zookeeper.o
 DEBUG_OBJ := $(OBJ:%.o=debug_%.o)
 TEST_OBJ  := $(OBJ:%.o=test_%.o)
 

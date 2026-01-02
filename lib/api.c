@@ -1,24 +1,14 @@
 #include "messageq/api.h"
+#include "messageq/zookeeper.h"
 
 #include <errno.h>
 #include <stdlib.h>
 #include <string.h>
 #include <zookeeper/zookeeper.h>
 
-#include "zookeeper_util.h"
-
 #define MAX_PATH_LEN 128
 
 static zhandle_t *zh = NULL;
-
-void watcher(zhandle_t *zzh, int type, int state, const char *path,
-             void *watcherCtx) {
-    (void)zzh;
-    (void)type;
-    (void)state;
-    (void)path;
-    (void)watcherCtx;
-}
 
 int client_init(const char *host) {
     if (!host) {
@@ -31,9 +21,7 @@ int client_init(const char *host) {
         return -1;
     }
 
-    zoo_set_debug_level(0);
-    zh = zookeeper_init(host, watcher, 10000, 0, 0, 0);
-    if (!zh) {
+    if (!(zh = zoo_init(host))) {
         errno = EIO;
         return -1;
     }

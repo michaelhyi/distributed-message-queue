@@ -1,4 +1,4 @@
-#include "zookeeper_util.h"
+#include "messageq/zookeeper.h"
 
 #include <errno.h>
 #include <pthread.h>

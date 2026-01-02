@@ -4,26 +4,17 @@
 #include "messageq/api.h"
 #include "messageq/test.h"
 #include "messageq/util.h"
+#include "messageq/zookeeper.h"
 
 #include <errno.h>
 #include <stdio.h>
 #include <string.h>
 #include <zookeeper/zookeeper.h>
 
-#include "zookeeper_util.h"
-
 #define TEST_ZOOKEEPER_SERVER_HOST "127.0.0.1:2182"
 #define MAX_PATH_LEN 128
 
 static zhandle_t *zh;
-static void watcher(zhandle_t *zzh, int type, int state, const char *path,
-                    void *watcherCtx) {
-    (void)zzh;
-    (void)type;
-    (void)state;
-    (void)path;
-    (void)watcherCtx;
-}
 
 int test_client_init_throws_if_invalid_args() {
     // arrange
@@ -275,7 +266,7 @@ int test_create_topic_success() {
 void setup() {
     errno = 0;
     zoo_set_debug_level(0);
-    zh = zookeeper_init(TEST_ZOOKEEPER_SERVER_HOST, watcher, 10000, 0, 0, 0);
+    zh = zookeeper_init(TEST_ZOOKEEPER_SERVER_HOST, NULL, 10000, 0, 0, 0);
 
     client_init(TEST_ZOOKEEPER_SERVER_HOST);
 }

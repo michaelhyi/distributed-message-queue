@@ -3,7 +3,7 @@
 
 #include "messageq/test.h"
 #include "messageq/util.h"
-#include "zookeeper_util.h"
+#include "messageq/zookeeper.h"
 
 #include <errno.h>
 
@@ -133,8 +133,7 @@ int test_zoo_deleteall_success() {
 
 void setup() {
     errno = 0;
-    zoo_set_debug_level(0);
-    zh = zookeeper_init(TEST_ZOOKEEPER_SERVER_HOST, NULL, 10000, 0, 0, 0);
+    zh = zoo_init(TEST_ZOOKEEPER_SERVER_HOST);
 }
 
 void teardown() { zookeeper_close(zh); }
@@ -150,6 +149,6 @@ struct test_case tests[] = {
     {setup, teardown, test_zoo_deleteall_success}};
 
 struct test_suite suite = {
-    .name = "test_zookeeper_util", .setup = NULL, .teardown = NULL};
+    .name = "test_zookeeper", .setup = NULL, .teardown = NULL};
 
 int main() { run_suite(); }

@@ -1,5 +1,5 @@
-#ifndef ZOOKEEPER_UTIL_H
-#define ZOOKEEPER_UTIL_H
+#ifndef ZOOKEEPER_H
+#define ZOOKEEPER_H
 
 #include <zookeeper/zookeeper.h>
 
