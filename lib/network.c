@@ -45,8 +45,8 @@ cleanup:
     return -1;
 }
 
-pthread_mutex_t server_lock;
-pthread_cond_t server_running_cond;
+pthread_mutex_t server_lock = PTHREAD_MUTEX_INITIALIZER;
+pthread_cond_t server_running_cond = PTHREAD_COND_INITIALIZER;
 int server_running = 0;
 unsigned short server_port = 0;
 static struct sigaction sa;

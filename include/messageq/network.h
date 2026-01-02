@@ -42,8 +42,7 @@ int dmqp_client_init(const char *host, unsigned short port);
 
 /**
  * Initializes a DMQP server and registers the current process as a partition in
- * ZooKeeper. Signals are handled to gracefully exit. The caller must initialize
- * `server_lock` and `server_running_cond` prior to calling this function.
+ * ZooKeeper. Signals are handled to gracefully exit.
  *
  * @param port the port to bind the server to
  * @param zookeeper_host the host of the ZooKeeper server
