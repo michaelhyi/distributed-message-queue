@@ -4,6 +4,22 @@
 #include <zookeeper/zookeeper.h>
 
 /**
+ * Copied from <zookeeper/zookeeper.h> with slight modifications.
+ *
+ * Synchronously create a handle to used communicate with zookeeper.
+ *
+ * @param host comma separated host:port pairs, each corresponding to a zk
+ * server. e.g. "127.0.0.1:3000,127.0.0.1:3001,127.0.0.1:3002"
+ * @return a pointer to the opaque zhandle structure. If it fails to create
+ * a new zhandle the function returns NULL and the errno variable
+ * indicates the reason.
+ * @throws `EINVAL` invalid args
+ * @throws `ETIMEDOUT` conn timeout
+ * @throws `ECONNREFUSED` conn failure
+ */
+zhandle_t *zoo_init(const char *host);
+
+/**
  * Deletes a ZNode and its children recursively.
  *
  * @param zh the zookeeper handle obtained by a call to `zookeeper_init`

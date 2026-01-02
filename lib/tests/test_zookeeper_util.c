@@ -10,13 +10,43 @@
 #define TEST_ZOOKEEPER_SERVER_HOST "127.0.0.1:2182"
 
 static zhandle_t *zh;
-static void watcher(zhandle_t *zzh, int type, int state, const char *path,
-                    void *watcherCtx) {
-    (void)zzh;
-    (void)type;
-    (void)state;
-    (void)path;
-    (void)watcherCtx;
+
+int test_zoo_init_throws_when_invalid_args() {
+    // arrange
+    errno = 0;
+
+    // act & assert
+    assert(!zoo_init(NULL));
+    assert(errno == EINVAL);
+
+    return 0;
+}
+
+int test_zoo_init_throws_when_nonexistent_host() {
+    // arrange
+    errno = 0;
+
+    // act & assert
+    assert(!zoo_init("127.0.0.1:3181"));
+    assert(errno == ETIMEDOUT);
+
+    return 0;
+}
+
+int test_zoo_init_success() {
+    // arrange
+    errno = 0;
+
+    // act
+    zhandle_t *zh = zoo_init(TEST_ZOOKEEPER_SERVER_HOST);
+
+    // assert
+    assert(zh);
+    assert(!errno);
+
+    // teardown
+    zookeeper_close(zh);
+    return 0;
 }
 
 int test_zoo_deleteall_throws_when_invalid_args() {
@@ -104,12 +134,16 @@ int test_zoo_deleteall_success() {
 void setup() {
     errno = 0;
     zoo_set_debug_level(0);
-    zh = zookeeper_init(TEST_ZOOKEEPER_SERVER_HOST, watcher, 10000, 0, 0, 0);
+    zh = zookeeper_init(TEST_ZOOKEEPER_SERVER_HOST, NULL, 10000, 0, 0, 0);
 }
 
 void teardown() { zookeeper_close(zh); }
 
 struct test_case tests[] = {
+    {NULL, NULL, test_zoo_init_throws_when_invalid_args},
+    {NULL, NULL, test_zoo_init_throws_when_nonexistent_host},
+    {NULL, NULL, test_zoo_init_success},
+
     {setup, teardown, test_zoo_deleteall_throws_when_invalid_args},
     {setup, teardown, test_zoo_deleteall_throws_when_znode_does_not_exist},
     {setup, teardown, test_zoo_deleteall_success_when_no_children},
