@@ -22,7 +22,7 @@ zhandle_t *zoo_init(const char *host);
 /**
  * Deletes a ZNode and its children recursively.
  *
- * @param zh the zookeeper handle obtained by a call to `zookeeper_init`
+ * @param zh the zookeeper handle obtained by a call to `zoo_init()`
  * @param path path of ZNode
  * @param version the expected version of the node. The function will fail if
  * the actual version of the node does not match the expected version. If -1 is
