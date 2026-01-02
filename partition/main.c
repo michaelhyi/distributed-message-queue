@@ -1,3 +1,4 @@
+#include <messageq/api.h> // TODO: shouldn't have to import the api to get macros
 #include <messageq/network.h>
 
 #include <errno.h>
@@ -10,18 +11,77 @@
 
 #include "queue.h"
 
-#define MAX_HOST_LEN 21 // ipv4:port fomat xxx.xxx.xxx.xxx:xxxxx
+#define MAX_SHARD_LEN 16 // shard znode name format: shard-xxxxxxxxxx
+#define MAX_HOST_LEN 21  // ipv4:port format xxx.xxx.xxx.xxx:xxxxx
+#define MAX_PATH_LEN 128
+
+static zhandle_t *zh;
+enum { LEADER, REPLICA, FREE } role = FREE;
+int partition_id = -1;
+char assigned_topic[MAX_TOPIC_NAME_LEN + 1] = {0};
+char assigned_shard[MAX_SHARD_LEN + 1] = {0};
 
 struct queue queue;
 pthread_mutex_t queue_lock;
 
-static void watcher(zhandle_t *zzh, int type, int state, const char *path,
-                    void *watcherCtx) {
-    (void)zzh;
-    (void)type;
+static void partition_znode_watcher(zhandle_t *zzh, int type, int state,
+                                    const char *path, void *watcherCtx) {
     (void)state;
-    (void)path;
-    (void)watcherCtx;
+
+    // TODO: proper resource cleanup on error
+    // TODO: validate partition_id properly set
+    if (type == ZOO_CHANGED_EVENT) {
+        // TODO: acquire lock on partition list
+
+        char buf[512];
+        int buflen = sizeof buf;
+        if (zoo_wget(zzh, path, partition_znode_watcher, watcherCtx, buf,
+                     &buflen, NULL)) {
+            return;
+        }
+        // TODO: make sure you're nul terminating every zoo buf
+        buf[buflen] = '\0';
+
+        strtok(buf, ";");
+        char *allocated = strtok(NULL, ";");
+        if (!allocated) {
+            return;
+        }
+
+        strtok(allocated, "/");
+        char *topic = strtok(NULL, "/");
+        strncpy(assigned_topic, topic, MAX_TOPIC_NAME_LEN);
+
+        strtok(NULL, "/");
+        char *shard = strtok(NULL, "/");
+        strncpy(assigned_shard, shard, MAX_SHARD_LEN);
+
+        char shardpath[MAX_PATH_LEN];
+        snprintf(shardpath, sizeof shardpath, "/topics/%s/shards/%s/partitions",
+                 topic, shard);
+        struct String_vector partitions;
+        if (zoo_get_children(zzh, shardpath, 0, &partitions)) {
+            return;
+        }
+
+        int min_id = partition_id;
+        for (int i = 0; i < partitions.count; i++) {
+            int id = atoi(partitions.data[i] + 10);
+            if (id < min_id) {
+                min_id = id;
+                break;
+            }
+        }
+
+        if (min_id == partition_id) {
+            role = LEADER;
+        } else {
+            role = REPLICA;
+        }
+
+        // TODO:
+        // unlock distributed lock on partition list, esp every time on return
+    }
 }
 
 struct targ {
@@ -63,9 +123,7 @@ int main(int argc, char **argv) {
     pthread_mutex_init(&queue_lock, NULL);
 
     zoo_set_debug_level(0);
-    zhandle_t *zh =
-        zookeeper_init(service_discovery_host, watcher, 10000, 0, 0, 0);
-    if (!zh) {
+    if (!(zh = zookeeper_init(service_discovery_host, NULL, 10000, 0, 0, 0))) {
         ret = 1;
         goto cleanup;
     }
@@ -83,19 +141,30 @@ int main(int argc, char **argv) {
     }
     pthread_mutex_unlock(&server_lock);
 
-    // TODO: obtain lock
-    // TODO: use localhost for now, must dynamically detect in the future
-    // 16 max buf len
-    char host[16];
+    // TODO: acquire /partitions distributed lock
+
+    // TODO: must dynamically detect host in the future
+    char host[MAX_HOST_LEN + 1];
     snprintf(host, sizeof host, "127.0.0.1:%d", server_port);
+
+    char path[MAX_PATH_LEN + 1];
+    int pathlen = sizeof path;
     if (zoo_create(zh, "/partitions/partition-", host, strlen(host),
-                   &ZOO_OPEN_ACL_UNSAFE, ZOO_EPHEMERAL_SEQUENTIAL, NULL, 0)) {
-        // TODO: release lock
+                   &ZOO_OPEN_ACL_UNSAFE, ZOO_EPHEMERAL_SEQUENTIAL, path,
+                   pathlen)) {
+        // TODO: release /partitions distributed lock
         ret = 1;
         // TODO: on error, cleanup dmqp server
         goto cleanup_zookeeper;
     }
-    // TODO: release lock
+    partition_id = atoi(path + 22);
+
+    if (zoo_wexists(zh, path, partition_znode_watcher, NULL, NULL)) {
+        ret = 1;
+        goto cleanup_zookeeper;
+    }
+
+    // TODO: release /partitions distributed lock
 
     pthread_join(tid, NULL);
 
