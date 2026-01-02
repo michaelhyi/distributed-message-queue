@@ -7,7 +7,7 @@
 
 #include <errno.h>
 
-#define TEST_ZOOKEEPER_SERVER_HOST "127.0.0.1:2182"
+#define TEST_ZOOKEEPER_HOST "127.0.0.1:2182"
 
 static zhandle_t *zh;
 
@@ -38,7 +38,7 @@ int test_zoo_init_success() {
     errno = 0;
 
     // act
-    zhandle_t *zh = zoo_init(TEST_ZOOKEEPER_SERVER_HOST);
+    zhandle_t *zh = zoo_init(TEST_ZOOKEEPER_HOST);
 
     // assert
     assert(zh);
@@ -133,7 +133,7 @@ int test_zoo_deleteall_success() {
 
 void setup() {
     errno = 0;
-    zh = zoo_init(TEST_ZOOKEEPER_SERVER_HOST);
+    zh = zoo_init(TEST_ZOOKEEPER_HOST);
 }
 
 void teardown() { zookeeper_close(zh); }

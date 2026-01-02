@@ -12,7 +12,7 @@
 #include <string.h>
 #include <zookeeper/zookeeper.h>
 
-#define TEST_ZOOKEEPER_SERVER_HOST "127.0.0.1:2182"
+#define TEST_ZOOKEEPER_HOST "127.0.0.1:2182"
 
 static zhandle_t *zh;
 
@@ -265,9 +265,9 @@ int test_create_topic_success() {
 
 void setup() {
     errno = 0;
-    zh = zoo_init(TEST_ZOOKEEPER_SERVER_HOST);
+    zh = zoo_init(TEST_ZOOKEEPER_HOST);
 
-    client_init(TEST_ZOOKEEPER_SERVER_HOST);
+    client_init(TEST_ZOOKEEPER_HOST);
 }
 
 void teardown() {
