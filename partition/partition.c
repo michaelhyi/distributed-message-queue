@@ -157,12 +157,12 @@ int start_partition(char *service_discovery_host) {
     queue_init(&queue);
     if (!(zh = zoo_init(service_discovery_host))) {
         ret = -1;
-        goto cleanup;
+        goto cleanup_queue;
     }
 
     pthread_t *server_tid = start_dmqp_server();
     if (!server_tid) {
-        ret = 1;
+        ret = -1;
         goto cleanup_zookeeper;
     }
 
@@ -172,7 +172,7 @@ int start_partition(char *service_discovery_host) {
 
 cleanup_zookeeper:
     zookeeper_close(zh);
-cleanup:
+cleanup_queue:
     queue_destroy(&queue);
     return ret;
 }
