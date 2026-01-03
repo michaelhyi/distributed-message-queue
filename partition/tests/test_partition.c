@@ -29,8 +29,6 @@ void *partition_thread(void *arg) {
 int test_start_partition_registers_with_zookeeper() {
     // arrange
     errno = 0;
-
-    // act
     pthread_t tid;
     struct targ arg = {0};
     pthread_create(&tid, NULL, partition_thread, &arg);
@@ -49,6 +47,7 @@ int test_start_partition_registers_with_zookeeper() {
     char expected_host[512] = "127.0.0.1:";
     sprintf(expected_host, "127.0.0.1:%d", server_port);
 
+    // act
     int found = 0;
     int retries = 5;
     while (!found && retries-- > 0) {
@@ -86,7 +85,94 @@ int test_start_partition_registers_with_zookeeper() {
     return 0;
 }
 
-int test_start_partition_becomes_leader_when_assigned_to_shard() { return -1; }
+int test_start_partition_becomes_leader_when_assigned_to_shard() {
+    // arrange
+    errno = 0;
+
+    role = FREE;
+    memset(assigned_topic, 0, sizeof assigned_topic);
+    memset(assigned_shard, 0, sizeof assigned_shard);
+
+    zoo_create(zh, "/topics/utest-topic", NULL, -1, &ZOO_OPEN_ACL_UNSAFE,
+               ZOO_PERSISTENT, NULL, 0);
+    zoo_create(zh, "/topics/utest-topic/shards", NULL, -1, &ZOO_OPEN_ACL_UNSAFE,
+               ZOO_PERSISTENT, NULL, 0);
+    zoo_create(zh, "/topics/utest-topic/shards/shard-0000000000", NULL, -1,
+               &ZOO_OPEN_ACL_UNSAFE, ZOO_PERSISTENT, NULL, 0);
+    zoo_create(zh, "/topics/utest-topic/shards/shard-0000000000/partitions",
+               NULL, -1, &ZOO_OPEN_ACL_UNSAFE, ZOO_PERSISTENT, NULL, 0);
+    zoo_create(zh,
+               "/topics/utest-topic/shards/shard-0000000000/partitions/"
+               "partition-9999999998",
+               NULL, -1, &ZOO_OPEN_ACL_UNSAFE, ZOO_PERSISTENT, NULL, 0);
+    zoo_create(zh,
+               "/topics/utest-topic/shards/shard-0000000000/partitions/"
+               "partition-9999999999",
+               NULL, -1, &ZOO_OPEN_ACL_UNSAFE, ZOO_PERSISTENT, NULL, 0);
+
+    pthread_t tid;
+    struct targ arg = {0};
+    pthread_create(&tid, NULL, partition_thread, &arg);
+
+    struct timeval tv;
+    struct timespec ts = {0};
+    gettimeofday(&tv, NULL);
+    ts.tv_sec = tv.tv_sec + 10;
+    pthread_mutex_lock(&server_lock);
+    while (!server_running) {
+        assert(pthread_cond_timedwait(&server_running_cond, &server_lock,
+                                      &ts) != ETIMEDOUT);
+    }
+    pthread_mutex_unlock(&server_lock);
+
+    int retries = 5;
+    while (partition_id == -1 && retries-- > 0) {
+        sleep(1);
+    }
+
+    // assert
+    assert(partition_id != -1);
+
+    // arrange
+    char buf[512];
+    int buflen = sizeof buf;
+    zoo_get(zh, partition_path, 0, buf, &buflen, NULL);
+    buf[buflen] = '\0';
+    strcat(buf, ";/topics/utest-topic/shards/shard-0000000000");
+
+    // act
+    zoo_set(zh, partition_path, buf, sizeof buf, -1);
+
+    // arrange
+    retries = 5;
+    while (role == FREE && retries-- > 0) {
+        sleep(5);
+    }
+
+    // assert
+    assert(role == LEADER);
+    assert(strcmp(assigned_topic, "utest-topic") == 0);
+    assert(strcmp(assigned_shard, "shard-0000000000") == 0);
+
+    // teardown
+    zoo_delete(zh,
+               "/topics/utest-topic/shards/shard-0000000000/partitions/"
+               "partition-9999999999",
+               -1);
+    zoo_delete(zh,
+               "/topics/utest-topic/shards/shard-0000000000/partitions/"
+               "partition-9999999998",
+               -1);
+    zoo_delete(zh, "/topics/utest-topic/shards/shard-0000000000/partitions",
+               -1);
+    zoo_delete(zh, "/topics/utest-topic/shards/shard-0000000000", -1);
+    zoo_delete(zh, "/topics/utest-topic/shards", -1);
+    zoo_delete(zh, "/topics/utest-topic", -1);
+
+    pthread_kill(tid, SIGTERM);
+    pthread_join(tid, NULL);
+    return 0;
+}
 
 int test_start_partition_becomes_replica_when_assigned_to_shard() { return -1; }
 
@@ -108,99 +194,6 @@ struct test_suite suite = {
 int main() { run_suite(); }
 
 // TODO: fix tests post refactorign
-
-// #ifdef DEBUG
-// TestSuite(partition);
-// #else
-// TestSuite(partition, .timeout = 10);
-// #endif
-
-// Test(partition, test_partition_destroy_success) {
-//     // arrange
-//     errno = 0;
-//     queue_init(&queue);
-//     pthread_mutex_init(&queue_lock, NULL);
-
-//     struct queue_entry entry;
-
-//     entry.data = "Hello";
-//     entry.size = strlen(entry.data);
-//     entry.timestamp = 0x1000;
-//     queue_push(&queue, &entry);
-
-//     entry.data = ", ";
-//     entry.size = strlen(entry.data);
-//     entry.timestamp = 0x2000;
-//     queue_push(&queue, &entry);
-
-//     entry.data = "World";
-//     entry.size = strlen(entry.data);
-//     entry.timestamp = 0x3000;
-//     queue_push(&queue, &entry);
-
-//     entry.data = "!";
-//     entry.size = strlen(entry.data);
-//     entry.timestamp = 0x4000;
-//     queue_push(&queue, &entry);
-
-//     // act
-//     partition_destroy();
-
-//     // assert
-//     cr_assert_eq(errno, 0);
-//     cr_assert_null(queue.head);
-//     cr_assert_null(queue.tail);
-// }
-
-// Test(partition, test_handle_dmqp_message_throws_error_on_invalid_args) {
-//     // arrange
-//     errno = 0;
-//     struct dmqp_header header1 = {.method = DMQP_HEARTBEAT,
-//                                   .flags = 0,
-//                                   .timestamp = 0,
-//                                   .length = 14};
-//     struct dmqp_message message1 = {.header = header1, .payload = NULL};
-
-//     struct dmqp_header header2 = {.method = DMQP_HEARTBEAT,
-//                                   .flags = 0,
-//                                   .timestamp = 0,
-//                                   .length = MAX_PAYLOAD_LENGTH + 14};
-//     struct dmqp_message message2 = {.header = header2,
-//                                     .payload = "Hello, World!"};
-
-//     struct dmqp_header header3 = {.method = DMQP_HEARTBEAT,
-//                                   .flags = 0,
-//                                   .timestamp = 0,
-//                                   .length = 14};
-//     struct dmqp_message message3 = {.header = header3,
-//                                     .payload = "Hello, World!"};
-
-//     // act
-//     int res1 = handle_dmqp_message(message1, 0);
-//     int errno1 = errno;
-
-//     // arrange
-//     errno = 0;
-
-//     // act
-//     int res2 = handle_dmqp_message(message2, 0);
-//     int errno2 = errno;
-
-//     // arrange
-//     errno = 0;
-
-//     // act
-//     int res3 = handle_dmqp_message(message3, -1);
-//     int errno3 = errno;
-
-//     // assert
-//     cr_assert(res1 < 0);
-//     cr_assert(res2 < 0);
-//     cr_assert(res3 < 0);
-//     cr_assert_eq(errno1, EINVAL);
-//     cr_assert_eq(errno2, EINVAL);
-//     cr_assert_eq(errno3, EINVAL);
-// }
 
 // Test(partition,
 //      test_handle_dmqp_message_throws_error_on_unknown_method_received) {
@@ -261,39 +254,6 @@ int main() { run_suite(); }
 //     cr_assert_eq(errno, EPROTO);
 //     cr_assert_eq(res_header.method, RESPONSE);
 //     cr_assert_eq(res_header.flags, EPROTO);
-//     cr_assert_eq(res_header.timestamp, 0);
-//     cr_assert_eq(res_header.length, 0);
-
-//     // cleanup
-//     free(message.payload);
-//     close(mock_sockets[0]);
-// }
-
-// Test(partition, test_handle_dmqp_message_success_on_heartbeat_received) {
-//     // arrange
-//     errno = 0;
-//     struct dmqp_header header = {.method = DMQP_HEARTBEAT,
-//                                  .flags = 0,
-//                                  .timestamp = 0,
-//                                  .length = 0};
-//     struct dmqp_message message = {.header = header, .payload = NULL};
-
-//     int mock_sockets[2];
-//     socketpair(AF_UNIX, SOCK_STREAM, 0, mock_sockets);
-
-//     // act
-//     int res = handle_dmqp_message(message, mock_sockets[1]);
-//     close(mock_sockets[1]);
-
-//     struct dmqp_header res_header;
-//     read_all(mock_sockets[0], &res_header, sizeof(struct
-//     dmqp_header));
-
-//     // assert
-//     cr_assert(res >= 0);
-//     cr_assert_eq(errno, 0);
-//     cr_assert_eq(res_header.method, RESPONSE);
-//     cr_assert_eq(res_header.flags, 0);
 //     cr_assert_eq(res_header.timestamp, 0);
 //     cr_assert_eq(res_header.length, 0);
 

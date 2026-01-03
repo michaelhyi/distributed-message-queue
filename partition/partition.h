@@ -7,6 +7,7 @@ enum role { LEADER, REPLICA, FREE };
 
 extern enum role role;
 extern int partition_id;
+extern char partition_path[MAX_PATH_LEN + 1];
 extern char assigned_topic[MAX_TOPIC_LEN + 1];
 extern char assigned_shard[MAX_SHARD_LEN + 1];
 
