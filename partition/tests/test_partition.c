@@ -103,11 +103,11 @@ int test_start_partition_becomes_leader_when_assigned_to_shard() {
                NULL, -1, &ZOO_OPEN_ACL_UNSAFE, ZOO_PERSISTENT, NULL, 0);
     zoo_create(zh,
                "/topics/utest-topic/shards/shard-0000000000/partitions/"
-               "partition-9999999998",
+               "partition-1000000000",
                NULL, -1, &ZOO_OPEN_ACL_UNSAFE, ZOO_PERSISTENT, NULL, 0);
     zoo_create(zh,
                "/topics/utest-topic/shards/shard-0000000000/partitions/"
-               "partition-9999999999",
+               "partition-1000000001",
                NULL, -1, &ZOO_OPEN_ACL_UNSAFE, ZOO_PERSISTENT, NULL, 0);
 
     pthread_t tid;
@@ -141,12 +141,12 @@ int test_start_partition_becomes_leader_when_assigned_to_shard() {
     strcat(buf, ";/topics/utest-topic/shards/shard-0000000000");
 
     // act
-    zoo_set(zh, partition_path, buf, sizeof buf, -1);
+    zoo_set(zh, partition_path, buf, strlen(buf), -1);
 
     // arrange
-    retries = 5;
+    retries = 50;
     while (role == FREE && retries-- > 0) {
-        sleep(5);
+        sleep(1);
     }
 
     // assert
@@ -155,26 +155,89 @@ int test_start_partition_becomes_leader_when_assigned_to_shard() {
     assert(strcmp(assigned_shard, "shard-0000000000") == 0);
 
     // teardown
-    zoo_delete(zh,
-               "/topics/utest-topic/shards/shard-0000000000/partitions/"
-               "partition-9999999999",
-               -1);
-    zoo_delete(zh,
-               "/topics/utest-topic/shards/shard-0000000000/partitions/"
-               "partition-9999999998",
-               -1);
-    zoo_delete(zh, "/topics/utest-topic/shards/shard-0000000000/partitions",
-               -1);
-    zoo_delete(zh, "/topics/utest-topic/shards/shard-0000000000", -1);
-    zoo_delete(zh, "/topics/utest-topic/shards", -1);
-    zoo_delete(zh, "/topics/utest-topic", -1);
-
+    zoo_deleteall(zh, "/topics/utest-topic", -1);
     pthread_kill(tid, SIGTERM);
     pthread_join(tid, NULL);
     return 0;
 }
 
-int test_start_partition_becomes_replica_when_assigned_to_shard() { return -1; }
+int test_start_partition_becomes_replica_when_assigned_to_shard() {
+    // arrange
+    errno = 0;
+
+    role = FREE;
+    memset(assigned_topic, 0, sizeof assigned_topic);
+    memset(assigned_shard, 0, sizeof assigned_shard);
+
+    zoo_create(zh, "/topics/utest-topic", NULL, -1, &ZOO_OPEN_ACL_UNSAFE,
+               ZOO_PERSISTENT, NULL, 0);
+    zoo_create(zh, "/topics/utest-topic/shards", NULL, -1, &ZOO_OPEN_ACL_UNSAFE,
+               ZOO_PERSISTENT, NULL, 0);
+    zoo_create(zh, "/topics/utest-topic/shards/shard-0000000000", NULL, -1,
+               &ZOO_OPEN_ACL_UNSAFE, ZOO_PERSISTENT, NULL, 0);
+    zoo_create(zh, "/topics/utest-topic/shards/shard-0000000000/partitions",
+               NULL, -1, &ZOO_OPEN_ACL_UNSAFE, ZOO_PERSISTENT, NULL, 0);
+    zoo_create(zh,
+               "/topics/utest-topic/shards/shard-0000000000/partitions/"
+               "partition-",
+               NULL, -1, &ZOO_OPEN_ACL_UNSAFE, ZOO_PERSISTENT_SEQUENTIAL, NULL,
+               0);
+    zoo_create(zh,
+               "/topics/utest-topic/shards/shard-0000000000/partitions/"
+               "partition-",
+               NULL, -1, &ZOO_OPEN_ACL_UNSAFE, ZOO_PERSISTENT_SEQUENTIAL, NULL,
+               0);
+
+    pthread_t tid;
+    struct targ arg = {0};
+    pthread_create(&tid, NULL, partition_thread, &arg);
+
+    struct timeval tv;
+    struct timespec ts = {0};
+    gettimeofday(&tv, NULL);
+    ts.tv_sec = tv.tv_sec + 10;
+    pthread_mutex_lock(&server_lock);
+    while (!server_running) {
+        assert(pthread_cond_timedwait(&server_running_cond, &server_lock,
+                                      &ts) != ETIMEDOUT);
+    }
+    pthread_mutex_unlock(&server_lock);
+
+    int retries = 5;
+    while (partition_id == -1 && retries-- > 0) {
+        sleep(1);
+    }
+
+    // assert
+    assert(partition_id != -1);
+
+    // arrange
+    char buf[512];
+    int buflen = sizeof buf;
+    zoo_get(zh, partition_path, 0, buf, &buflen, NULL);
+    buf[buflen] = '\0';
+    strcat(buf, ";/topics/utest-topic/shards/shard-0000000000");
+
+    // act
+    zoo_set(zh, partition_path, buf, strlen(buf), -1);
+
+    // arrange
+    retries = 50;
+    while (role == FREE && retries-- > 0) {
+        sleep(1);
+    }
+
+    // assert
+    assert(role == REPLICA);
+    assert(strcmp(assigned_topic, "utest-topic") == 0);
+    assert(strcmp(assigned_shard, "shard-0000000000") == 0);
+
+    // teardown
+    zoo_deleteall(zh, "/topics/utest-topic", -1);
+    pthread_kill(tid, SIGTERM);
+    pthread_join(tid, NULL);
+    return 0;
+}
 
 int test_start_partition_becomes_leader_when_prev_leader_dies() { return -1; }
 

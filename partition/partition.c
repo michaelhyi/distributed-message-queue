@@ -116,11 +116,6 @@ static void partition_znode_watcher(zhandle_t *zzh, int type, int state,
         int preceding_id = -1;
         char *preceding_znode = NULL;
         for (int i = 0; i < partitions.count; i++) {
-            if (strcmp(partitions.data[i], "free-count") == 0 ||
-                strcmp(partitions.data[i], "lock") == 0) {
-                continue;
-            }
-
             int id = atoi(partitions.data[i] + 10);
             if (id < partition_id &&
                 (preceding_id == -1 || id > preceding_id)) {
@@ -137,7 +132,10 @@ static void partition_znode_watcher(zhandle_t *zzh, int type, int state,
             char preceding_partition[MAX_PATH_LEN];
             snprintf(preceding_partition, sizeof preceding_partition,
                      "/partitions/%s", preceding_znode);
-            zoo_wexists(zzh, preceding_partition, leader_watcher, NULL, NULL);
+            char buf[512];
+            int buflen = sizeof buf;
+            zoo_wget(zzh, preceding_partition, leader_watcher, NULL, buf,
+                     &buflen, NULL);
         }
 
         // TODO: release /partitions distributed lock
@@ -159,7 +157,10 @@ static void reigster_partition() {
                sizeof partition_path);
     partition_id = atoi(partition_path + 22);
 
-    zoo_wexists(zh, partition_path, partition_znode_watcher, NULL, NULL);
+    char buf[512];
+    int buflen = sizeof buf;
+    zoo_wget(zh, partition_path, partition_znode_watcher, NULL, buf, &buflen,
+             NULL);
 
     // TODO: release /partitions distributed lock
 }
