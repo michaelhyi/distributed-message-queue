@@ -143,7 +143,8 @@ static int get_free_partition(char *partition_id) {
 
     for (int i = 0; i < partitions.count; i++) {
         char *partition = partitions.data[i];
-        if (strcmp(partition, "free-count") == 0) {
+        if (strcmp(partition, "free-count") == 0 ||
+            strcmp(partition, "lock") == 0) {
             continue;
         }
 

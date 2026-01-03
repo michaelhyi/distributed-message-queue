@@ -273,6 +273,12 @@ void setup() {
 void teardown() {
     zoo_deleteall(zh, "/topics", -1);
     zoo_deleteall(zh, "/partitions", -1);
+
+    zoo_create(zh, "/topics", NULL, -1, &ZOO_OPEN_ACL_UNSAFE, ZOO_PERSISTENT,
+               NULL, 0);
+    zoo_create(zh, "/partitions", NULL, -1, &ZOO_OPEN_ACL_UNSAFE,
+               ZOO_PERSISTENT, NULL, 0);
+
     client_destroy();
     zookeeper_close(zh);
 }
