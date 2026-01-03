@@ -94,24 +94,17 @@ int test_create_topic_throws_if_invalid_args() {
 
 int test_create_topic_throws_if_not_enough_partitions() {
     // arrange
-    zoo_create(zh, "/partitions", NULL, -1, &ZOO_OPEN_ACL_UNSAFE,
-               ZOO_PERSISTENT, NULL, 0);
-    zoo_create(zh, "/partitions/free-count", "4", 1, &ZOO_OPEN_ACL_UNSAFE,
-               ZOO_PERSISTENT, NULL, 0);
+    zoo_set(zh, "/partitions/free-count", "4", 1, -1);
     char *partitions[] = {"127.0.0.1:8080", "127.0.0.1:8081", "127.0.0.1:8082",
-                          "127.0.0.1:8083", "127.0.0.1:8084", "127.0.0.1:8085",
-                          "127.0.0.1:8086", "127.0.0.1:8087"};
+                          "127.0.0.1:8083"};
     char partition_ids[arrlen(partitions)][MAX_PATH_LEN];
-    for (size_t i = 0; i < arrlen(partitions); i++) {
+    for (int i = 0; i < arrlen(partitions); i++) {
         char *path = partition_ids[i];
         zoo_create(zh, "/partitions/partition-", partitions[i],
                    strlen(partitions[i]), &ZOO_OPEN_ACL_UNSAFE,
                    ZOO_PERSISTENT_SEQUENTIAL, path, MAX_PATH_LEN);
         // must be persistent during tests due to timeout
     }
-
-    zoo_create(zh, "/topics", NULL, -1, &ZOO_OPEN_ACL_UNSAFE, ZOO_PERSISTENT,
-               NULL, 0);
 
     struct topic topic = {
         .name = "utest-topic", .shards = 2, .replication_factor = 3};
@@ -122,20 +115,24 @@ int test_create_topic_throws_if_not_enough_partitions() {
     // assert
     assert(res < 0);
     assert(errno == ENODEV);
+
+    // teardown
+    for (int i = 0; i < arrlen(partitions); i++) {
+        char *path = partition_ids[i];
+        zoo_delete(zh, path, -1);
+    }
+    zoo_set(zh, "/partitions/free-count", "0", 1, -1);
     return 0;
 }
 
 int test_create_topic_throws_if_topic_already_exists() {
     // arrange
-    zoo_create(zh, "/partitions", NULL, -1, &ZOO_OPEN_ACL_UNSAFE,
-               ZOO_PERSISTENT, NULL, 0);
-    zoo_create(zh, "/partitions/free-count", "8", 1, &ZOO_OPEN_ACL_UNSAFE,
-               ZOO_PERSISTENT, NULL, 0);
+    zoo_set(zh, "/partitions/free-count", "8", 1, -1);
     char *partitions[] = {"127.0.0.1:8080", "127.0.0.1:8081", "127.0.0.1:8082",
                           "127.0.0.1:8083", "127.0.0.1:8084", "127.0.0.1:8085",
                           "127.0.0.1:8086", "127.0.0.1:8087"};
-    char partition_ids[sizeof partitions / sizeof partitions[0]][MAX_PATH_LEN];
-    for (size_t i = 0; i < sizeof partitions / sizeof partitions[0]; i++) {
+    char partition_ids[arrlen(partitions)][MAX_PATH_LEN];
+    for (int i = 0; i < arrlen(partitions); i++) {
         char *path = partition_ids[i];
         zoo_create(zh, "/partitions/partition-", partitions[i],
                    strlen(partitions[i]), &ZOO_OPEN_ACL_UNSAFE,
@@ -143,8 +140,6 @@ int test_create_topic_throws_if_topic_already_exists() {
         // must be persistent during tests due to timeout
     }
 
-    zoo_create(zh, "/topics", NULL, -1, &ZOO_OPEN_ACL_UNSAFE, ZOO_PERSISTENT,
-               NULL, 0);
     zoo_create(zh, "/topics/utest-topic", NULL, -1, &ZOO_OPEN_ACL_UNSAFE,
                ZOO_PERSISTENT, NULL, 0);
 
@@ -157,30 +152,31 @@ int test_create_topic_throws_if_topic_already_exists() {
     // assert
     assert(res < 0);
     assert(errno == EEXIST);
+
+    // teardown
+    zoo_delete(zh, "/topics/utest-topic", -1);
+    for (int i = 0; i < arrlen(partitions); i++) {
+        char *path = partition_ids[i];
+        zoo_delete(zh, path, -1);
+    }
+    zoo_set(zh, "/partitions/free-count", "0", 1, -1);
     return 0;
 }
 
 int test_create_topic_success() {
     // arrange
-    zoo_create(zh, "/partitions", NULL, -1, &ZOO_OPEN_ACL_UNSAFE,
-               ZOO_PERSISTENT, NULL, 0);
-    zoo_create(zh, "/partitions/free-count", "8", 1, &ZOO_OPEN_ACL_UNSAFE,
-               ZOO_PERSISTENT, NULL, 0);
-
+    zoo_set(zh, "/partitions/free-count", "8", 1, -1);
     char *partitions[] = {"127.0.0.1:8080", "127.0.0.1:8081", "127.0.0.1:8082",
                           "127.0.0.1:8083", "127.0.0.1:8084", "127.0.0.1:8085",
                           "127.0.0.1:8086", "127.0.0.1:8087"};
-    char partition_ids[sizeof partitions / sizeof partitions[0]][MAX_PATH_LEN];
-    for (size_t i = 0; i < sizeof partitions / sizeof partitions[0]; i++) {
+    char partition_ids[arrlen(partitions)][MAX_PATH_LEN];
+    for (int i = 0; i < arrlen(partitions); i++) {
         char *path = partition_ids[i];
         zoo_create(zh, "/partitions/partition-", partitions[i],
                    strlen(partitions[i]), &ZOO_OPEN_ACL_UNSAFE,
                    ZOO_PERSISTENT_SEQUENTIAL, path, MAX_PATH_LEN);
         // must be persistent during tests due to timeout
     }
-
-    zoo_create(zh, "/topics", NULL, -1, &ZOO_OPEN_ACL_UNSAFE, ZOO_PERSISTENT,
-               NULL, 0);
 
     struct topic topic = {
         .name = "utest-topic", .shards = 2, .replication_factor = 3};
@@ -260,6 +256,13 @@ int test_create_topic_success() {
         }
     }
 
+    // teardown
+    zoo_deleteall(zh, "/topics/utest-topic", -1);
+    for (int i = 0; i < arrlen(partitions); i++) {
+        char *path = partition_ids[i];
+        zoo_delete(zh, path, -1);
+    }
+    zoo_set(zh, "/partitions/free-count", "0", 1, -1);
     return 0;
 }
 
@@ -271,14 +274,6 @@ void setup() {
 }
 
 void teardown() {
-    zoo_deleteall(zh, "/topics", -1);
-    zoo_deleteall(zh, "/partitions", -1);
-
-    zoo_create(zh, "/topics", NULL, -1, &ZOO_OPEN_ACL_UNSAFE, ZOO_PERSISTENT,
-               NULL, 0);
-    zoo_create(zh, "/partitions", NULL, -1, &ZOO_OPEN_ACL_UNSAFE,
-               ZOO_PERSISTENT, NULL, 0);
-
     client_destroy();
     zookeeper_close(zh);
 }
