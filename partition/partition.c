@@ -17,7 +17,7 @@ char assigned_shard[MAX_SHARD_LEN + 1] = {0};
 
 static zhandle_t *zh;
 static struct queue queue;
-// static pthread_mutex_t queue_lock = PTHREAD_MUTEX_INITIALIZER;
+static pthread_mutex_t queue_lock = PTHREAD_MUTEX_INITIALIZER;
 
 struct targ {
     int result;
@@ -196,102 +196,131 @@ cleanup_queue:
     return ret;
 }
 
-// TODO: test and fix all these
-// void handle_dmqp_push(const struct dmqp_message *message, int client) {
-//     struct dmqp_header res_header;
+// TODO: test all of these DMQP handlers
+void handle_dmqp_push(const struct dmqp_message *message, int client) {
+    if (!message || client < 0 || role == FREE || partition_id < 0 ||
+        !partition_path[0] || !assigned_topic[0] || !assigned_shard[0]) {
+        return;
+    }
 
-//     // TODO: establish what topic this partition is part of
-//     // TODO: acquire seq id distributed lock
-//     // get seq id
-//     // if message->header.sequence_id doesnt match the topic's expected seq
-//     id,
-//     //
+    // TODO: acquire /topics/{topic_name}/sequence-id/lock distributed lock
 
-//     pthread_mutex_lock(&queue_lock);
-//     struct queue_entry entry = {.data = message->payload,
-//                                 .size = message->header.length,
-//                                 .timestamp = message->header.sequence_id};
+    char path[MAX_PATH_LEN + 1];
+    snprintf(path, sizeof path, "/topics/%s/sequence-id", assigned_topic);
+    char buf[512];
+    int buflen = sizeof buf;
+    zoo_get(zh, path, 0, buf, &buflen, NULL);
 
-//     if (queue_push(&queue, &entry) < 0) {
-//         if (errno != ENODATA) {
-//             errno = EIO;
-//         }
-//     }
+    unsigned int seqid = atoi(buf);
 
-//     pthread_mutex_unlock(&queue_lock);
+    struct dmqp_header res_header;
+    struct dmqp_message res_message;
+    if (message->header.sequence_id != seqid) {
+        res_header.sequence_id = 0;
+        res_header.length = 0;
+        res_header.method = DMQP_RESPONSE;
+        res_header.status_code = EINVAL;
 
-//     res_header.method = DMQP_RESPONSE;
-//     res_header.status_code = errno;
-//     res_header.length = 0;
-//     res_header.sequence_id = 0;
-//     struct dmqp_message res_message = {.header = res_header};
+        res_message.header = res_header;
+        res_message.payload = NULL;
+        send_dmqp_message(client, &res_message, 0);
+        goto cleanup;
+    }
 
-//     send_dmqp_message(client, &res_message, 0);
-// }
+    pthread_mutex_lock(&queue_lock);
+    struct queue_entry entry = {
+        .id = message->header.sequence_id,
+        .data = message->payload,
+        .size = message->header.length,
+    };
+    queue_push(&queue, &entry);
+    pthread_mutex_unlock(&queue_lock);
 
-// void handle_dmqp_pop(const struct dmqp_message *message, int client) {
-//     (void)message;
-//     struct queue_entry entry = {.data = NULL, .size = 0, .timestamp = 0};
-//     struct dmqp_header res_header;
+    res_header.sequence_id = 0;
+    res_header.length = 0;
+    res_header.method = DMQP_RESPONSE;
+    res_header.status_code = 0;
+    res_message.header = res_header;
+    send_dmqp_message(client, &res_message, 0);
 
-//     pthread_mutex_lock(&queue_lock);
+cleanup:;
+    // TODO: release /topics/{topic_name}/sequence-id/lock distributed lock
+}
 
-//     if (queue_pop(&queue, &entry) < 0) {
-//         if (errno != ENODATA) {
-//             errno = EIO;
-//         }
-//     }
+void handle_dmqp_pop(const struct dmqp_message *message, int client) {
+    if (!message || client < 0 || role == FREE || partition_id < 0 ||
+        !partition_path[0] || !assigned_topic[0] || !assigned_shard[0]) {
+        return;
+    }
 
-//     pthread_mutex_unlock(&queue_lock);
+    pthread_mutex_lock(&queue_lock);
+    struct queue_entry *entry = queue_pop(&queue);
 
-//     res_header.method = DMQP_RESPONSE;
-//     res_header.status_code = errno;
-//     res_header.length = entry.size;
-//     res_header.sequence_id = entry.timestamp;
-//     struct dmqp_message res_message = {.header = res_header,
-//                                        .payload = entry.data};
+    struct dmqp_header res_header;
+    if (!entry) {
+        res_header.sequence_id = 0;
+        res_header.length = 0;
+        res_header.method = DMQP_RESPONSE;
+        res_header.status_code = ENODATA;
 
-//     send_dmqp_message(client, &res_message, 0);
+        struct dmqp_message res_message = {.header = res_header,
+                                           .payload = NULL};
+        send_dmqp_message(client, &res_message, 0);
+        goto cleanup;
+    }
 
-//     if (entry.data != NULL) {
-//         free(entry.data);
-//     }
-// }
+    res_header.sequence_id = entry->id;
+    res_header.length = entry->size;
+    res_header.method = DMQP_RESPONSE;
+    res_header.status_code = errno;
+    struct dmqp_message res_message = {.header = res_header,
+                                       .payload = entry->data};
+    send_dmqp_message(client, &res_message, 0);
 
-// void handle_dmqp_peek_sequence_id(const struct dmqp_message *message,
-//                                   int client) {
-//     (void)message;
-//     struct dmqp_header res_header;
+cleanup:
+    if (entry) {
+        if (entry->data) {
+            free(entry->data);
+        }
 
-//     pthread_mutex_lock(&queue_lock);
+        free(entry);
+    }
+    pthread_mutex_unlock(&queue_lock);
+}
 
-//     long timestamp;
-//     if (queue_peek_timestamp(&queue, &timestamp) < 0) {
-//         if (errno != ENODATA) {
-//             errno = EIO;
-//         }
-//     }
+void handle_dmqp_peek_sequence_id(const struct dmqp_message *message,
+                                  int client) {
+    if (!message || client < 0 || role == FREE || partition_id < 0 ||
+        !partition_path[0] || !assigned_topic[0] || !assigned_shard[0]) {
+        return;
+    }
 
-//     pthread_mutex_unlock(&queue_lock);
+    pthread_mutex_lock(&queue_lock);
+    int seqid = queue_peek_id(&queue);
+    pthread_mutex_unlock(&queue_lock);
 
-//     res_header.method = DMQP_RESPONSE;
-//     res_header.status_code = errno;
-//     res_header.length = 0;
-//     res_header.sequence_id = timestamp;
-//     struct dmqp_message res_message = {.header = res_header, .payload =
-//     NULL};
+    struct dmqp_header res_header = {0};
+    if (seqid < 0) {
+        res_header.method = DMQP_RESPONSE;
+        res_header.status_code = ENODATA;
+    } else {
+        res_header.sequence_id = seqid;
+        res_header.method = DMQP_RESPONSE;
+    }
 
-//     send_dmqp_message(client, &res_message, 0);
-// }
+    struct dmqp_message res_message = {.header = res_header, .payload = NULL};
+    send_dmqp_message(client, &res_message, 0);
+}
 
-// void handle_dmqp_response(const struct dmqp_message *message, int client) {
-//     (void)message;
-//     struct dmqp_header res_header = {.method = DMQP_RESPONSE,
-//                                      .status_code = EPROTO,
-//                                      .length = 0,
-//                                      .sequence_id = 0};
-//     struct dmqp_message res_message = {.header = res_header};
+void handle_dmqp_response(const struct dmqp_message *message, int client) {
+    if (!message || client < 0 || role == FREE || partition_id < 0 ||
+        !partition_path[0] || !assigned_topic[0] || !assigned_shard[0]) {
+        return;
+    }
 
-//     send_dmqp_message(client, &res_message, 0);
-//     errno = EPROTO;
-// }
+    struct dmqp_header res_header = {0};
+    res_header.method = DMQP_RESPONSE;
+    res_header.status_code = EPROTO;
+    struct dmqp_message res_message = {.header = res_header, .payload = NULL};
+    send_dmqp_message(client, &res_message, 0);
+}
