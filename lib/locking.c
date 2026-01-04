@@ -8,23 +8,26 @@
 
 static __thread uuid_t lock_holder_id;
 static __thread int lock_holder_id_initialized = 0;
-static __thread int unlocked = 0;
-static __thread pthread_mutex_t unlocked_mutex;
-static __thread pthread_cond_t unlocked_cond;
-static __thread int sync_primitives_initialized = 0;
+
+struct lock_context {
+    int unlocked;
+    pthread_mutex_t mutex;
+    pthread_cond_t cond;
+};
 
 static void preceding_lock_node_watcher(zhandle_t *zzh, int type, int state,
                                         const char *path, void *watcherCtx) {
     (void)zzh;
     (void)state;
     (void)path;
-    (void)watcherCtx;
+
+    struct lock_context *context = (struct lock_context *)watcherCtx;
 
     if (type == ZOO_DELETED_EVENT) {
-        pthread_mutex_lock(&unlocked_mutex);
-        unlocked = 1;
-        pthread_mutex_unlock(&unlocked_mutex);
-        pthread_cond_signal(&unlocked_cond);
+        pthread_mutex_lock(&context->mutex);
+        context->unlocked = 1;
+        pthread_mutex_unlock(&context->mutex);
+        pthread_cond_signal(&context->cond);
     }
 }
 
@@ -37,12 +40,6 @@ int acquire_distributed_lock(const char *lock, zhandle_t *zh) {
     if (!lock_holder_id_initialized) {
         uuid_generate_time_safe(lock_holder_id);
         lock_holder_id_initialized = 1;
-    }
-
-    if (!sync_primitives_initialized) {
-        pthread_mutex_init(&unlocked_mutex, NULL);
-        pthread_cond_init(&unlocked_cond, NULL);
-        sync_primitives_initialized = 1;
     }
 
     char path[MAX_PATH_LEN + 1];
@@ -83,11 +80,15 @@ int acquire_distributed_lock(const char *lock, zhandle_t *zh) {
             break;
         }
 
+        struct lock_context context = {0};
+        pthread_mutex_init(&context.mutex, NULL);
+        pthread_cond_init(&context.cond, NULL);
+
         char preceding_node[MAX_PATH_LEN + 1];
         snprintf(preceding_node, sizeof preceding_node, "%s/lock-%010d", lock,
                  preceding_lock_id);
-        rc = zoo_wexists(zh, preceding_node, preceding_lock_node_watcher, NULL,
-                         NULL);
+        rc = zoo_wexists(zh, preceding_node, preceding_lock_node_watcher,
+                         &context, NULL);
         if (rc == ZNONODE) {
             deallocate_String_vector(&lock_nodes);
             continue;
@@ -97,12 +98,12 @@ int acquire_distributed_lock(const char *lock, zhandle_t *zh) {
             goto cleanup;
         }
 
-        pthread_mutex_lock(&unlocked_mutex);
-        while (!unlocked) {
-            pthread_cond_wait(&unlocked_cond, &unlocked_mutex);
+        pthread_mutex_lock(&context.mutex);
+        while (!context.unlocked) {
+            pthread_cond_wait(&context.cond, &context.mutex);
         }
-        unlocked = 0;
-        pthread_mutex_unlock(&unlocked_mutex);
+        context.unlocked = 0;
+        pthread_mutex_unlock(&context.mutex);
 
         deallocate_String_vector(&lock_nodes);
     }
