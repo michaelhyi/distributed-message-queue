@@ -29,6 +29,7 @@ TEST_TARGET := test_api \
 			   test_zookeeper
 
 OBJ 	  := api.o \
+			 locking.o \
 	   		 network.o \
 	   		 zookeeper.o
 DEBUG_OBJ := $(OBJ:%.o=debug_%.o)

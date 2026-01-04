@@ -3,9 +3,11 @@
 
 #include <errno.h>
 #include <pthread.h>
+#include <string.h>
 #include <uuid/uuid.h>
 
-static __thread uuid_t lock_holder_id = {0};
+static __thread uuid_t lock_holder_id;
+static __thread int lock_holder_id_initialized = 0;
 static __thread int unlocked = 0;
 static __thread pthread_mutex_t unlocked_mutex = PTHREAD_MUTEX_INITIALIZER;
 static __thread pthread_cond_t unlocked_cond = PTHREAD_COND_INITIALIZER;
@@ -31,14 +33,15 @@ int acquire_distributed_lock(const char *lock, zhandle_t *zh) {
         return -1;
     }
 
-    if (!lock_holder_id[0]) {
+    if (!lock_holder_id_initialized) {
         uuid_generate_time_safe(lock_holder_id);
+        lock_holder_id_initialized = 1;
     }
 
     char path[MAX_PATH_LEN + 1];
     int path_len = sizeof path;
     snprintf(path, path_len, "%s/lock-", lock);
-    int rc = zoo_create(zh, path, lock_holder_id, sizeof lock_holder_id,
+    int rc = zoo_create(zh, path, (char *)lock_holder_id, sizeof lock_holder_id,
                         &ZOO_OPEN_ACL_UNSAFE, ZOO_EPHEMERAL_SEQUENTIAL, path,
                         path_len);
     if (rc == ZNONODE) {
@@ -100,8 +103,61 @@ int acquire_distributed_lock(const char *lock, zhandle_t *zh) {
     return 0;
 }
 
-void release_distributed_lock(const char *lock, zhandle_t *zh) {
+int release_distributed_lock(const char *lock, zhandle_t *zh) {
     if (!lock || !zh) {
-        return;
+        errno = EINVAL;
+        return -1;
     }
+
+    if (!lock_holder_id_initialized) {
+        errno = EPERM;
+        return -1;
+    }
+
+    struct String_vector lock_nodes;
+    int rc = zoo_get_children(zh, lock, 0, &lock_nodes);
+    if (rc == ZNONODE) {
+        errno = ENODATA;
+        return -1;
+    } else if (rc) {
+        errno = EIO;
+        return -1;
+    }
+
+    if (lock_nodes.count == 0) {
+        errno = EPERM;
+        return -1;
+    }
+
+    int min_lock_id = -1;
+    for (int i = 0; i < lock_nodes.count; i++) {
+        strtok(lock_nodes.data[i], "-");
+        int curr_lock_id = atoi(strtok(NULL, "-"));
+
+        if (curr_lock_id < min_lock_id || min_lock_id == -1) {
+            min_lock_id = curr_lock_id;
+        }
+    }
+
+    char lock_holder[MAX_PATH_LEN + 1];
+    snprintf(lock_holder, sizeof lock_holder, "%s/lock-%010d", lock,
+             min_lock_id);
+    char buf[512];
+    int buf_len = sizeof buf;
+    if (zoo_get(zh, lock_holder, 0, buf, &buf_len, NULL)) {
+        errno = EIO;
+        return -1;
+    }
+
+    if (memcmp(lock_holder_id, buf, sizeof(uuid_t))) {
+        errno = EPERM;
+        return -1;
+    }
+
+    if (zoo_delete(zh, lock_holder, -1)) {
+        errno = EIO;
+        return -1;
+    }
+
+    return 0;
 }
