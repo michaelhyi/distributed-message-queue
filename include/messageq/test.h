@@ -1,3 +1,7 @@
+// TODO: add timeouts
+// TODO: test outputs should be formatted
+// TODO: test cases should have no logs other than results
+
 #ifndef TEST_H
 #define TEST_H
 
@@ -54,7 +58,7 @@ extern struct test_suite suite;
     }                                                                          \
     if (suite.teardown)                                                        \
         suite.teardown();                                                      \
-    printf("Score: %d/%d\n", passed, arrlen(tests));                           \
+    printf("Score: " KCYN "%d/%d\n" KNRM, passed, arrlen(tests));              \
     if (passed != arrlen(tests))                                               \
         return 1;                                                              \
     return 0;
