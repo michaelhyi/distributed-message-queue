@@ -9,8 +9,9 @@
 static __thread uuid_t lock_holder_id;
 static __thread int lock_holder_id_initialized = 0;
 static __thread int unlocked = 0;
-static __thread pthread_mutex_t unlocked_mutex = PTHREAD_MUTEX_INITIALIZER;
-static __thread pthread_cond_t unlocked_cond = PTHREAD_COND_INITIALIZER;
+static __thread pthread_mutex_t unlocked_mutex;
+static __thread pthread_cond_t unlocked_cond;
+static __thread int sync_primitives_initialized = 0;
 
 static void preceding_lock_node_watcher(zhandle_t *zzh, int type, int state,
                                         const char *path, void *watcherCtx) {
@@ -38,6 +39,12 @@ int acquire_distributed_lock(const char *lock, zhandle_t *zh) {
         lock_holder_id_initialized = 1;
     }
 
+    if (!sync_primitives_initialized) {
+        pthread_mutex_init(&unlocked_mutex, NULL);
+        pthread_cond_init(&unlocked_cond, NULL);
+        sync_primitives_initialized = 1;
+    }
+
     char path[MAX_PATH_LEN + 1];
     int path_len = sizeof path;
     snprintf(path, path_len, "%s/lock-", lock);
@@ -52,22 +59,18 @@ int acquire_distributed_lock(const char *lock, zhandle_t *zh) {
         return -1;
     }
 
-    strtok(path, "-");
-    int lock_id = atoi(strtok(NULL, "-"));
-
+    int lock_id = atoi(strchr(path, "-") + 1);
     for (;;) {
         int preceding_lock_id = -1;
 
         struct String_vector lock_nodes;
         if (zoo_get_children(zh, lock, 0, &lock_nodes)) {
-            zoo_delete(zh, path, -1);
             errno = EIO;
-            return -1;
+            goto cleanup;
         }
 
         for (int i = 0; i < lock_nodes.count; i++) {
-            strtok(lock_nodes.data[i], "-");
-            int curr_lock_id = atoi(strtok(NULL, "-"));
+            int curr_lock_id = atoi(strchr(lock_nodes.data[i], "-") + 1);
 
             if (curr_lock_id < lock_id &&
                 (preceding_lock_id == -1 || curr_lock_id > preceding_lock_id)) {
@@ -76,6 +79,7 @@ int acquire_distributed_lock(const char *lock, zhandle_t *zh) {
         }
 
         if (preceding_lock_id == -1) {
+            deallocate_String_vector(&lock_nodes);
             break;
         }
 
@@ -85,11 +89,12 @@ int acquire_distributed_lock(const char *lock, zhandle_t *zh) {
         rc = zoo_wexists(zh, preceding_node, preceding_lock_node_watcher, NULL,
                          NULL);
         if (rc == ZNONODE) {
+            deallocate_String_vector(&lock_nodes);
             continue;
         } else if (rc) {
-            zoo_delete(zh, path, -1);
+            deallocate_String_vector(&lock_nodes);
             errno = EIO;
-            return -1;
+            goto cleanup;
         }
 
         pthread_mutex_lock(&unlocked_mutex);
@@ -98,9 +103,15 @@ int acquire_distributed_lock(const char *lock, zhandle_t *zh) {
         }
         unlocked = 0;
         pthread_mutex_unlock(&unlocked_mutex);
+
+        deallocate_String_vector(&lock_nodes);
     }
 
     return 0;
+
+cleanup:
+    zoo_delete(zh, path, -1);
+    return -1;
 }
 
 int release_distributed_lock(const char *lock, zhandle_t *zh) {
@@ -109,11 +120,14 @@ int release_distributed_lock(const char *lock, zhandle_t *zh) {
         return -1;
     }
 
+    int ret = 0;
     if (!lock_holder_id_initialized) {
         errno = EPERM;
         return -1;
     }
 
+    // TODO: check every usage of strtok(), since it modifies original data
+    // TODO: deallocate every instance of String_vector
     struct String_vector lock_nodes;
     int rc = zoo_get_children(zh, lock, 0, &lock_nodes);
     if (rc == ZNONODE) {
@@ -126,13 +140,13 @@ int release_distributed_lock(const char *lock, zhandle_t *zh) {
 
     if (lock_nodes.count == 0) {
         errno = EPERM;
-        return -1;
+        ret = -1;
+        goto cleanup;
     }
 
     int min_lock_id = -1;
     for (int i = 0; i < lock_nodes.count; i++) {
-        strtok(lock_nodes.data[i], "-");
-        int curr_lock_id = atoi(strtok(NULL, "-"));
+        int curr_lock_id = atoi(strchr(lock_nodes.data[i], "-") + 1);
 
         if (curr_lock_id < min_lock_id || min_lock_id == -1) {
             min_lock_id = curr_lock_id;
@@ -146,18 +160,23 @@ int release_distributed_lock(const char *lock, zhandle_t *zh) {
     int buf_len = sizeof buf;
     if (zoo_get(zh, lock_holder, 0, buf, &buf_len, NULL)) {
         errno = EIO;
-        return -1;
+        ret = -1;
+        goto cleanup;
     }
 
     if (memcmp(lock_holder_id, buf, sizeof(uuid_t))) {
         errno = EPERM;
-        return -1;
+        ret = -1;
+        goto cleanup;
     }
 
     if (zoo_delete(zh, lock_holder, -1)) {
         errno = EIO;
-        return -1;
+        ret = -1;
+        goto cleanup;
     }
 
-    return 0;
+cleanup:
+    deallocate_String_vector(&lock_nodes);
+    return ret;
 }
