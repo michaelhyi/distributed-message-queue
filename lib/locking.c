@@ -164,7 +164,7 @@ int release_distributed_lock(const char *lock, zhandle_t *zh) {
         goto cleanup;
     }
 
-    if (memcmp(lock_holder_id, buf, sizeof(uuid_t))) {
+    if (memcmp(lock_holder_id, buf, sizeof lock_holder_id)) {
         errno = EPERM;
         ret = -1;
         goto cleanup;
