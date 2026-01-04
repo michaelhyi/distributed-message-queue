@@ -59,7 +59,7 @@ int acquire_distributed_lock(const char *lock, zhandle_t *zh) {
         return -1;
     }
 
-    int lock_id = atoi(strchr(path, "-") + 1);
+    int lock_id = atoi(strchr(path, '-') + 1);
     for (;;) {
         int preceding_lock_id = -1;
 
@@ -70,7 +70,7 @@ int acquire_distributed_lock(const char *lock, zhandle_t *zh) {
         }
 
         for (int i = 0; i < lock_nodes.count; i++) {
-            int curr_lock_id = atoi(strchr(lock_nodes.data[i], "-") + 1);
+            int curr_lock_id = atoi(strchr(lock_nodes.data[i], '-') + 1);
 
             if (curr_lock_id < lock_id &&
                 (preceding_lock_id == -1 || curr_lock_id > preceding_lock_id)) {
@@ -146,7 +146,7 @@ int release_distributed_lock(const char *lock, zhandle_t *zh) {
 
     int min_lock_id = -1;
     for (int i = 0; i < lock_nodes.count; i++) {
-        int curr_lock_id = atoi(strchr(lock_nodes.data[i], "-") + 1);
+        int curr_lock_id = atoi(strchr(lock_nodes.data[i], '-') + 1);
 
         if (curr_lock_id < min_lock_id || min_lock_id == -1) {
             min_lock_id = curr_lock_id;
