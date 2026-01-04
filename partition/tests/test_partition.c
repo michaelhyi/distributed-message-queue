@@ -260,8 +260,6 @@ struct test_suite suite = {
 
 int main() { run_suite(); }
 
-// TODO: fix tests post refactorign
-
 // Test(partition,
 //      test_handle_dmqp_message_throws_error_on_unknown_method_received) {
 //     // arrange
