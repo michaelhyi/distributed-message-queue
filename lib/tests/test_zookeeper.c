@@ -139,14 +139,20 @@ void setup() {
 void teardown() { zookeeper_close(zh); }
 
 struct test_case tests[] = {
-    {NULL, NULL, test_zoo_init_throws_when_invalid_args},
-    {NULL, NULL, test_zoo_init_throws_when_nonexistent_host},
-    {NULL, NULL, test_zoo_init_success},
+    {"test_zoo_init_throws_when_invalid_args", NULL, NULL,
+     test_zoo_init_throws_when_invalid_args},
+    {"test_zoo_init_throws_when_nonexistent_host", NULL, NULL,
+     test_zoo_init_throws_when_nonexistent_host},
+    {"test_zoo_init_success", NULL, NULL, test_zoo_init_success},
 
-    {setup, teardown, test_zoo_deleteall_throws_when_invalid_args},
-    {setup, teardown, test_zoo_deleteall_throws_when_znode_does_not_exist},
-    {setup, teardown, test_zoo_deleteall_success_when_no_children},
-    {setup, teardown, test_zoo_deleteall_success}};
+    {"test_zoo_deleteall_throws_when_invalid_args", setup, teardown,
+     test_zoo_deleteall_throws_when_invalid_args},
+    {"test_zoo_deleteall_throws_when_znode_does_not_exist", setup, teardown,
+     test_zoo_deleteall_throws_when_znode_does_not_exist},
+    {"test_zoo_deleteall_success_when_no_children", setup, teardown,
+     test_zoo_deleteall_success_when_no_children},
+    {"test_zoo_deleteall_success", setup, teardown,
+     test_zoo_deleteall_success}};
 
 struct test_suite suite = {
     .name = "test_zookeeper", .setup = NULL, .teardown = NULL};

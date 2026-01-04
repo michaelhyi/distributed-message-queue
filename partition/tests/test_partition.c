@@ -246,10 +246,14 @@ void setup() { zh = zoo_init(TEST_ZOOKEEPER_HOST); }
 void teardown() { zookeeper_close(zh); }
 
 struct test_case tests[] = {
-    {NULL, NULL, test_start_partition_registers_with_zookeeper},
-    {NULL, NULL, test_start_partition_becomes_leader_when_assigned_to_shard},
-    {NULL, NULL, test_start_partition_becomes_replica_when_assigned_to_shard},
-    {NULL, NULL, test_start_partition_becomes_leader_when_prev_leader_dies}};
+    {"test_start_partition_registers_with_zookeeper", NULL, NULL,
+     test_start_partition_registers_with_zookeeper},
+    {"test_start_partition_becomes_leader_when_assigned_to_shard", NULL, NULL,
+     test_start_partition_becomes_leader_when_assigned_to_shard},
+    {"test_start_partition_becomes_replica_when_assigned_to_shard", NULL, NULL,
+     test_start_partition_becomes_replica_when_assigned_to_shard},
+    {"test_start_partition_becomes_leader_when_prev_leader_dies", NULL, NULL,
+     test_start_partition_becomes_leader_when_prev_leader_dies}};
 
 struct test_suite suite = {
     .name = "test_partition", .setup = setup, .teardown = teardown};

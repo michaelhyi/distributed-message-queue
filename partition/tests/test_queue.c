@@ -404,19 +404,29 @@ int test_queue_peek_id_success() {
 }
 
 struct test_case tests[] = {
-    {NULL, NULL, test_queue_init_success},
-    {NULL, NULL, test_queue_destroy_success},
-    {NULL, NULL, test_queue_push_throws_error_when_invalid_args},
-    {NULL, NULL, test_queue_push_success_when_empty},
-    {NULL, NULL, test_queue_push_success_when_size_is_one},
-    {NULL, NULL, test_queue_push_success_when_size_is_greater_than_one},
-    {NULL, NULL, test_queue_pop_throws_error_when_invalid_args},
-    {NULL, NULL, test_queue_pop_throws_error_when_empty},
-    {NULL, NULL, test_queue_pop_success_when_size_is_one},
-    {NULL, NULL, test_queue_pop_success_when_size_is_greater_than_one},
-    {NULL, NULL, test_queue_peek_id_throws_when_invalid_args},
-    {NULL, NULL, test_queue_peek_id_throws_when_empty},
-    {NULL, NULL, test_queue_peek_id_success}};
+    {"test_queue_init_success", NULL, NULL, test_queue_init_success},
+    {"test_queue_destroy_success", NULL, NULL, test_queue_destroy_success},
+    {"test_queue_push_throws_error_when_invalid_args", NULL, NULL,
+     test_queue_push_throws_error_when_invalid_args},
+    {"test_queue_push_success_when_empty", NULL, NULL,
+     test_queue_push_success_when_empty},
+    {"test_queue_push_success_when_size_is_one", NULL, NULL,
+     test_queue_push_success_when_size_is_one},
+    {"test_queue_push_success_when_size_is_greater_than_one", NULL, NULL,
+     test_queue_push_success_when_size_is_greater_than_one},
+    {"test_queue_pop_throws_error_when_invalid_args", NULL, NULL,
+     test_queue_pop_throws_error_when_invalid_args},
+    {"test_queue_pop_throws_error_when_empty", NULL, NULL,
+     test_queue_pop_throws_error_when_empty},
+    {"test_queue_pop_success_when_size_is_one", NULL, NULL,
+     test_queue_pop_success_when_size_is_one},
+    {"test_queue_pop_success_when_size_is_greater_than_one", NULL, NULL,
+     test_queue_pop_success_when_size_is_greater_than_one},
+    {"test_queue_peek_id_throws_when_invalid_args", NULL, NULL,
+     test_queue_peek_id_throws_when_invalid_args},
+    {"test_queue_peek_id_throws_when_empty", NULL, NULL,
+     test_queue_peek_id_throws_when_empty},
+    {"test_queue_peek_id_success", NULL, NULL, test_queue_peek_id_success}};
 
 struct test_suite suite = {
     .name = "test_queue", .setup = NULL, .teardown = NULL};

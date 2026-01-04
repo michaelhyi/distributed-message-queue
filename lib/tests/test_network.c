@@ -437,19 +437,32 @@ int test_dmqp_server_init_handles_message_with_unknown_method() {
 }
 
 struct test_case tests[] = {
-    {NULL, NULL, test_dmqp_client_init_throws_when_invalid_args},
-    {NULL, NULL, test_dmqp_client_init_throws_when_server_does_not_exist},
-    {NULL, NULL, test_dmqp_client_init_success},
-    {NULL, NULL, test_dmqp_server_init_handles_signals},
-    {NULL, NULL, test_read_dmqp_message_throws_when_invalid_args},
-    {NULL, NULL, test_read_dmqp_message_throws_when_payload_too_large},
-    {NULL, NULL, test_read_dmqp_message_success_when_no_payload},
-    {NULL, NULL, test_read_dmqp_message_success_with_payload},
-    {NULL, NULL, test_send_dmqp_message_throws_when_invalid_args},
-    {NULL, NULL, test_send_dmqp_message_throws_when_payload_too_large},
-    {NULL, NULL, test_send_dmqp_message_success_when_no_payload},
-    {NULL, NULL, test_send_dmqp_message_success_with_payload},
-    {NULL, NULL, test_dmqp_server_init_handles_message_with_unknown_method}};
+    {"test_dmqp_client_init_throws_when_invalid_args", NULL, NULL,
+     test_dmqp_client_init_throws_when_invalid_args},
+    {"test_dmqp_client_init_throws_when_server_does_not_exist", NULL, NULL,
+     test_dmqp_client_init_throws_when_server_does_not_exist},
+    {"test_dmqp_client_init_success", NULL, NULL,
+     test_dmqp_client_init_success},
+    {"test_dmqp_server_init_handles_signals", NULL, NULL,
+     test_dmqp_server_init_handles_signals},
+    {"test_read_dmqp_message_throws_when_invalid_args", NULL, NULL,
+     test_read_dmqp_message_throws_when_invalid_args},
+    {"test_read_dmqp_message_throws_when_payload_too_large", NULL, NULL,
+     test_read_dmqp_message_throws_when_payload_too_large},
+    {"test_read_dmqp_message_success_when_no_payload", NULL, NULL,
+     test_read_dmqp_message_success_when_no_payload},
+    {"test_read_dmqp_message_success_with_payload", NULL, NULL,
+     test_read_dmqp_message_success_with_payload},
+    {"test_send_dmqp_message_throws_when_invalid_args", NULL, NULL,
+     test_send_dmqp_message_throws_when_invalid_args},
+    {"test_send_dmqp_message_throws_when_payload_too_large", NULL, NULL,
+     test_send_dmqp_message_throws_when_payload_too_large},
+    {"test_send_dmqp_message_success_when_no_payload", NULL, NULL,
+     test_send_dmqp_message_success_when_no_payload},
+    {"test_send_dmqp_message_success_with_payload", NULL, NULL,
+     test_send_dmqp_message_success_with_payload},
+    {"test_dmqp_server_init_handles_message_with_unknown_method", NULL, NULL,
+     test_dmqp_server_init_handles_message_with_unknown_method}};
 
 struct test_suite suite = {
     .name = "test_network", .setup = NULL, .teardown = NULL};

@@ -279,14 +279,20 @@ void teardown() {
 }
 
 struct test_case tests[] = {
-    {NULL, NULL, test_client_init_throws_if_invalid_args},
-    {NULL, NULL, test_client_init_throws_if_client_already_initialized},
-    {NULL, NULL, test_client_init_success},
-    {NULL, NULL, test_create_topic_throws_if_client_uninitialized},
-    {setup, teardown, test_create_topic_throws_if_invalid_args},
-    {setup, teardown, test_create_topic_throws_if_not_enough_partitions},
-    {setup, teardown, test_create_topic_throws_if_topic_already_exists},
-    {setup, teardown, test_create_topic_success}};
+    {"test_client_init_throws_if_invalid_args", NULL, NULL,
+     test_client_init_throws_if_invalid_args},
+    {"test_client_init_throws_if_client_already_initialized", NULL, NULL,
+     test_client_init_throws_if_client_already_initialized},
+    {"test_client_init_success", NULL, NULL, test_client_init_success},
+    {"test_create_topic_throws_if_client_uninitialized", NULL, NULL,
+     test_create_topic_throws_if_client_uninitialized},
+    {"test_create_topic_throws_if_invalid_args", setup, teardown,
+     test_create_topic_throws_if_invalid_args},
+    {"test_create_topic_throws_if_not_enough_partitions", setup, teardown,
+     test_create_topic_throws_if_not_enough_partitions},
+    {"test_create_topic_throws_if_topic_already_exists", setup, teardown,
+     test_create_topic_throws_if_topic_already_exists},
+    {"test_create_topic_success", setup, teardown, test_create_topic_success}};
 
 struct test_suite suite = {.name = "test_api", .setup = NULL, .teardown = NULL};
 
