@@ -1,0 +1,107 @@
+#include "messageq/locking.h"
+#include "messageq/constants.h"
+
+#include <errno.h>
+#include <pthread.h>
+#include <uuid/uuid.h>
+
+static __thread uuid_t lock_holder_id = {0};
+static __thread int unlocked = 0;
+static __thread pthread_mutex_t unlocked_mutex = PTHREAD_MUTEX_INITIALIZER;
+static __thread pthread_cond_t unlocked_cond = PTHREAD_COND_INITIALIZER;
+
+static void preceding_lock_node_watcher(zhandle_t *zzh, int type, int state,
+                                        const char *path, void *watcherCtx) {
+    (void)zzh;
+    (void)state;
+    (void)path;
+    (void)watcherCtx;
+
+    if (type == ZOO_DELETED_EVENT) {
+        pthread_mutex_lock(&unlocked_mutex);
+        unlocked = 1;
+        pthread_mutex_unlock(&unlocked_mutex);
+        pthread_cond_signal(&unlocked_cond);
+    }
+}
+
+int acquire_distributed_lock(const char *lock, zhandle_t *zh) {
+    if (!lock || !zh) {
+        errno = EINVAL;
+        return -1;
+    }
+
+    if (!lock_holder_id[0]) {
+        uuid_generate_time_safe(lock_holder_id);
+    }
+
+    char path[MAX_PATH_LEN + 1];
+    int path_len = sizeof path;
+    snprintf(path, path_len, "%s/lock-", lock);
+    int rc = zoo_create(zh, path, lock_holder_id, sizeof lock_holder_id,
+                        &ZOO_OPEN_ACL_UNSAFE, ZOO_EPHEMERAL_SEQUENTIAL, path,
+                        path_len);
+    if (rc == ZNONODE) {
+        errno = ENODATA;
+        return -1;
+    } else if (rc) {
+        errno = EIO;
+        return -1;
+    }
+
+    strtok(path, "-");
+    int lock_id = atoi(strtok(NULL, "-"));
+
+    for (;;) {
+        int preceding_lock_id = -1;
+
+        struct String_vector lock_nodes;
+        if (zoo_get_children(zh, lock, 0, &lock_nodes)) {
+            zoo_delete(zh, path, -1);
+            errno = EIO;
+            return -1;
+        }
+
+        for (int i = 0; i < lock_nodes.count; i++) {
+            strtok(lock_nodes.data[i], "-");
+            int curr_lock_id = atoi(strtok(NULL, "-"));
+
+            if (curr_lock_id < lock_id &&
+                (preceding_lock_id == -1 || curr_lock_id > preceding_lock_id)) {
+                preceding_lock_id = curr_lock_id;
+            }
+        }
+
+        if (preceding_lock_id == -1) {
+            break;
+        }
+
+        char preceding_node[MAX_PATH_LEN + 1];
+        snprintf(preceding_node, sizeof preceding_node, "%s/lock-%010d", lock,
+                 preceding_lock_id);
+        rc = zoo_wexists(zh, preceding_node, preceding_lock_node_watcher, NULL,
+                         NULL);
+        if (rc == ZNONODE) {
+            continue;
+        } else if (rc) {
+            zoo_delete(zh, path, -1);
+            errno = EIO;
+            return -1;
+        }
+
+        pthread_mutex_lock(&unlocked_mutex);
+        while (!unlocked) {
+            pthread_cond_wait(&unlocked_cond, &unlocked_mutex);
+        }
+        unlocked = 0;
+        pthread_mutex_unlock(&unlocked_mutex);
+    }
+
+    return 0;
+}
+
+void release_distributed_lock(const char *lock, zhandle_t *zh) {
+    if (!lock || !zh) {
+        return;
+    }
+}
