@@ -6,6 +6,7 @@
 #include <errno.h>
 #include <pthread.h>
 #include <string.h>
+#include <unistd.h>
 
 #include "queue.h"
 
@@ -196,6 +197,35 @@ cleanup_queue:
     return ret;
 }
 
+static void replicate_message(const struct dmqp_message *message) {
+    char path[MAX_PATH_LEN + 1];
+    snprintf(path, sizeof path, "/topics/%s/shards/%s/partitions",
+             assigned_topic, assigned_shard);
+    struct String_vector replicas;
+    zoo_get_children(zh, path, 0, &replicas);
+
+    for (int i = 0; i < replicas.count; i++) {
+        int id = atoi(replicas.data[i] + 10);
+        if (id == partition_id) {
+            continue;
+        }
+
+        snprintf(path, sizeof path, "/topics/%s/shards/%s/partitions/%s",
+                 assigned_topic, assigned_shard, replicas.data[i]);
+        char buf[512];
+        int buflen = sizeof buf;
+        zoo_get(zh, path, 0, buf, &buflen, NULL);
+
+        char *host = strtok(buf, ";");
+        char *ipv4 = strtok(host, ":");
+        char *port = strtok(NULL, ":");
+
+        int client = dmqp_client_init(ipv4, atoi(port));
+        send_dmqp_message(client, message, 0);
+        close(client);
+    }
+}
+
 // TODO: test all of these DMQP handlers
 void handle_dmqp_push(const struct dmqp_message *message, int client) {
     if (!message || client < 0 || role == FREE || partition_id < 0 ||
@@ -236,6 +266,11 @@ void handle_dmqp_push(const struct dmqp_message *message, int client) {
     queue_push(&queue, &entry);
     pthread_mutex_unlock(&queue_lock);
 
+    // TODO: batch-based replication
+    if (role == LEADER) {
+        replicate_message(message);
+    }
+
     res_header.sequence_id = 0;
     res_header.length = 0;
     res_header.method = DMQP_RESPONSE;
@@ -267,6 +302,11 @@ void handle_dmqp_pop(const struct dmqp_message *message, int client) {
                                            .payload = NULL};
         send_dmqp_message(client, &res_message, 0);
         goto cleanup;
+    }
+
+    // TODO: batch-based replication
+    if (role == LEADER) {
+        replicate_message(message);
     }
 
     res_header.sequence_id = entry->id;
