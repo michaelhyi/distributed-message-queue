@@ -3,8 +3,6 @@
 
 #include <zookeeper/zookeeper.h>
 
-// TODO: test these functions
-
 /**
  * Acquires a distributed lock, blocking until acquired.
  *

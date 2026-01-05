@@ -1,3 +1,6 @@
+# TODO: create debug library builds, update partition/Makefile to utilize debug
+# 		library build if DEBUG_TARGET
+
 CC 	   := gcc
 CFLAGS := -I../include \
 		  -Wall -Wextra -Werror \
@@ -10,7 +13,7 @@ CFLAGS += -DTHREADED 	# allows zoo_create()
 RELEASE_CFLAGS := -O2
 DEBUG_CFLAGS   := -g -O0 -fno-inline -DDEBUG
 TEST_CFLAGS    := -I.
-LDFLAGS 	   := -lzookeeper_mt
+LDFLAGS 	   := -luuid -lzookeeper_mt
 
 AR 		 := ar
 AR_FLAGS := rcs
@@ -25,6 +28,7 @@ VALGRIND_FLAGS := --leak-check=full \
 
 TARGET 		:= libmessageq.a
 TEST_TARGET := test_api \
+			   test_locking \
 			   test_network \
 			   test_zookeeper
 
