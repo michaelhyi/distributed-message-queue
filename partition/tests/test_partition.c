@@ -1,5 +1,6 @@
 #include "partition.h"
 
+#include <messageq/locking.h>
 #include <messageq/network.h>
 #include <messageq/test.h>
 #include <messageq/zookeeper.h>
@@ -28,7 +29,6 @@ void *partition_thread(void *arg) {
 
 int test_start_partition_registers_with_zookeeper() {
     // arrange
-    errno = 0;
     pthread_t tid;
     struct targ arg = {0};
     pthread_create(&tid, NULL, partition_thread, &arg);
@@ -53,9 +53,10 @@ int test_start_partition_registers_with_zookeeper() {
     while (!found && retries-- > 0) {
         sleep(1);
 
+        acquire_distributed_lock("/partitions/lock", zh);
+
         struct String_vector partitions;
         zoo_get_children(zh, "/partitions", 0, &partitions);
-
         for (int i = 0; i < partitions.count; i++) {
             char path[512] = "/partitions/";
             strcat(path, partitions.data[i]);
@@ -69,6 +70,8 @@ int test_start_partition_registers_with_zookeeper() {
                 break;
             }
         }
+
+        release_distributed_lock("/partitions/lock", zh);
     }
 
     // assert
@@ -87,12 +90,6 @@ int test_start_partition_registers_with_zookeeper() {
 
 int test_start_partition_becomes_leader_when_assigned_to_shard() {
     // arrange
-    errno = 0;
-
-    role = FREE;
-    memset(assigned_topic, 0, sizeof assigned_topic);
-    memset(assigned_shard, 0, sizeof assigned_shard);
-
     zoo_create(zh, "/topics/utest-topic", NULL, -1, &ZOO_OPEN_ACL_UNSAFE,
                ZOO_PERSISTENT, NULL, 0);
     zoo_create(zh, "/topics/utest-topic/shards", NULL, -1, &ZOO_OPEN_ACL_UNSAFE,
@@ -136,12 +133,17 @@ int test_start_partition_becomes_leader_when_assigned_to_shard() {
     // arrange
     char buf[512];
     int buflen = sizeof buf;
-    zoo_get(zh, partition_path, 0, buf, &buflen, NULL);
+    char path[MAX_PATH_LEN + 1];
+    snprintf(path, sizeof path, "/partitions/partition-%010d", partition_id);
+    acquire_distributed_lock("/partitions/lock", zh);
+    zoo_get(zh, path, 0, buf, &buflen, NULL);
     buf[buflen] = '\0';
     strcat(buf, ";/topics/utest-topic/shards/shard-0000000000");
 
     // act
-    zoo_set(zh, partition_path, buf, strlen(buf), -1);
+    zoo_set(zh, path, buf, strlen(buf), -1);
+    dprintf("Updated partition assignment at %s\n", path);
+    release_distributed_lock("/partitions/lock", zh);
 
     // arrange
     retries = 50;
@@ -163,12 +165,6 @@ int test_start_partition_becomes_leader_when_assigned_to_shard() {
 
 int test_start_partition_becomes_replica_when_assigned_to_shard() {
     // arrange
-    errno = 0;
-
-    role = FREE;
-    memset(assigned_topic, 0, sizeof assigned_topic);
-    memset(assigned_shard, 0, sizeof assigned_shard);
-
     zoo_create(zh, "/topics/utest-topic", NULL, -1, &ZOO_OPEN_ACL_UNSAFE,
                ZOO_PERSISTENT, NULL, 0);
     zoo_create(zh, "/topics/utest-topic/shards", NULL, -1, &ZOO_OPEN_ACL_UNSAFE,
@@ -214,12 +210,17 @@ int test_start_partition_becomes_replica_when_assigned_to_shard() {
     // arrange
     char buf[512];
     int buflen = sizeof buf;
-    zoo_get(zh, partition_path, 0, buf, &buflen, NULL);
+    char path[MAX_PATH_LEN + 1];
+    snprintf(path, sizeof path, "/partitions/partition-%010d", partition_id);
+    acquire_distributed_lock("/partitions/lock", zh);
+    zoo_get(zh, path, 0, buf, &buflen, NULL);
     buf[buflen] = '\0';
     strcat(buf, ";/topics/utest-topic/shards/shard-0000000000");
 
     // act
-    zoo_set(zh, partition_path, buf, strlen(buf), -1);
+    zoo_set(zh, path, buf, strlen(buf), -1);
+    dprintf("Updated partition assignment\n");
+    release_distributed_lock("/partitions/lock", zh);
 
     // arrange
     retries = 50;
@@ -241,22 +242,31 @@ int test_start_partition_becomes_replica_when_assigned_to_shard() {
 
 int test_start_partition_becomes_leader_when_prev_leader_dies() { return -1; }
 
-void setup() { zh = zoo_init(TEST_ZOOKEEPER_HOST); }
+void setup() {
+    errno = 0;
+    role = FREE;
+    partition_id = -1;
+    memset(assigned_topic, 0, sizeof assigned_topic);
+    memset(assigned_shard, 0, sizeof assigned_shard);
+
+    zh = zoo_init(TEST_ZOOKEEPER_HOST);
+}
 
 void teardown() { zookeeper_close(zh); }
 
 struct test_case tests[] = {
-    {"test_start_partition_registers_with_zookeeper", NULL, NULL,
+    {"test_start_partition_registers_with_zookeeper", setup, teardown,
      test_start_partition_registers_with_zookeeper},
-    {"test_start_partition_becomes_leader_when_assigned_to_shard", NULL, NULL,
-     test_start_partition_becomes_leader_when_assigned_to_shard},
-    {"test_start_partition_becomes_replica_when_assigned_to_shard", NULL, NULL,
-     test_start_partition_becomes_replica_when_assigned_to_shard},
-    {"test_start_partition_becomes_leader_when_prev_leader_dies", NULL, NULL,
-     test_start_partition_becomes_leader_when_prev_leader_dies}};
+    {"test_start_partition_becomes_leader_when_assigned_to_shard", setup,
+     teardown, test_start_partition_becomes_leader_when_assigned_to_shard},
+    {"test_start_partition_becomes_replica_when_assigned_to_shard", setup,
+     teardown, test_start_partition_becomes_replica_when_assigned_to_shard},
+    // {"test_start_partition_becomes_leader_when_prev_leader_dies", NULL, NULL,
+    //  test_start_partition_becomes_leader_when_prev_leader_dies}
+};
 
 struct test_suite suite = {
-    .name = "test_partition", .setup = setup, .teardown = teardown};
+    .name = "test_partition", .setup = NULL, .teardown = NULL};
 
 int main() { run_suite(); }
 

@@ -1,5 +1,6 @@
 #include "partition.h"
 
+#include <messageq/locking.h>
 #include <messageq/network.h>
 #include <messageq/zookeeper.h>
 
@@ -12,7 +13,6 @@
 
 enum role role = FREE;
 int partition_id = -1;
-char partition_path[MAX_PATH_LEN + 1] = {0};
 char assigned_topic[MAX_TOPIC_LEN + 1] = {0};
 char assigned_shard[MAX_SHARD_LEN + 1] = {0};
 
@@ -80,11 +80,11 @@ static void partition_znode_watcher(zhandle_t *zzh, int type, int state,
                                     const char *path, void *watcherCtx) {
     (void)state;
 
-    // TODO: proper resource cleanup on error
     if (type == ZOO_CHANGED_EVENT) {
-        // TODO: acquire lock on partition list
+        acquire_distributed_lock("/partitions/lock", zh);
+
         if (partition_id == -1) {
-            return;
+            goto cleanup;
         }
 
         char buf[512];
@@ -97,7 +97,7 @@ static void partition_znode_watcher(zhandle_t *zzh, int type, int state,
         strtok(buf, ";");
         char *allocated = strtok(NULL, ";");
         if (!allocated) {
-            return;
+            goto cleanup;
         }
 
         strtok(allocated, "/");
@@ -107,7 +107,7 @@ static void partition_znode_watcher(zhandle_t *zzh, int type, int state,
         char *shard = strtok(NULL, "/");
         strncpy(assigned_shard, shard, MAX_SHARD_LEN);
 
-        // get all partitiosn assigned to same shard
+        // get all partitions assigned to same shard
         char shardpath[MAX_PATH_LEN];
         snprintf(shardpath, sizeof shardpath, "/topics/%s/shards/%s/partitions",
                  topic, shard);
@@ -115,13 +115,11 @@ static void partition_znode_watcher(zhandle_t *zzh, int type, int state,
         zoo_get_children(zzh, shardpath, 0, &partitions);
 
         int preceding_id = -1;
-        char *preceding_znode = NULL;
         for (int i = 0; i < partitions.count; i++) {
             int id = atoi(partitions.data[i] + 10);
             if (id < partition_id &&
                 (preceding_id == -1 || id > preceding_id)) {
                 preceding_id = id;
-                preceding_znode = partitions.data[i];
             }
         }
 
@@ -132,14 +130,15 @@ static void partition_znode_watcher(zhandle_t *zzh, int type, int state,
 
             char preceding_partition[MAX_PATH_LEN];
             snprintf(preceding_partition, sizeof preceding_partition,
-                     "/partitions/%s", preceding_znode);
+                     "/partitions/%010d", preceding_id);
             char buf[512];
             int buflen = sizeof buf;
             zoo_wget(zzh, preceding_partition, leader_watcher, NULL, buf,
                      &buflen, NULL);
         }
 
-        // TODO: release /partitions distributed lock
+    cleanup:
+        release_distributed_lock("/partitions/lock", zh);
     }
 }
 
@@ -147,23 +146,22 @@ static void partition_znode_watcher(zhandle_t *zzh, int type, int state,
  * Registers a partition into the service registry.
  */
 static void reigster_partition() {
-    // TODO: acquire /partitions distributed lock
+    acquire_distributed_lock("/partitions/lock", zh);
 
     // TODO: must dynamically detect host in the future
     char host[MAX_HOST_LEN + 1];
     snprintf(host, sizeof host, "127.0.0.1:%d", server_port);
-
+    char path[MAX_PATH_LEN + 1];
     zoo_create(zh, "/partitions/partition-", host, strlen(host),
-               &ZOO_OPEN_ACL_UNSAFE, ZOO_EPHEMERAL_SEQUENTIAL, partition_path,
-               sizeof partition_path);
-    partition_id = atoi(partition_path + 22);
+               &ZOO_OPEN_ACL_UNSAFE, ZOO_EPHEMERAL_SEQUENTIAL, path,
+               sizeof path);
+    partition_id = atoi(path + 22);
 
     char buf[512];
     int buflen = sizeof buf;
-    zoo_wget(zh, partition_path, partition_znode_watcher, NULL, buf, &buflen,
-             NULL);
+    zoo_wget(zh, path, partition_znode_watcher, NULL, buf, &buflen, NULL);
 
-    // TODO: release /partitions distributed lock
+    release_distributed_lock("/partitions/lock", zh);
 }
 
 int start_partition(char *service_discovery_host) {
@@ -229,7 +227,7 @@ static void replicate_message(const struct dmqp_message *message) {
 // TODO: test all of these DMQP handlers
 void handle_dmqp_push(const struct dmqp_message *message, int client) {
     if (!message || client < 0 || role == FREE || partition_id < 0 ||
-        !partition_path[0] || !assigned_topic[0] || !assigned_shard[0]) {
+        !assigned_topic[0] || !assigned_shard[0]) {
         return;
     }
 
@@ -284,7 +282,7 @@ cleanup:;
 
 void handle_dmqp_pop(const struct dmqp_message *message, int client) {
     if (!message || client < 0 || role == FREE || partition_id < 0 ||
-        !partition_path[0] || !assigned_topic[0] || !assigned_shard[0]) {
+        !assigned_topic[0] || !assigned_shard[0]) {
         return;
     }
 
@@ -331,7 +329,7 @@ cleanup:
 void handle_dmqp_peek_sequence_id(const struct dmqp_message *message,
                                   int client) {
     if (!message || client < 0 || role == FREE || partition_id < 0 ||
-        !partition_path[0] || !assigned_topic[0] || !assigned_shard[0]) {
+        !assigned_topic[0] || !assigned_shard[0]) {
         return;
     }
 
@@ -354,7 +352,7 @@ void handle_dmqp_peek_sequence_id(const struct dmqp_message *message,
 
 void handle_dmqp_response(const struct dmqp_message *message, int client) {
     if (!message || client < 0 || role == FREE || partition_id < 0 ||
-        !partition_path[0] || !assigned_topic[0] || !assigned_shard[0]) {
+        !assigned_topic[0] || !assigned_shard[0]) {
         return;
     }
 
