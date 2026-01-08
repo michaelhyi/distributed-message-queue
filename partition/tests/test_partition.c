@@ -142,7 +142,6 @@ int test_start_partition_becomes_leader_when_assigned_to_shard() {
 
     // act
     zoo_set(zh, path, buf, strlen(buf), -1);
-    dprintf("Updated partition assignment at %s\n", path);
     release_distributed_lock("/partitions/lock", zh);
 
     // arrange
@@ -219,7 +218,6 @@ int test_start_partition_becomes_replica_when_assigned_to_shard() {
 
     // act
     zoo_set(zh, path, buf, strlen(buf), -1);
-    dprintf("Updated partition assignment\n");
     release_distributed_lock("/partitions/lock", zh);
 
     // arrange
