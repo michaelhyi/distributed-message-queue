@@ -7,10 +7,12 @@ CFLAGS := -I../include \
 CFLAGS += -D_GNU_SOURCE # allows pthread_kill()
 CFLAGS += -DTHREADED 	# allows for zoo_create()
 
-RELEASE_CFLAGS := -O2
-DEBUG_CFLAGS   := -g -O0 -fno-inline -DDEBUG
-TEST_CFLAGS    := -I.
-LDFLAGS 	   := -L../lib -lmessageq -luuid -lzookeeper_mt
+RELEASE_CFLAGS  := -O2
+DEBUG_CFLAGS    := -g -O0 -fno-inline -DDEBUG
+TEST_CFLAGS     := -I.
+LDFLAGS 	    :=
+RELEASE_LDFLAGS := -L../lib -lmessageq -luuid -lzookeeper_mt
+DEBUG_LDFLAGS   := -L../lib -ldebug_messageq -luuid -lzookeeper_mt
 
 GDB := gdb
 
@@ -41,8 +43,8 @@ VALGRIND_TEST_TARGET := $(TEST_TARGET:%=valgrind-%)
 		$(VALGRIND_TEST_TARGET) format clean help
 
 all: release
+release: LDFLAGS += $(RELEASE_LDFLAGS)
 release: $(TARGET)
-
 $(TARGET): $(OBJ)
 	@$(CC) $^ -o $@ $(LDFLAGS) 
 
@@ -50,6 +52,7 @@ $(OBJ): CFLAGS += $(RELEASE_CFLAGS)
 $(OBJ): %.o: %.c
 	@$(CC) $(CFLAGS) -c $< -o $@
 
+debug: LDFLAGS += $(DEBUG_LDFLAGS)
 debug: $(DEBUG_TARGET)
 $(DEBUG_TARGET): $(DEBUG_OBJ) 
 	@$(CC) $^ -o $@ $(LDFLAGS) 
@@ -58,6 +61,7 @@ $(DEBUG_OBJ): CFLAGS += $(DEBUG_CFLAGS)
 $(DEBUG_OBJ): debug_%.o: %.c
 	@$(CC) $(CFLAGS) -c $< -o $@
 
+test: LDFLAGS += $(DEBUG_LDFLAGS)
 test: $(TEST_TARGET)
 $(TEST_TARGET): %: %.o $(filter-out debug_main.o, $(DEBUG_OBJ))
 	@$(CC) $^ -o $@ $(LDFLAGS) 

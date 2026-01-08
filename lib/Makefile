@@ -1,6 +1,3 @@
-# TODO: create debug library builds, update partition/Makefile to utilize debug
-# 		library build if DEBUG_TARGET
-
 CC 	   := gcc
 CFLAGS := -I../include \
 		  -Wall -Wextra -Werror \
@@ -26,8 +23,9 @@ VALGRIND_FLAGS := --leak-check=full \
 				  --track-origins=yes \
 				  --trace-children=yes
 
-TARGET 		:= libmessageq.a
-TEST_TARGET := test_api \
+TARGET 		 := libmessageq.a
+DEBUG_TARGET := libdebug_messageq.a
+TEST_TARGET  := test_api \
 			   test_locking \
 			   test_network \
 			   test_zookeeper
@@ -58,7 +56,10 @@ $(OBJ): CFLAGS += $(RELEASE_CFLAGS)
 $(OBJ): %.o: %.c
 	@$(CC) $(CFLAGS) -c $< -o $@
 
-debug: $(DEBUG_OBJ)
+debug: $(DEBUG_TARGET)
+$(DEBUG_TARGET): $(DEBUG_OBJ)
+	@$(AR) $(AR_FLAGS) $@ $^
+
 $(DEBUG_OBJ): CFLAGS += $(DEBUG_CFLAGS)
 $(DEBUG_OBJ): debug_%.o: %.c
 	@$(CC) $(CFLAGS) -c $< -o $@
