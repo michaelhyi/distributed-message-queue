@@ -19,6 +19,8 @@
 
 static zhandle_t *zh;
 
+// TODO: mem leaks
+
 int test_acquire_distributed_lock_throws_when_invalid_args() {
     // act & assert
     assert(acquire_distributed_lock(NULL, NULL) < 0);
@@ -51,6 +53,26 @@ int test_acquire_distributed_lock_throws_when_lock_not_found() {
     // act & assert
     assert(acquire_distributed_lock("/utest-lock", zh) < 0);
     assert(errno == ENODATA);
+    return 0;
+}
+
+int test_acquire_distributed_lock_success() {
+    // arrange
+    zoo_create(zh, "/utest-lock", NULL, -1, &ZOO_OPEN_ACL_UNSAFE,
+               ZOO_PERSISTENT, NULL, 0);
+
+    // act & assert
+    assert(acquire_distributed_lock("/utest-lock", zh) >= 0);
+    assert(!errno);
+
+    struct String_vector lock_nodes;
+    zoo_get_children(zh, "/utest-lock", 0, &lock_nodes);
+    assert(lock_nodes.count == 1);
+    assert(!strcmp(lock_nodes.data[0], "lock-0000000000"));
+
+    // teardown
+    deallocate_String_vector(&lock_nodes);
+    zoo_deleteall(zh, "/utest-lock", -1);
     return 0;
 }
 
@@ -89,17 +111,66 @@ int test_release_distributed_lock_throws_when_lock_not_found() {
     return 0;
 }
 
-// TODO: more complex example where somebody else is holding the lock
+void *test_release_distributed_lock_throws_when_caller_not_holding_lock_thread(
+    __attribute__((unused)) void *arg) {
+    acquire_distributed_lock("/utest-lock", zh);
+    return NULL;
+}
+
 int test_release_distributed_lock_throws_when_caller_not_holding_lock() {
     // arrange
     zoo_create(zh, "/utest-lock", NULL, -1, &ZOO_OPEN_ACL_UNSAFE,
                ZOO_PERSISTENT, NULL, 0);
+    pthread_t tid;
+    pthread_create(
+        &tid, NULL,
+        test_release_distributed_lock_throws_when_caller_not_holding_lock_thread,
+        NULL);
+
+    // wait until /utest-lock acquired by thread
+    struct String_vector lock_nodes;
+    zoo_get_children(zh, "/utest-lock", 0, &lock_nodes);
+    while (!lock_nodes.count) {
+        deallocate_String_vector(&lock_nodes);
+        zoo_get_children(zh, "/utest-lock", 0, &lock_nodes);
+    }
+    deallocate_String_vector(&lock_nodes);
 
     // act & assert
     assert(release_distributed_lock("/utest-lock", zh) < 0);
     assert(errno == EPERM);
 
     // teardown
+    pthread_join(tid, NULL);
+    zoo_deleteall(zh, "/utest-lock", -1);
+    return 0;
+}
+
+int test_release_distributed_lock_success() {
+    // arrange
+    zoo_create(zh, "/utest-lock", NULL, -1, &ZOO_OPEN_ACL_UNSAFE,
+               ZOO_PERSISTENT, NULL, 0);
+    acquire_distributed_lock("/utest-lock", zh);
+
+    // assert
+    struct String_vector lock_nodes;
+    zoo_get_children(zh, "/utest-lock", 0, &lock_nodes);
+    assert(lock_nodes.count == 1);
+    assert(!strcmp(lock_nodes.data[0], "lock-0000000000"));
+
+    // act & assert
+    assert(release_distributed_lock("/utest-lock", zh) >= 0);
+    assert(!errno);
+
+    // teardown
+    deallocate_String_vector(&lock_nodes);
+
+    // assert
+    zoo_get_children(zh, "/utest-lock", 0, &lock_nodes);
+    assert(!lock_nodes.count);
+
+    // teardown
+    deallocate_String_vector(&lock_nodes);
     zoo_delete(zh, "/utest-lock", -1);
     return 0;
 }
@@ -174,15 +245,7 @@ int test_no_data_race() {
 static void *double_acquire_thread(void *arg) {
     struct targ *targ = (struct targ *)arg;
 
-    zhandle_t *zzh = zoo_init(TEST_ZOOKEEPER_HOST);
-    if (!zzh) {
-        dprintf("acquire_thread zoo_init() failed: %s\n", strerror(errno));
-        targ->result = -1;
-        targ->_errno = errno;
-        return NULL;
-    }
-
-    if (acquire_distributed_lock("/utest-lock", zzh) < 0) {
+    if (acquire_distributed_lock("/utest-lock", zh) < 0) {
         dprintf("acquire_thread acquire() failed: %s\n", strerror(errno));
         targ->result = -1;
         targ->_errno = errno;
@@ -234,7 +297,144 @@ int test_deadlock_double_acquire() {
     assert(memcmp(buf1, buf2, sizeof(uuid_t)));
 
     // teardown
+    deallocate_String_vector(&lock_nodes);
     zoo_deleteall(zh, "/utest-lock", -1);
+    return 0;
+}
+
+void *test_deadlock_two_locks_thread_a(__attribute__((unused)) void *arg) {
+    acquire_distributed_lock("/lock_a", zh);
+
+    // wait until lock_b is locked by thread_b
+    struct String_vector lock_nodes;
+    zoo_get_children(zh, "/lock_b", 0, &lock_nodes);
+    while (!lock_nodes.count) {
+        deallocate_String_vector(&lock_nodes);
+        zoo_get_children(zh, "/lock_b", 0, &lock_nodes);
+    }
+    deallocate_String_vector(&lock_nodes);
+
+    acquire_distributed_lock("/lock_b", zh);
+
+    release_distributed_lock("/lock_b", zh);
+    release_distributed_lock("/lock_a", zh);
+    return NULL;
+}
+
+void *test_deadlock_two_locks_thread_b(__attribute__((unused)) void *arg) {
+    acquire_distributed_lock("/lock_b", zh);
+
+    // wait until lock_a is locked by thread_a
+    struct String_vector lock_nodes;
+    zoo_get_children(zh, "/lock_a", 0, &lock_nodes);
+    while (!lock_nodes.count) {
+        deallocate_String_vector(&lock_nodes);
+        zoo_get_children(zh, "/lock_a", 0, &lock_nodes);
+    }
+    deallocate_String_vector(&lock_nodes);
+
+    acquire_distributed_lock("/lock_a", zh);
+
+    release_distributed_lock("/lock_a", zh);
+    release_distributed_lock("/lock_b", zh);
+    return NULL;
+}
+
+int test_deadlock_two_locks() {
+    // arrange
+    zoo_create(zh, "/lock_a", NULL, -1, &ZOO_OPEN_ACL_UNSAFE, ZOO_PERSISTENT,
+               NULL, 0);
+    zoo_create(zh, "/lock_b", NULL, -1, &ZOO_OPEN_ACL_UNSAFE, ZOO_PERSISTENT,
+               NULL, 0);
+
+    pthread_t tid1;
+    pthread_t tid2;
+    pthread_create(&tid1, NULL, test_deadlock_two_locks_thread_a, NULL);
+    pthread_create(&tid2, NULL, test_deadlock_two_locks_thread_b, NULL);
+
+    struct timeval tv;
+    struct timespec ts;
+    gettimeofday(&tv, NULL);
+    ts.tv_sec = tv.tv_sec + 15;
+    ts.tv_nsec = 0;
+
+    // act & assert
+    assert(pthread_timedjoin_np(tid1, NULL, &ts) == ETIMEDOUT);
+    assert(pthread_timedjoin_np(tid2, NULL, &ts) == ETIMEDOUT);
+
+    // teardown
+    zoo_deleteall(zh, "/lock_a", -1);
+    zoo_deleteall(zh, "/lock_b", -1);
+    return 0;
+}
+
+static int arr[3];
+
+void *test_ordered_locking_thread(void *arg) {
+    acquire_distributed_lock("/utest-lock", zh);
+
+    if (!arr[0]) {
+        arr[0] = *(int *)arg;
+    } else if (!arr[1]) {
+        arr[1] = *(int *)arg;
+    } else {
+        arr[2] = *(int *)arg;
+    }
+
+    release_distributed_lock("/utest-lock", zh);
+    return NULL;
+}
+
+int test_ordered_locking() {
+    // arrange
+    zoo_create(zh, "/utest-lock", NULL, -1, &ZOO_OPEN_ACL_UNSAFE,
+               ZOO_PERSISTENT, NULL, 0);
+
+    // act
+    acquire_distributed_lock("/utest-lock", zh);
+
+    int id1 = 2;
+    pthread_t tid1;
+    pthread_create(&tid1, NULL, test_ordered_locking_thread, &id1);
+
+    struct String_vector lock_nodes;
+    zoo_get_children(zh, "/utest-lock", 0, &lock_nodes);
+    while (lock_nodes.count != 2) {
+        deallocate_String_vector(&lock_nodes);
+        zoo_get_children(zh, "/utest-lock", 0, &lock_nodes);
+    }
+    deallocate_String_vector(&lock_nodes);
+
+    int id2 = 3;
+    pthread_t tid2;
+    pthread_create(&tid2, NULL, test_ordered_locking_thread, &id2);
+
+    zoo_get_children(zh, "/utest-lock", 0, &lock_nodes);
+    while (lock_nodes.count != 3) {
+        deallocate_String_vector(&lock_nodes);
+        zoo_get_children(zh, "/utest-lock", 0, &lock_nodes);
+    }
+    deallocate_String_vector(&lock_nodes);
+
+    if (!arr[0]) {
+        arr[0] = 1;
+    } else if (!arr[1]) {
+        arr[1] = 1;
+    } else {
+        arr[2] = 1;
+    }
+
+    release_distributed_lock("/utest-lock", zh);
+    pthread_join(tid1, NULL);
+    pthread_join(tid2, NULL);
+
+    // assert
+    assert(arr[0] == 1);
+    assert(arr[1] == 2);
+    assert(arr[2] == 3);
+
+    // teardown
+    zoo_delete(zh, "/utest-lock", -1);
     return 0;
 }
 
@@ -250,6 +450,8 @@ struct test_case tests[] = {
      test_acquire_distributed_lock_throws_when_invalid_args},
     {"test_acquire_distributed_lock_throws_when_lock_not_found", setup,
      teardown, test_acquire_distributed_lock_throws_when_lock_not_found},
+    {"test_acquire_distributed_lock_success", setup, teardown,
+     test_acquire_distributed_lock_success},
 
     {"test_release_distributed_lock_throws_when_invalid_args", setup, teardown,
      test_release_distributed_lock_throws_when_invalid_args},
@@ -258,14 +460,14 @@ struct test_case tests[] = {
     {"test_release_distributed_lock_throws_when_caller_not_holding_lock", setup,
      teardown,
      test_release_distributed_lock_throws_when_caller_not_holding_lock},
+    {"test_release_distributed_lock_success", setup, teardown,
+     test_release_distributed_lock_success},
 
     {"test_no_data_race", setup, teardown, test_no_data_race},
     {"test_deadlock_double_acquire", setup, teardown,
-     test_deadlock_double_acquire}
-    // {"test_deadlock_two_threads"}
-    // TODO: test success for both operations
-    // TODO: test ordered locking
-};
+     test_deadlock_double_acquire},
+    {"test_deadlock_two_locks", setup, teardown, test_deadlock_two_locks},
+    {"test_ordered_locking", setup, teardown, test_ordered_locking}};
 
 struct test_suite suite = {
     .name = "test_locking", .setup = NULL, .teardown = NULL};
