@@ -231,7 +231,11 @@ void handle_dmqp_push(const struct dmqp_message *message, int client) {
         return;
     }
 
-    // TODO: acquire /topics/{topic_name}/sequence-id/lock distributed lock
+    char lock_path[MAX_PATH_LEN + 1];
+    snprintf(lock_path, sizeof lock_path, "/topics/%s/sequence-id/lock",
+             assigned_topic);
+    ;
+    acquire_distributed_lock(lock_path, zh);
 
     char path[MAX_PATH_LEN + 1];
     snprintf(path, sizeof path, "/topics/%s/sequence-id", assigned_topic);
@@ -276,8 +280,8 @@ void handle_dmqp_push(const struct dmqp_message *message, int client) {
     res_message.header = res_header;
     send_dmqp_message(client, &res_message, 0);
 
-cleanup:;
-    // TODO: release /topics/{topic_name}/sequence-id/lock distributed lock
+cleanup:
+    release_distributed_lock(lock_path, zh);
 }
 
 void handle_dmqp_pop(const struct dmqp_message *message, int client) {

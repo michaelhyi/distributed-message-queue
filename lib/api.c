@@ -1,5 +1,6 @@
 #include "messageq/api.h"
 #include "messageq/constants.h"
+#include "messageq/locking.h"
 #include "messageq/zookeeper.h"
 
 #include <errno.h>
@@ -39,7 +40,7 @@ void client_destroy(void) {
 
 /**
  * Returns the number of free partitions by getting the data of the
- * `/partitions/free-count` ZNode.
+ * `/partitions/free-count` ZNode. Must be holding /partitions distributed lock.
  *
  * @returns the number of free partitions, -1 if error with global `errno` set
  * @throws `EIO` unexpected error
@@ -236,6 +237,8 @@ static int create_replica(const char *shard_path) {
  * /topics/{topic_name}/shards/shard-{sequence_id}/partitions/partition-{sequence_id}
  * (PERSISTENT & SEQUENTIAL)
  *
+ * Must be holding the /partitions distributed lock.
+ *
  * @returns 0 if success, -1 if error with global `errno` set
  * @throws `EINVAL` invalid args or `topic_name` exceeds max length
  * @throws `EIO` unexpected error
@@ -282,20 +285,20 @@ int create_topic(const struct topic *topic) {
         return -1;
     }
 
-    // TODO: acquire distributed lock on partition list
+    acquire_distributed_lock("/partitions/lock", zh);
 
     int num_free_partitions = get_num_free_partitions();
     if (num_free_partitions < 0) {
+        release_distributed_lock("/partitions/lock", zh);
         errno = EIO;
-        // TODO: relse distributed lock
         return -1;
     }
 
     unsigned int num_requested_partitions =
         topic->shards * topic->replication_factor;
     if ((unsigned int)num_free_partitions < num_requested_partitions) {
+        release_distributed_lock("/partitions/lock", zh);
         errno = ENODEV;
-        // TODO: relse distributed lock
         return -1;
     }
 
@@ -317,12 +320,12 @@ int create_topic(const struct topic *topic) {
         }
     }
 
-    // TODO: release distributed lock
+    release_distributed_lock("/partitions/lock", zh);
     return 0;
 
 // TODO: need to fix this
-cleanup:;
-    // TODO: release distributed lock
+cleanup:
+    release_distributed_lock("/partitions/lock", zh);
 
     char path[MAX_PATH_LEN];
     snprintf(path, sizeof(path), "/topics/%s", topic->name);
