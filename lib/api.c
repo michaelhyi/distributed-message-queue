@@ -230,11 +230,6 @@ static int create_replica(const char *shard_path) {
         return -1;
     }
 
-    // TODO:
-    // if this shard has no partitions, p is the leader (lowest seq no.)
-    // if this shard has partitions, then p must set a watch on the node
-    // with highest seq no. the watch should promote itself to leader if
-    // the previous node dies
     return 0;
 }
 
