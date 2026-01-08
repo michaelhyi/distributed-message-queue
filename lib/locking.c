@@ -127,7 +127,6 @@ int release_distributed_lock(const char *lock, zhandle_t *zh) {
         return -1;
     }
 
-    // TODO: check every usage of strtok(), since it modifies original data
     struct String_vector lock_nodes;
     int rc = zoo_get_children(zh, lock, 0, &lock_nodes);
     if (rc == ZNONODE) {
