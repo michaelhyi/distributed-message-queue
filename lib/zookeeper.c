@@ -91,6 +91,7 @@ int zoo_deleteall(zhandle_t *zh, const char *path, int version) {
         return -1;
     }
 
+    int ret = 0;
     struct String_vector children;
     int rc = zoo_get_children(zh, path, 0, &children);
     if (rc == ZNONODE) {
@@ -106,14 +107,18 @@ int zoo_deleteall(zhandle_t *zh, const char *path, int version) {
         snprintf(child_path, sizeof child_path, "%s/%s", path,
                  children.data[i]);
         if (zoo_deleteall(zh, child_path, version) < 0) {
-            return -1;
+            ret = -1;
+            goto cleanup;
         }
     }
 
     if (zoo_delete(zh, path, version)) {
         errno = EIO;
-        return -1;
+        ret = -1;
+        goto cleanup;
     }
 
-    return 0;
+cleanup:
+    deallocate_String_vector(&children);
+    return ret;
 }

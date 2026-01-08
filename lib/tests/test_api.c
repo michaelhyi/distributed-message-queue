@@ -254,9 +254,12 @@ int test_create_topic_success() {
 
             free(partition_id);
         }
+
+        deallocate_String_vector(&replicas);
     }
 
     // teardown
+    deallocate_String_vector(&shards);
     zoo_deleteall(zh, "/topics/utest-topic", -1);
     for (int i = 0; i < arrlen(partitions); i++) {
         char *path = partition_ids[i];

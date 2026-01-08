@@ -122,6 +122,7 @@ static void partition_znode_watcher(zhandle_t *zzh, int type, int state,
                 preceding_id = id;
             }
         }
+        deallocate_String_vector(&partitions);
 
         if (preceding_id == -1) {
             role = LEADER;
@@ -222,6 +223,8 @@ static void replicate_message(const struct dmqp_message *message) {
         send_dmqp_message(client, message, 0);
         close(client);
     }
+
+    deallocate_String_vector(&replicas);
 }
 
 // TODO: test all of these DMQP handlers

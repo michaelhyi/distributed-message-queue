@@ -142,6 +142,7 @@ static int get_free_partition(char *partition_id) {
         return -1;
     }
 
+    int found = 0;
     for (int i = 0; i < partitions.count; i++) {
         char *partition = partitions.data[i];
         if (strcmp(partition, "free-count") == 0 ||
@@ -162,13 +163,21 @@ static int get_free_partition(char *partition_id) {
         strtok(buffer, ";");
         char *allocated = strtok(NULL, ";");
         if (!allocated) {
+            found = 1;
             strncpy(partition_id, path, MAX_PATH_LEN);
-            return 0;
+            goto cleanup;
         }
     }
 
-    errno = ENODEV;
-    return -1;
+cleanup:
+    deallocate_String_vector(&partitions);
+
+    if (!found) {
+        errno = ENODEV;
+        return -1;
+    }
+
+    return 0;
 }
 
 /**

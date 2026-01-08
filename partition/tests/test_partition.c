@@ -70,6 +70,7 @@ int test_start_partition_registers_with_zookeeper() {
                 break;
             }
         }
+        deallocate_String_vector(&partitions);
 
         release_distributed_lock("/partitions/lock", zh);
     }
