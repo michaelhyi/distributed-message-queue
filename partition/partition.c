@@ -131,7 +131,7 @@ static void partition_znode_watcher(zhandle_t *zzh, int type, int state,
 
             char preceding_partition[MAX_PATH_LEN];
             snprintf(preceding_partition, sizeof preceding_partition,
-                     "/partitions/%010d", preceding_id);
+                     "/partitions/partition-%010d", preceding_id);
             char buf[512];
             int buflen = sizeof buf;
             zoo_wget(zzh, preceding_partition, leader_watcher, NULL, buf,

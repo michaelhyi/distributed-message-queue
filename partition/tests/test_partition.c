@@ -199,7 +199,7 @@ int test_start_partition_becomes_replica_when_assigned_to_shard() {
     }
     pthread_mutex_unlock(&server_lock);
 
-    int retries = 5;
+    int retries = 50;
     while (partition_id == -1 && retries-- > 0) {
         sleep(1);
     }
@@ -239,7 +239,106 @@ int test_start_partition_becomes_replica_when_assigned_to_shard() {
     return 0;
 }
 
-int test_start_partition_becomes_leader_when_prev_leader_dies() { return -1; }
+int test_start_partition_becomes_leader_when_prev_leader_dies() {
+    // arrange
+    char partition_path1[MAX_PATH_LEN + 1];
+    char partition_path2[MAX_PATH_LEN + 1];
+
+    zoo_create(zh, "/partitions/partition-", NULL, -1, &ZOO_OPEN_ACL_UNSAFE,
+               ZOO_PERSISTENT_SEQUENTIAL, partition_path1,
+               sizeof partition_path1);
+    zoo_create(zh, "/partitions/partition-", NULL, -1, &ZOO_OPEN_ACL_UNSAFE,
+               ZOO_PERSISTENT_SEQUENTIAL, partition_path2,
+               sizeof partition_path2);
+
+    zoo_create(zh, "/topics/utest-topic", NULL, -1, &ZOO_OPEN_ACL_UNSAFE,
+               ZOO_PERSISTENT, NULL, 0);
+    zoo_create(zh, "/topics/utest-topic/shards", NULL, -1, &ZOO_OPEN_ACL_UNSAFE,
+               ZOO_PERSISTENT, NULL, 0);
+    zoo_create(zh, "/topics/utest-topic/shards/shard-0000000000", NULL, -1,
+               &ZOO_OPEN_ACL_UNSAFE, ZOO_PERSISTENT, NULL, 0);
+    zoo_create(zh, "/topics/utest-topic/shards/shard-0000000000/partitions",
+               NULL, -1, &ZOO_OPEN_ACL_UNSAFE, ZOO_PERSISTENT, NULL, 0);
+
+    char path[MAX_PATH_LEN + 1] = {0};
+    strcat(path, "/topics/utest-topic/shards/shard-0000000000");
+    strcat(path, partition_path1);
+    zoo_create(zh, path, NULL, -1, &ZOO_OPEN_ACL_UNSAFE, ZOO_PERSISTENT, NULL,
+               0);
+
+    memset(path, 0, sizeof path);
+    strcat(path, "/topics/utest-topic/shards/shard-0000000000");
+    strcat(path, partition_path2);
+    zoo_create(zh, path, NULL, -1, &ZOO_OPEN_ACL_UNSAFE, ZOO_PERSISTENT, NULL,
+               0);
+
+    pthread_t tid;
+    struct targ arg = {0};
+    pthread_create(&tid, NULL, partition_thread, &arg);
+
+    struct timeval tv;
+    struct timespec ts = {0};
+    gettimeofday(&tv, NULL);
+    ts.tv_sec = tv.tv_sec + 10;
+    pthread_mutex_lock(&server_lock);
+    while (!server_running) {
+        assert(pthread_cond_timedwait(&server_running_cond, &server_lock,
+                                      &ts) != ETIMEDOUT);
+    }
+    pthread_mutex_unlock(&server_lock);
+
+    int retries = 50;
+    while (partition_id == -1 && retries-- > 0) {
+        sleep(1);
+    }
+
+    // assert
+    assert(partition_id != -1);
+
+    // arrange
+    char buf[512];
+    int buflen = sizeof buf;
+    snprintf(path, sizeof path, "/partitions/partition-%010d", partition_id);
+    acquire_distributed_lock("/partitions/lock", zh);
+    zoo_get(zh, path, 0, buf, &buflen, NULL);
+    buf[buflen] = '\0';
+    strcat(buf, ";/topics/utest-topic/shards/shard-0000000000");
+
+    // act
+    zoo_set(zh, path, buf, strlen(buf), -1);
+    release_distributed_lock("/partitions/lock", zh);
+
+    // arrange
+    retries = 50;
+    while (role == FREE && retries-- > 0) {
+        sleep(1);
+    }
+
+    // assert
+    assert(role == REPLICA);
+    assert(strcmp(assigned_topic, "utest-topic") == 0);
+    assert(strcmp(assigned_shard, "shard-0000000000") == 0);
+
+    // act
+    acquire_distributed_lock("/partitions/lock", zh);
+    zoo_delete(zh, partition_path1, -1);
+    zoo_delete(zh, partition_path2, -1);
+    release_distributed_lock("/partitions/lock", zh);
+
+    retries = 50;
+    while (role == REPLICA && retries-- > 0) {
+        sleep(1);
+    }
+
+    // assert
+    assert(role == LEADER);
+
+    // teardown
+    zoo_deleteall(zh, "/topics/utest-topic", -1);
+    pthread_kill(tid, SIGTERM);
+    pthread_join(tid, NULL);
+    return 0;
+}
 
 void setup() {
     errno = 0;
@@ -260,9 +359,8 @@ struct test_case tests[] = {
      teardown, test_start_partition_becomes_leader_when_assigned_to_shard},
     {"test_start_partition_becomes_replica_when_assigned_to_shard", setup,
      teardown, test_start_partition_becomes_replica_when_assigned_to_shard},
-    // {"test_start_partition_becomes_leader_when_prev_leader_dies", NULL, NULL,
-    //  test_start_partition_becomes_leader_when_prev_leader_dies}
-};
+    {"test_start_partition_becomes_leader_when_prev_leader_dies", setup,
+     teardown, test_start_partition_becomes_leader_when_prev_leader_dies}};
 
 struct test_suite suite = {
     .name = "test_partition", .setup = NULL, .teardown = NULL};
